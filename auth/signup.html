@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إنشاء حساب - مَرْمى</title>
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="logo">
+        <div class="logo-icon"><i data-lucide="goal"></i></div>
+        <h1 id="page-title">إنشاء حساب جديد</h1>
+        <p class="subtitle" id="page-subtitle">سجل ملعبك الآن - 3 أيام تجربة مجانية</p>
+      </div>
+
+      <div id="invite-info" class="hidden" style="background:var(--color-info-light);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:0.9rem;"></div>
+
+      <form id="signup-form" autocomplete="on">
+        <!-- حقول مالك جديد -->
+        <div id="owner-fields">
+          <div class="form-group">
+            <label class="form-label" for="tenant_name">اسم الملعب <span class="required">*</span></label>
+            <input type="text" class="form-control" id="tenant_name" name="tenant_name" required>
+            <span class="form-help">سيكون هذا اسم ملعبك في النظام</span>
+          </div>
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label class="form-label" for="city">المدينة</label>
+              <input type="text" class="form-control" id="city" name="city">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="phone">رقم جوال الملعب</label>
+              <input type="tel" class="form-control" id="phone" name="phone">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" id="fullname-group">
+          <label class="form-label" for="full_name">اسمك الكامل <span class="required">*</span></label>
+          <input type="text" class="form-control" id="full_name" name="full_name" required>
+        </div>
+
+        <div class="form-group" id="email-group">
+          <label class="form-label" for="email">البريد الإلكتروني <span class="required">*</span></label>
+          <input type="email" class="form-control" id="email" name="email" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">كلمة المرور <span class="required">*</span></label>
+          <input type="password" class="form-control" id="password" name="password" required minlength="6" autocomplete="new-password">
+          <span class="form-help">6 أحرف على الأقل</span>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block" id="submit-btn">
+          <span class="btn-text">إنشاء الحساب</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        لديك حساب بالفعل؟ <a href="/auth/login">سجل دخولك</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../config.js"></script>
+  <script src="../src/core/supabase-client.js"></script>
+  <script src="../src/core/utils.js"></script>
+  <script src="../src/core/auth.js"></script>
+  <!-- signup يحتاج staffApi.getInvitationByCode فقط -->
+  <script src="../src/features/staff/api.js"></script>
+  <script src="../src/core/api.js"></script>
+  <script>
+    window.utils.renderIcons();
+    (async () => {
+      // إعادة التوجيه إذا مسجل بالفعل (حسب نوع الحساب)
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (session) {
+        await window.auth.redirectIfAuthenticated();
+        return;
+      }
+
+      const inviteCode = window.utils.getQueryParam('invite');
+      const form = document.getElementById('signup-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const ownerFields = document.getElementById('owner-fields');
+      const inviteInfo = document.getElementById('invite-info');
+      const pageTitle = document.getElementById('page-title');
+      const pageSubtitle = document.getElementById('page-subtitle');
+
+      let inviteData = null;
+
+      // إذا كان هناك رمز دعوة
+      if (inviteCode) {
+        try {
+          inviteData = await window.api.getInvitationByCode(inviteCode);
+          if (!inviteData) {
+            inviteInfo.classList.remove('hidden');
+            inviteInfo.style.background = 'var(--color-danger-light)';
+            inviteInfo.style.color = 'var(--color-danger)';
+            inviteInfo.innerHTML = '<strong>رمز الدعوة غير صحيح</strong>';
+            form.style.display = 'none';
+            return;
+          }
+          if (!inviteData.is_valid) {
+            inviteInfo.classList.remove('hidden');
+            inviteInfo.style.background = 'var(--color-warning-light)';
+            inviteInfo.style.color = 'var(--color-warning)';
+            inviteInfo.innerHTML = '<strong>انتهت صلاحية الدعوة أو تم استخدامها مسبقاً</strong>';
+            form.style.display = 'none';
+            return;
+          }
+
+          // واجهة دعوة موظف
+          pageTitle.textContent = 'انضم كموظف';
+          pageSubtitle.textContent = `تمت دعوتك للانضمام إلى ${inviteData.tenant_name}`;
+          ownerFields.style.display = 'none';
+          ownerFields.querySelector('#tenant_name').required = false;
+
+          inviteInfo.classList.remove('hidden');
+          inviteInfo.innerHTML = `
+            <strong>دعوة من ${window.utils.escapeHtml(inviteData.tenant_name)}</strong><br>
+            باسم: ${window.utils.escapeHtml(inviteData.full_name)} (${window.utils.escapeHtml(inviteData.email)})
+          `;
+
+          // تعبئة البريد والاسم وقفلهما
+          form.email.value = inviteData.email;
+          form.email.readOnly = true;
+          form.full_name.value = inviteData.full_name;
+          form.full_name.readOnly = true;
+        } catch (err) {
+          window.utils.toast(window.utils.formatError(err), 'error');
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.btn-text').textContent = 'جارٍ الإنشاء...';
+
+        const email = form.email.value.trim();
+        const password = form.password.value;
+        const fullName = form.full_name.value.trim();
+        const metadata = { full_name: fullName };
+
+        if (inviteCode && inviteData) {
+          metadata.invite_code = inviteCode;
+        } else {
+          const tenantName = form.tenant_name.value.trim();
+          const city = form.city.value.trim();
+          const phone = form.phone.value.trim();
+          metadata.tenant_name = tenantName;
+          if (city) metadata.city = city;
+          if (phone) metadata.phone = phone;
+        }
+
+        try {
+          const { data, error } = await window.sb.auth.signUp({
+            email,
+            password,
+            options: { data: metadata }
+          });
+          if (error) throw error;
+
+          const welcomeMsg = inviteCode ? 'تم إنشاء الحساب بنجاح' : 'مرحباً! لديك 3 أيام تجربة مجانية';
+          // محاولة تسجيل دخول مباشر بعد التسجيل (في حالة عدم تفعيل تأكيد البريد)
+          if (data.session) {
+            window.utils.toast(welcomeMsg, 'success');
+            setTimeout(() => window.location.replace('/dashboard'), 800);
+          } else {
+            // التسجيل تم لكن يحتاج تأكيد البريد - نسجّل الدخول مباشرة
+            const { error: signInError } = await window.sb.auth.signInWithPassword({ email, password });
+            if (signInError) {
+              window.utils.toast('تم إنشاء الحساب! يرجى تأكيد البريد الإلكتروني ثم تسجيل الدخول', 'success');
+              setTimeout(() => window.location.replace('/auth/login'), 2000);
+            } else {
+              window.utils.toast(welcomeMsg, 'success');
+              setTimeout(() => window.location.replace('/dashboard'), 800);
+            }
+          }
+        } catch (err) {
+          window.utils.toast(window.utils.formatError(err), 'error');
+          submitBtn.disabled = false;
+          submitBtn.querySelector('.btn-text').textContent = 'إنشاء الحساب';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

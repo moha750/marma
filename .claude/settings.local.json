@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__execute_sql",
+      "Bash(Get-ChildItem -Path \"e:\\\\moham\\\\Downloads\\\\goal\" -Recurse -Filter \"*.js\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 5)",
+      "Bash(node --check \"e:/moham/Downloads/goal/js/auth.js\")",
+      "Bash(node --check \"e:/moham/Downloads/goal/js/api.js\")",
+      "Bash(node --check \"e:/moham/Downloads/goal/js/layout.js\")",
+      "Bash(node --check \"e:/moham/Downloads/goal/js/utils.js\")",
+      "Bash(node --check \"e:/moham/Downloads/goal/js/book.js\")",
+      "mcp__supabase__get_logs"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

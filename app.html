@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مَرْمى</title>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <div id="app-root">
+    <div class="loader-center" style="min-height:100vh"><div class="loader loader--lg"></div></div>
+  </div>
+
+  <!-- CDN libraries -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/ar.global.min.js"></script>
+
+  <!-- Config (يبقى في الجذر — في .gitignore) -->
+  <script src="/config.js"></script>
+
+  <!-- Core infrastructure (الترتيب مهم) -->
+  <script src="/src/core/supabase-client.js"></script>
+  <script src="/src/core/utils.js"></script>
+  <script src="/src/core/auth.js"></script>
+
+  <!-- Feature APIs (تُحمَّل قبل aggregator) -->
+  <script src="/src/features/tenant/api.js"></script>
+  <script src="/src/features/fields/api.js"></script>
+  <script src="/src/features/customers/api.js"></script>
+  <script src="/src/features/bookings/api.js"></script>
+  <script src="/src/features/staff/api.js"></script>
+  <script src="/src/features/dashboard/api.js"></script>
+  <script src="/src/features/reports/api.js"></script>
+  <script src="/src/features/schedule/api.js"></script>
+  <script src="/src/features/subscriptions/api.js"></script>
+  <script src="/src/features/admin/api.js"></script>
+
+  <!-- API aggregator (window.api) -->
+  <script src="/src/core/api.js"></script>
+
+  <!-- Shared components -->
+  <script src="/src/shared/components/layout.js"></script>
+  <script src="/src/features/bookings/components/booking-modal.js"></script>
+
+  <!-- SPA infrastructure -->
+  <script src="/src/core/store.js"></script>
+  <script src="/src/core/realtime.js"></script>
+  <script src="/src/core/router.js"></script>
+
+  <!-- Route registration -->
+  <script src="/src/app/routes.js"></script>
+
+  <!-- Page modules (يسجّل كل صفحة نفسها في window.pages) -->
+  <script src="/src/features/dashboard/pages/home.js"></script>
+  <script src="/src/features/bookings/pages/list.js"></script>
+  <script src="/src/features/bookings/pages/calendar.js"></script>
+  <script src="/src/features/customers/pages/list.js"></script>
+  <script src="/src/features/customers/pages/details.js"></script>
+  <script src="/src/features/fields/pages/list.js"></script>
+  <script src="/src/features/schedule/pages/editor.js"></script>
+  <script src="/src/features/reports/pages/daily.js"></script>
+  <script src="/src/features/staff/pages/manage.js"></script>
+  <script src="/src/features/subscriptions/pages/manage.js"></script>
+
+  <!-- Boot (آخر شيء) -->
+  <script src="/src/app/boot.js"></script>
+</body>
+</html>

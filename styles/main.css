@@ -1,0 +1,23 @@
+/* Umbrella stylesheet - يستورد كل ملفات الـ styles
+   استخدامه: <link rel="stylesheet" href="styles/main.css">
+
+   ملاحظة: @import سيُحمَّل بشكل تتابعي. للأداء العالي في الإنتاج،
+   استخدم build step ينتج ملفاً واحداً مُجمَّعاً، أو ضع <link> tags
+   متعددة في الـ HTML لتحميل متوازٍ. */
+
+/* الأساس */
+@import url('./tokens.css');
+@import url('./base.css');
+@import url('./layout.css');
+
+/* المكوّنات */
+@import url('./components/button.css');
+@import url('./components/form.css');
+@import url('./components/card.css');
+@import url('./components/table.css');
+@import url('./components/badge.css');
+@import url('./components/modal.css');
+@import url('./components/calendar.css');
+@import url('./components/utilities.css');
+@import url('./components/public.css');
+@import url('./components/subscription.css');

@@ -1,0 +1,31 @@
+/* FullCalendar overrides */
+.fc {
+  direction: rtl;
+  font-family: inherit;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.2rem !important;
+}
+
+.fc-event {
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.85rem;
+}
+
+.fc-event.status-cancelled {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.fc-event.status-pending {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.18) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  font-weight: 600;
+}

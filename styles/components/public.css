@@ -1,0 +1,246 @@
+/* الصفحة العامة للحجز (book.html) - steps, field-tiles, slot-grid */
+
+.public-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--color-bg) 0%, #ffffff 100%);
+  padding: var(--space-md);
+}
+
+.public-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-md) 0;
+}
+
+.public-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.public-header .pitch-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-sm);
+}
+
+.public-header h1 {
+  margin-bottom: var(--space-xs);
+}
+
+.public-header .pitch-meta {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+}
+
+/* خطوة مرقّمة */
+.step {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* بطاقات اختيار الأرضية */
+.field-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-sm);
+}
+
+.field-tile {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  cursor: pointer;
+  text-align: start;
+  background: var(--color-card);
+  transition: all var(--transition);
+  font: inherit;
+  color: var(--color-text);
+}
+
+.field-tile:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.field-tile.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.field-tile .name {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.field-tile .price {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+/* شبكة المواعيد */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.slot-btn {
+  border: 2px solid var(--color-border);
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  transition: all var(--transition);
+}
+
+.slot-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.slot-btn.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.slot-btn:disabled {
+  cursor: not-allowed;
+  background: var(--color-bg);
+  color: var(--color-text-light);
+  border-color: var(--color-border);
+}
+
+.slot-btn .slot-time {
+  font-size: 1rem;
+  margin-bottom: 2px;
+}
+
+.slot-btn .slot-status {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.slot-btn.is-busy {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border-color: var(--color-danger-light);
+}
+
+.slot-btn.is-past {
+  opacity: 0.5;
+}
+
+.slot-empty {
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* قائمة المواعيد المحجوزة */
+.busy-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-sm);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.busy-slot {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.no-busy-slots {
+  background: var(--color-success-light);
+  color: var(--color-primary-dark);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  margin-top: var(--space-sm);
+}
+
+/* ملخص السعر */
+.price-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-primary-light);
+  padding: var(--space-md);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-md);
+  font-weight: 600;
+}
+
+.price-summary .amount {
+  font-size: 1.4rem;
+  color: var(--color-primary-dark);
+}
+
+/* شاشة النجاح */
+.success-screen {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-success);
+}
+
+.success-screen .check-icon {
+  font-size: 4rem;
+  color: var(--color-success);
+  margin-bottom: var(--space-md);
+}
+
+.success-screen h2 {
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-sm);
+}
+
+.success-screen .booking-id {
+  background: var(--color-bg);
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  margin: var(--space-md) 0;
+}

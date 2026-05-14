@@ -1,0 +1,115 @@
+/* Modal + Toast */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--space-md);
+  animation: fadeIn 0.15s ease;
+}
+
+.modal {
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+
+.modal-header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.modal-close {
+  background: none;
+  border: 0;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.modal-close:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: var(--space-lg);
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  background: var(--color-bg);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: var(--space-lg);
+  inset-inline-start: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  z-index: 200;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-md) var(--space-lg);
+  min-width: 280px;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  pointer-events: auto;
+  animation: slideInStart 0.2s ease;
+  border-inline-start: 4px solid var(--color-primary);
+}
+
+.toast--success { border-inline-start-color: var(--color-success); }
+.toast--error { border-inline-start-color: var(--color-danger); }
+.toast--warning { border-inline-start-color: var(--color-warning); }
+.toast--info { border-inline-start-color: var(--color-info); }
+
+@keyframes slideInStart {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
