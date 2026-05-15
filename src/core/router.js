@@ -1,12 +1,39 @@
 // راوتر معتمد على History API للتطبيق الأحادي الصفحة (SPA)
 // كل صفحة تُسجَّل نفسها كـ module بشكل: { mount(container, ctx), unmount() }
 // يُستدعى router.start() مرة واحدة بعد تركيب الـ shell.
+//
+// يدعم base path (لـ GitHub Pages تحت /marma/) عبر window.__BASE__
+// المسارات المسجلة في routes.js تبقى نظيفة (/dashboard) — الراوتر يضيف base عند الحاجة.
 
 window.router = (function () {
   const routes = {};                 // name -> { path, title, ownerOnly, module, activeNav }
   let currentInstance = null;
   let currentName = null;
   let started = false;
+
+  function getBase() {
+    // window.__BASE__ مثل '/marma' (بدون trailing) أو '' في dev/custom domain
+    return window.__BASE__ || '';
+  }
+
+  // يحول pathname المتصفح إلى مسار بدون base
+  // مثال: '/marma/customers/abc' → '/customers/abc'
+  function stripBase(pathname) {
+    const base = getBase();
+    if (!base) return pathname;
+    if (pathname === base) return '/';
+    if (pathname.startsWith(base + '/')) return pathname.slice(base.length);
+    return pathname;
+  }
+
+  // يضيف base إلى مسار نظيف
+  // مثال: '/dashboard' → '/marma/dashboard' (في production) أو '/dashboard' (في dev)
+  function withBase(path) {
+    const base = getBase();
+    if (!base) return path;
+    if (path.startsWith(base + '/') || path === base) return path; // مسبوق بالفعل
+    return base + path;
+  }
 
   function register(name, def) {
     routes[name] = Object.assign({ module: name, title: '', ownerOnly: false }, def);
@@ -16,6 +43,7 @@ window.router = (function () {
 
   // يحاول مطابقة pathname مع كل المسارات المسجلة
   // pattern مثل "/customers/:id" يطابق "/customers/abc" مع params = ['abc']
+  // pathname هنا يجب أن يكون بدون base (استخدم stripBase أولاً)
   function matchRoute(pathname) {
     const segments = pathname.split('/').filter(Boolean);
     for (const name of Object.keys(routes)) {
@@ -39,7 +67,7 @@ window.router = (function () {
   }
 
   function parseLocation() {
-    const matched = matchRoute(location.pathname);
+    const matched = matchRoute(stripBase(location.pathname));
     return {
       name: matched ? matched.name : '',
       params: matched ? matched.params : [],
@@ -49,9 +77,10 @@ window.router = (function () {
 
   function buildPath(name, params) {
     const route = routes[name];
-    if (!route || !route.path) return '/' + name;
+    if (!route || !route.path) return withBase('/' + name);
     let i = 0;
-    return route.path.replace(/:[^/]+/g, () => encodeURIComponent(params && params[i++] || ''));
+    const cleanPath = route.path.replace(/:[^/]+/g, () => encodeURIComponent(params && params[i++] || ''));
+    return withBase(cleanPath);
   }
 
   function navigate(name, params) {
@@ -126,7 +155,7 @@ window.router = (function () {
       <div class="card">
         <div class="empty-state">
           <p>الصفحة غير موجودة</p>
-          <a href="/dashboard" class="btn btn--primary mt-md">العودة للوحة التحكم</a>
+          <a href="${withBase('/dashboard')}" class="btn btn--primary mt-md">العودة للوحة التحكم</a>
         </div>
       </div>
     `;
@@ -147,15 +176,17 @@ window.router = (function () {
     if (!href.startsWith('/') || href.startsWith('//')) return;
 
     const [pathOnly, queryOnly] = href.split('?');
-    const matched = matchRoute(pathOnly);
+    // pathOnly قد يكون مع base (مثل /marma/customers) أو بدونه (/customers)
+    const cleanPath = stripBase(pathOnly);
+    const matched = matchRoute(cleanPath);
     if (!matched) return; // اترك المتصفح يتعامل (مثل /auth/login، /admin/tenants)
 
     e.preventDefault();
-    const target = queryOnly ? pathOnly + '?' + queryOnly : pathOnly;
-    if (location.pathname + location.search === target) {
+    const fullTarget = withBase(cleanPath) + (queryOnly ? '?' + queryOnly : '');
+    if (location.pathname + location.search === fullTarget) {
       go();
     } else {
-      history.pushState(null, '', target);
+      history.pushState(null, '', fullTarget);
       go();
     }
   }
@@ -165,14 +196,25 @@ window.router = (function () {
     started = true;
     window.addEventListener('popstate', go);
     document.addEventListener('click', interceptLinkClicks);
-    // إذا الـ pathname لا يطابق أي مسار SPA (مثل دخل المستخدم على /app.html مباشرة) → /dashboard
-    if (!matchRoute(location.pathname)) {
-      history.replaceState(null, '', '/dashboard');
+    // إذا الـ pathname لا يطابق أي مسار SPA (مثل دخل المستخدم على /app.html مباشرة أو 404.html) → /dashboard
+    if (!matchRoute(stripBase(location.pathname))) {
+      history.replaceState(null, '', withBase('/dashboard'));
     }
     go();
   }
 
   function currentRouteName() { return currentName; }
 
-  return { register, getRoutes, navigate, start, parseLocation, currentRouteName, buildPath, matchRoute };
+  return {
+    register,
+    getRoutes,
+    navigate,
+    start,
+    parseLocation,
+    currentRouteName,
+    buildPath,
+    matchRoute,
+    withBase,
+    stripBase
+  };
 })();

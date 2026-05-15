@@ -14,6 +14,7 @@ const dateShortFormatter = new Intl.DateTimeFormat('ar-EG', {
 });
 
 const currencyFormatter = new Intl.NumberFormat('ar-EG', {
+  numberingSystem: 'latn',
   minimumFractionDigits: 0,
   maximumFractionDigits: 2
 });
@@ -37,8 +38,19 @@ function renderIcons(root) {
   }
 }
 
+// يضيف base path (مثل '/marma') إلى مسار نظيف. آمن إذا base فارغ.
+// مثال: path('/dashboard') → '/marma/dashboard' في prod، '/dashboard' في dev.
+// idempotent: path('/marma/dashboard') ترجع نفس القيمة.
+function pathWithBase(p) {
+  const base = window.__BASE__ || '';
+  if (!base || !p) return p;
+  if (p === base || p.startsWith(base + '/')) return p;
+  return base + p;
+}
+
 window.utils = {
   renderIcons,
+  path: pathWithBase,
 
   formatDate(value) {
     if (!value) return '';
@@ -134,11 +146,12 @@ window.utils = {
 
   // ====== Modal generic ======
   // يفتح modal، يعيد دالة close
-  openModal({ title, body, footer, onClose }) {
+  openModal({ title, body, footer, onClose, size }) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
+    const sizeClass = size ? ` modal--${size}` : '';
     backdrop.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal${sizeClass}" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h3>${this.escapeHtml(title || '')}</h3>
           <button type="button" class="modal-close" aria-label="إغلاق"><i data-lucide="x"></i></button>
@@ -247,6 +260,11 @@ window.utils = {
     if (msg.includes('NOT_OWNER')) return 'هذه العملية متاحة لمالك الملعب فقط';
     if (msg.includes('NOT_SUPER_ADMIN')) return 'هذه العملية للمشرف العام فقط';
     if (msg.includes('UNAUTHENTICATED')) return 'يجب تسجيل الدخول أولاً';
+
+    // حدود الأرضيات والموظفين
+    if (msg.includes('FIELD_LIMIT_REACHED')) return 'بلغت الحد الأقصى المسموح من الأرضيات لباقتك. ارفع الباقة من صفحة الاشتراك';
+    if (msg.includes('STAFF_LIMIT_REACHED')) return 'بلغت الحد الأقصى المسموح من الموظفين لباقتك. ارفع الباقة من صفحة الاشتراك';
+    if (msg.includes('INVALID_UNIT_COUNT')) return 'عدد الأرضيات أو الموظفين غير صالح';
 
     // رسائل auth شائعة
     if (msg.includes('Invalid login credentials')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';

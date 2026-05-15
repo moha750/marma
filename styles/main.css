@@ -6,7 +6,9 @@
    متعددة في الـ HTML لتحميل متوازٍ. */
 
 /* الأساس */
+@import url('./fonts.css');
 @import url('./tokens.css');
+@import url('./themes/dark.css');
 @import url('./base.css');
 @import url('./layout.css');
 
@@ -16,8 +18,16 @@
 @import url('./components/card.css');
 @import url('./components/table.css');
 @import url('./components/badge.css');
+@import url('./components/chip.css');
 @import url('./components/modal.css');
+@import url('./components/drawer.css');
+@import url('./components/skeleton.css');
+@import url('./components/bottom-nav.css');
+@import url('./components/command-palette.css');
+@import url('./components/charts.css');
+@import url('./components/schedule.css');
 @import url('./components/calendar.css');
 @import url('./components/utilities.css');
 @import url('./components/public.css');
 @import url('./components/subscription.css');
+@import url('./components/landing.css');

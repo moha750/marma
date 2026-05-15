@@ -13,7 +13,7 @@ window.adminLayout = (function () {
     const root = document.getElementById('app-root') || document.body;
     const existing = document.getElementById('page-content');
     const existingHtml = existing ? existing.innerHTML : '';
-    const existingTitle = pageTitle || document.title.replace(' - مَرْمى', '');
+    const existingTitle = pageTitle || document.title.replace(' - مَرمى', '');
 
     root.innerHTML = `
       <div class="admin-shell">
@@ -21,7 +21,7 @@ window.adminLayout = (function () {
           <div class="brand"><i data-lucide="shield"></i> لوحة المشرف العام</div>
           <nav class="admin-tabs">
             ${TABS.map((t) => `
-              <a href="${t.href}" class="${t.key === activeTab ? 'active' : ''}">${t.label}</a>
+              <a href="${window.utils.path(t.href)}" class="${t.key === activeTab ? 'active' : ''}">${t.label}</a>
             `).join('')}
           </nav>
           <div style="margin-inline-start:auto;display:flex;gap:8px">

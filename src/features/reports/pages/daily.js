@@ -1,10 +1,15 @@
-// صفحة التقارير - module pattern (SPA + legacy)
+// التقارير اليومية — KPI strip + رسم أعمدة للإيرادات + جدول تفصيلي + CSV export
 (function () {
   const TEMPLATE = `
     <div class="page-header">
-      <h2>التقارير</h2>
+      <div>
+        <h2>التقارير</h2>
+        <div class="page-subtitle">تقرير الإيرادات والحجوزات حسب الفترة</div>
+      </div>
       <div class="actions">
-        <button class="btn btn--secondary" id="export-btn">نسخ كـ CSV</button>
+        <button class="btn btn--secondary" id="export-btn">
+          <i data-lucide="download"></i> تصدير CSV
+        </button>
       </div>
     </div>
 
@@ -17,10 +22,10 @@
         <label class="form-label">إلى تاريخ</label>
         <input type="date" id="to-date" class="form-control">
       </div>
-      <div class="flex-row" style="gap:8px">
-        <button class="btn btn--ghost btn--sm" data-quick="today">اليوم</button>
-        <button class="btn btn--ghost btn--sm" data-quick="week">هذا الأسبوع</button>
-        <button class="btn btn--ghost btn--sm" data-quick="month">هذا الشهر</button>
+      <div class="chip-rail" style="align-self:end">
+        <button class="chip" data-quick="today">اليوم</button>
+        <button class="chip" data-quick="week">هذا الأسبوع</button>
+        <button class="chip is-active" data-quick="month">هذا الشهر</button>
       </div>
     </div>
 
@@ -34,15 +39,23 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
+  function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
+
+  function dayLabel(iso) {
+    const d = new Date(iso);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  }
+
   const page = {
     async mount(container, ctx) {
       container.innerHTML = TEMPLATE;
+      window.utils.renderIcons(container);
 
       const fromInput = container.querySelector('#from-date');
-      const toInput = container.querySelector('#to-date');
+      const toInput   = container.querySelector('#to-date');
       const reportContainer = container.querySelector('#report-container');
       const exportBtn = container.querySelector('#export-btn');
-      const quickBtns = container.querySelectorAll('[data-quick]');
+      const quickChips = container.querySelectorAll('[data-quick]');
 
       let currentData = [];
       let alive = true;
@@ -62,10 +75,13 @@
           to.setDate(from.getDate() + 6);
         } else {
           from = new Date(now.getFullYear(), now.getMonth(), 1);
-          to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          to   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         }
         fromInput.value = toISODate(from);
-        toInput.value = toISODate(to);
+        toInput.value   = toISODate(to);
+
+        quickChips.forEach((c) => c.classList.toggle('is-active', c.dataset.quick === quick));
+
         refresh();
       }
 
@@ -84,7 +100,15 @@
           renderReport(rows);
         } catch (err) {
           if (!alive) return;
-          reportContainer.innerHTML = `<div class="card"><div class="empty-state"><p class="text-danger">${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
+          reportContainer.innerHTML = `
+            <div class="card">
+              <div class="empty-state">
+                <div class="empty-icon"><i data-lucide="triangle-alert"></i></div>
+                <p class="text-danger">${window.utils.escapeHtml(window.utils.formatError(err))}</p>
+              </div>
+            </div>
+          `;
+          window.utils.renderIcons(reportContainer);
         }
       }
 
@@ -93,9 +117,9 @@
           reportContainer.innerHTML = `
             <div class="card">
               <div class="empty-state">
-                <div class="icon"><i data-lucide="bar-chart-3"></i></div>
+                <div class="empty-icon"><i data-lucide="bar-chart-3"></i></div>
                 <h3>لا توجد بيانات</h3>
-                <p>لا توجد حجوزات في هذا النطاق الزمني</p>
+                <p>لا توجد حجوزات في هذا النطاق الزمني.</p>
               </div>
             </div>
           `;
@@ -103,71 +127,114 @@
           return;
         }
 
-        const totals = rows.reduce(
-          (acc, r) => {
-            acc.bookings += Number(r.bookings_count || 0);
-            acc.revenue += Number(r.total_revenue || 0);
-            acc.paid += Number(r.total_paid || 0);
-            acc.remaining += Number(r.total_remaining || 0);
-            return acc;
-          },
-          { bookings: 0, revenue: 0, paid: 0, remaining: 0 }
-        );
+        const totals = rows.reduce((acc, r) => {
+          acc.bookings  += Number(r.bookings_count   || 0);
+          acc.revenue   += Number(r.total_revenue    || 0);
+          acc.paid      += Number(r.total_paid       || 0);
+          acc.remaining += Number(r.total_remaining  || 0);
+          return acc;
+        }, { bookings: 0, revenue: 0, paid: 0, remaining: 0 });
+
+        const avgDaily = totals.revenue / Math.max(rows.length, 1);
 
         reportContainer.innerHTML = `
-          <div class="stats-grid mb-lg">
+          <div class="stats-grid mb-md">
             <div class="stat-card">
-              <div class="stat-label">إجمالي الحجوزات</div>
+              <div class="stat-card-head">
+                <span class="stat-icon-chip"><i data-lucide="clipboard-list"></i></span>
+                <span class="stat-label">إجمالي الحجوزات</span>
+              </div>
               <div class="stat-value">${totals.bookings}</div>
+              <div class="stat-sub">${rows.length} يوم في النطاق</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">إجمالي الإيرادات</div>
-              <div class="stat-value">${window.utils.formatCurrency(totals.revenue)}</div>
+              <div class="stat-card-head">
+                <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="banknote"></i></span>
+                <span class="stat-label">إجمالي الإيرادات</span>
+              </div>
+              <div class="stat-value">${fmtMoney(totals.revenue)}</div>
+              <div class="stat-sub">متوسط ${fmtMoney(avgDaily)} يومياً</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">المدفوع</div>
-              <div class="stat-value">${window.utils.formatCurrency(totals.paid)}</div>
+              <div class="stat-card-head">
+                <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="circle-check"></i></span>
+                <span class="stat-label">المدفوع</span>
+              </div>
+              <div class="stat-value text-success">${fmtMoney(totals.paid)}</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-label">المتبقي</div>
-              <div class="stat-value">${window.utils.formatCurrency(totals.remaining)}</div>
+            <div class="stat-card${totals.remaining > 0 ? ' stat-card--warning' : ''}">
+              <div class="stat-card-head">
+                <span class="stat-icon-chip ${totals.remaining > 0 ? 'stat-icon-chip--warning' : ''}"><i data-lucide="receipt"></i></span>
+                <span class="stat-label">المتبقي</span>
+              </div>
+              <div class="stat-value ${totals.remaining > 0 ? 'text-warning' : ''}">${fmtMoney(totals.remaining)}</div>
             </div>
           </div>
 
-          <div class="table-wrapper">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>التاريخ</th>
-                  <th>عدد الحجوزات</th>
-                  <th>الإيرادات</th>
-                  <th>المدفوع</th>
-                  <th>المتبقي</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows.map((r) => `
+          <div class="card mb-md">
+            <div class="card-header">
+              <h3>الإيرادات اليومية</h3>
+              <span class="card-header-meta">${rows.length} يوم</span>
+            </div>
+            <div class="card-body">
+              <div id="revenue-bar-chart" style="min-height: 220px"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>التفاصيل اليومية</h3>
+            </div>
+            <div class="table-wrapper" style="box-shadow:none;border-radius:0">
+              <table class="table tabular-nums">
+                <thead>
                   <tr>
-                    <td>${window.utils.formatDate(r.day)}</td>
-                    <td>${r.bookings_count}</td>
-                    <td>${window.utils.formatCurrency(r.total_revenue)}</td>
-                    <td>${window.utils.formatCurrency(r.total_paid)}</td>
-                    <td>${window.utils.formatCurrency(r.total_remaining)}</td>
+                    <th>التاريخ</th>
+                    <th>الحجوزات</th>
+                    <th>الإيرادات</th>
+                    <th>المدفوع</th>
+                    <th>المتبقي</th>
                   </tr>
-                `).join('')}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td>الإجمالي</td>
-                  <td>${totals.bookings}</td>
-                  <td>${window.utils.formatCurrency(totals.revenue)}</td>
-                  <td>${window.utils.formatCurrency(totals.paid)}</td>
-                  <td>${window.utils.formatCurrency(totals.remaining)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  ${rows.map((r) => `
+                    <tr>
+                      <td>${window.utils.formatDate(r.day)}</td>
+                      <td>${r.bookings_count}</td>
+                      <td>${fmtMoney(r.total_revenue)}</td>
+                      <td class="text-success">${fmtMoney(r.total_paid)}</td>
+                      <td class="${Number(r.total_remaining) > 0 ? 'text-warning' : 'text-tertiary'}">${fmtMoney(r.total_remaining)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td><strong>الإجمالي</strong></td>
+                    <td><strong>${totals.bookings}</strong></td>
+                    <td><strong>${fmtMoney(totals.revenue)}</strong></td>
+                    <td><strong class="text-success">${fmtMoney(totals.paid)}</strong></td>
+                    <td><strong>${fmtMoney(totals.remaining)}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         `;
+
+        // ارسم الرسم البياني
+        const chartEl = reportContainer.querySelector('#revenue-bar-chart');
+        if (chartEl && window.charts && window.charts.bar) {
+          window.charts.bar({
+            container: chartEl,
+            data: rows.map((r) => ({
+              label: dayLabel(r.day),
+              value: Number(r.total_revenue) || 0
+            })),
+            height: 220
+          });
+        }
+
+        window.utils.renderIcons(reportContainer);
       }
 
       function exportCsv() {
@@ -186,12 +253,10 @@
           ])
         ];
         const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-        // BOM لدعم العربية في Excel
         const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
         const link = document.createElement('a');
-        const fileName = `تقرير-${fromInput.value}-إلى-${toInput.value}.csv`;
         link.href = URL.createObjectURL(blob);
-        link.download = fileName;
+        link.download = `تقرير-${fromInput.value}-إلى-${toInput.value}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -199,23 +264,26 @@
         window.utils.toast('تم تصدير التقرير', 'success');
       }
 
-      fromInput.addEventListener('change', refresh);
-      toInput.addEventListener('change', refresh);
-      quickBtns.forEach((btn) => {
-        btn.addEventListener('click', () => setRange(btn.dataset.quick));
+      fromInput.addEventListener('change', () => {
+        quickChips.forEach((c) => c.classList.remove('is-active'));
+        refresh();
+      });
+      toInput.addEventListener('change', () => {
+        quickChips.forEach((c) => c.classList.remove('is-active'));
+        refresh();
+      });
+      quickChips.forEach((c) => {
+        c.addEventListener('click', () => setRange(c.dataset.quick));
       });
       exportBtn.addEventListener('click', exportCsv);
 
       cleanup.push(() => {
         alive = false;
-        fromInput.removeEventListener('change', refresh);
-        toInput.removeEventListener('change', refresh);
-        exportBtn.removeEventListener('click', exportCsv);
       });
 
       if (window.realtime) {
-        const debouncedRefresh = window.utils.debounce(refresh, 400);
-        cleanup.push(window.realtime.on('bookings:change', debouncedRefresh));
+        const debounced = window.utils.debounce(refresh, 400);
+        cleanup.push(window.realtime.on('bookings:change', debounced));
       }
 
       // افتراضي: الشهر الحالي

@@ -1,4 +1,4 @@
-# Architecture — مَرْمى
+# Architecture — مَرمى
 
 ## نظرة عامة
 

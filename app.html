@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مَرْمى</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo-mark.svg">
+  <title>مَرمى</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
@@ -35,12 +37,22 @@
   <script src="/src/features/reports/api.js"></script>
   <script src="/src/features/schedule/api.js"></script>
   <script src="/src/features/subscriptions/api.js"></script>
+  <script src="/src/features/subscriptions/pricing.js"></script>
   <script src="/src/features/admin/api.js"></script>
 
   <!-- API aggregator (window.api) -->
   <script src="/src/core/api.js"></script>
 
-  <!-- Shared components -->
+  <!-- Charts (vanilla SVG, no deps) — يجب أن تُحمَّل قبل صفحات الـ pages -->
+  <script src="/src/shared/charts/sparkline.js"></script>
+  <script src="/src/shared/charts/bar.js"></script>
+  <script src="/src/shared/charts/donut.js"></script>
+  <script src="/src/shared/charts/heatmap.js"></script>
+
+  <!-- Shared components (theme-toggle + drawer + command-palette تُحمَّل قبل layout) -->
+  <script src="/src/shared/components/theme-toggle.js"></script>
+  <script src="/src/shared/components/drawer.js"></script>
+  <script src="/src/shared/components/command-palette.js"></script>
   <script src="/src/shared/components/layout.js"></script>
   <script src="/src/features/bookings/components/booking-modal.js"></script>
 
@@ -63,6 +75,7 @@
   <script src="/src/features/reports/pages/daily.js"></script>
   <script src="/src/features/staff/pages/manage.js"></script>
   <script src="/src/features/subscriptions/pages/manage.js"></script>
+  <script src="/src/features/tenant/pages/settings.js"></script>
 
   <!-- Boot (آخر شيء) -->
   <script src="/src/app/boot.js"></script>

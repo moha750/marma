@@ -6,6 +6,12 @@ window.auth = (function () {
   let currentStatus = null;       // ذاكرة مؤقتة لحالة الاشتراك
   let currentIsAdmin = null;      // ذاكرة مؤقتة لـ super-admin
 
+  // يضيف base path (لـ GitHub Pages /marma/) إلى المسار المطلق
+  // في dev أو custom domain يبقى المسار كما هو
+  function withBase(path) {
+    return (window.__BASE__ || '') + path;
+  }
+
   // التحقق من الجلسة. ترجع session أو null إذا غير مسجل
   async function getSession() {
     const { data: { session }, error } = await window.sb.auth.getSession();
@@ -65,7 +71,7 @@ window.auth = (function () {
   async function requireAuth(redirectTo = '/auth/login') {
     const session = await getSession();
     if (!session) {
-      window.location.replace(redirectTo);
+      window.location.replace(withBase(redirectTo));
       throw new Error('UNAUTHENTICATED');
     }
     try {
@@ -73,7 +79,7 @@ window.auth = (function () {
       return { user: session.user, profile, tenant: profile.tenants };
     } catch (err) {
       await window.sb.auth.signOut();
-      window.location.replace(redirectTo);
+      window.location.replace(withBase(redirectTo));
       throw err;
     }
   }
@@ -83,7 +89,7 @@ window.auth = (function () {
     const ctx = await requireAuth();
     if (ctx.profile.role !== 'owner') {
       window.utils.toast('هذه الصفحة متاحة لمالك الملعب فقط', 'warning');
-      window.location.replace(redirectTo);
+      window.location.replace(withBase(redirectTo));
       throw new Error('FORBIDDEN');
     }
     return ctx;
@@ -96,7 +102,7 @@ window.auth = (function () {
     const ctx = await requireAuth();
     const status = await loadSubscriptionStatus();
     if (!status || !status.is_active) {
-      if (redirectTo) window.location.replace(redirectTo);
+      if (redirectTo) window.location.replace(withBase(redirectTo));
       throw new Error('SUBSCRIPTION_EXPIRED');
     }
     return Object.assign({}, ctx, { status });
@@ -106,30 +112,30 @@ window.auth = (function () {
   async function requireSuperAdmin(redirectTo = '/auth/login') {
     const session = await getSession();
     if (!session) {
-      window.location.replace(redirectTo);
+      window.location.replace(withBase(redirectTo));
       throw new Error('UNAUTHENTICATED');
     }
     const isAdmin = await checkIsSuperAdmin();
     if (!isAdmin) {
       window.utils.toast('هذه الصفحة للمشرف العام فقط', 'error');
-      window.location.replace('/');
+      window.location.replace(withBase('/'));
       throw new Error('NOT_SUPER_ADMIN');
     }
     return { user: session.user, isSuperAdmin: true };
   }
 
-  // يحدد الوجهة الصحيحة بعد تسجيل الدخول:
-  // - إذا له profile (مالك أو موظف) → /dashboard (SPA)
-  // - إذا لا profile لكن super-admin → /admin/subscriptions
+  // يحدد الوجهة الصحيحة بعد تسجيل الدخول (مع base path):
+  // - إذا له profile (مالك أو موظف) → /[base]/dashboard
+  // - إذا لا profile لكن super-admin → /[base]/admin/subscriptions
   // - غير ذلك → null (يجب تسجيل الخروج)
   async function getPostLoginDestination() {
     const { data: { user } } = await window.sb.auth.getUser();
     if (!user) return null;
     const { data: profile } = await window.sb
       .from('profiles').select('id').eq('id', user.id).maybeSingle();
-    if (profile) return '/dashboard';
+    if (profile) return withBase('/dashboard');
     const isAdmin = await checkIsSuperAdmin({ force: true });
-    if (isAdmin) return '/admin/subscriptions';
+    if (isAdmin) return withBase('/admin/subscriptions');
     return null;
   }
 
@@ -153,7 +159,7 @@ window.auth = (function () {
     currentStatus = null;
     currentIsAdmin = null;
     if (window.store) window.store.clearAll();
-    window.location.replace(redirectTo);
+    window.location.replace(withBase(redirectTo));
   }
 
   return {

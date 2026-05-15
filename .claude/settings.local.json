@@ -15,7 +15,14 @@
       "Bash(node --check \"e:/moham/Downloads/goal/js/layout.js\")",
       "Bash(node --check \"e:/moham/Downloads/goal/js/utils.js\")",
       "Bash(node --check \"e:/moham/Downloads/goal/js/book.js\")",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "PowerShell($raw = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw; $j = $raw | ConvertFrom-Json; $j.PSObject.Properties.Name)",
+      "PowerShell($j = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw | ConvertFrom-Json; $j.projects.PSObject.Properties.Name)",
+      "PowerShell($j = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw | ConvertFrom-Json; $p = $j.projects.'E:/moham/Downloads/goal'; $p.PSObject.Properties.Name)",
+      "PowerShell($j = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw | ConvertFrom-Json; \"tipsHistory:\"; $j.tipsHistory | ConvertTo-Json -Depth 3 -Compress; \"\"; \"seenNotifications:\"; $j.seenNotifications | ConvertTo-Json -Depth 3 -Compress; \"\"; \"skillUsage:\"; $j.skillUsage | ConvertTo-Json -Depth 3 -Compress)",
+      "PowerShell($j = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw | ConvertFrom-Json; \"routineFiredWatermark:\"; $j.routineFiredWatermark | ConvertTo-Json -Depth 5 -Compress)",
+      "PowerShell($j = Get-Content \"C:\\\\Users\\\\moham\\\\.claude.json\" -Raw | ConvertFrom-Json; \"installedPlugins:\"; if \\($j.PSObject.Properties.Name -contains 'installedPlugins'\\) { $j.installedPlugins | ConvertTo-Json -Depth 5 } else { \"NONE\" })",
+      "PowerShell(claude *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -28,6 +28,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# Claude Code MCP config (contains secrets)
+.mcp.json
+
 # Temp
 *.tmp
 *.bak

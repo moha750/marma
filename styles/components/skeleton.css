@@ -1,0 +1,103 @@
+/* Skeleton — حالات تحميل هيكليّة بدلاً من spinners كبيرة.
+   استخدامها:
+     <div class="skeleton skeleton-line" style="width:60%"></div>
+     <div class="skeleton skeleton-block" style="height:120px"></div>
+     <span class="skeleton skeleton-circle"></span>
+
+   يحترم prefers-reduced-motion (يطفئ الـ shimmer).
+*/
+
+.skeleton {
+  display: block;
+  background: var(--surface-2);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: -100% 0;
+  animation: skeleton-shimmer 1.5s var(--ease-out) infinite;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .skeleton {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: -100% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* في RTL، اقلب الاتجاه ليبدو طبيعياً */
+[dir="rtl"] .skeleton {
+  animation-name: skeleton-shimmer-rtl;
+}
+
+@keyframes skeleton-shimmer-rtl {
+  from { background-position: 200% 0; }
+  to   { background-position: -100% 0; }
+}
+
+/* أشكال جاهزة */
+
+.skeleton-line {
+  height: 12px;
+  width: 100%;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-line--sm { height: 8px; }
+.skeleton-line--lg { height: 16px; }
+
+.skeleton-block {
+  height: 80px;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-circle {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.skeleton-circle--sm { width: 20px; height: 20px; }
+.skeleton-circle--lg { width: 48px; height: 48px; }
+
+/* مجموعة أسطر — لمحاكاة فقرة */
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* بطاقة هيكلية كاملة — مكافئ لـ stat-card */
+.skeleton-card {
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 116px;
+}
+
+/* احترام prefers-reduced-motion: يبقى المظهر، يختفي shimmer */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+  }
+}

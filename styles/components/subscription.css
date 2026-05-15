@@ -33,3 +33,91 @@
   color: var(--color-primary);
   margin: 8px 0;
 }
+
+/* ─── Unit counter — لاستخدامه في صفحة الاشتراك (عدّاد +/-) ─── */
+
+.unit-counter {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+.unit-counter input {
+  width: 64px;
+  height: 36px;
+  text-align: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+.unit-counter input:focus {
+  outline: 0;
+  border-color: var(--border-focus);
+  box-shadow: var(--ring-focus);
+}
+.unit-counter input::-webkit-inner-spin-button,
+.unit-counter input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.unit-counter button {
+  min-width: 36px;
+  height: 36px;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  padding: 0;
+}
+/* زر عادي داخل العدّاد (بدون classes الـ btn) — مثل صفحة الهبوط */
+.unit-counter button:not([class*="btn"]) {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.unit-counter button:not([class*="btn"]):hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+.unit-counter button:not([class*="btn"]):focus-visible {
+  outline: 0;
+  border-color: var(--border-focus);
+  box-shadow: var(--ring-focus);
+}
+
+/* ─── Invoice lines — تفصيل الفاتورة في صفحة الاشتراك والـ modal ─── */
+
+.invoice-lines {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.invoice-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.invoice-line + .invoice-line {
+  border-top: 1px solid var(--border-subtle);
+}
+.invoice-line--total {
+  background: var(--surface-2);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

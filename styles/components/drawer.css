@@ -1,0 +1,168 @@
+/* Drawer — لوح جانبي ينزلق من الحافة، يحفظ سياق الصفحة خلفه.
+   للتعديل السياقي (حجز، عميل، فترة جدول).
+   على الجوال يصبح modal كامل الشاشة.
+
+   البنية:
+   <div class="drawer-backdrop" data-open="true">
+     <aside class="drawer drawer--md" role="dialog">
+       <header class="drawer-header">...</header>
+       <div class="drawer-body">...</div>
+       <footer class="drawer-footer">...</footer>
+     </aside>
+   </div>
+*/
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  z-index: 90;
+  display: flex;
+  justify-content: flex-start;       /* في RTL: الـ start = اليمين */
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    visibility 0s linear var(--duration-normal);
+  backdrop-filter: blur(2px);
+}
+
+.drawer-backdrop[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.drawer {
+  background: var(--surface-1);
+  height: 100%;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-3);
+  transform: translateX(100%);       /* RTL: ينزلق من اليمين */
+  transition: transform var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+[dir="ltr"] .drawer {
+  transform: translateX(-100%);
+}
+
+.drawer-backdrop[data-open="true"] .drawer {
+  transform: translateX(0);
+}
+
+.drawer--sm  { max-width: 380px; }
+.drawer--md  { max-width: 480px; }
+.drawer--lg  { max-width: 600px; }
+.drawer--xl  { max-width: 760px; }
+
+.drawer-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.drawer-header h3,
+.drawer-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.drawer-header-meta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.drawer-close:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.drawer-close:focus-visible {
+  outline: 0;
+  box-shadow: var(--ring-focus);
+}
+
+.drawer-body {
+  padding: var(--space-5);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.drawer-body--flush {
+  padding: 0;
+}
+
+.drawer-footer {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* أقسام داخل الـ drawer */
+.drawer-section {
+  padding: var(--space-4) var(--space-5);
+}
+.drawer-section + .drawer-section {
+  border-top: 1px solid var(--border-subtle);
+}
+.drawer-section-title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: var(--space-2);
+}
+
+/* الجوال — drawer يصير modal من الأسفل (bottom-sheet) */
+@media (max-width: 640px) {
+  .drawer-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .drawer {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    max-height: 92vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    transform: translateY(100%);
+  }
+  [dir="ltr"] .drawer {
+    transform: translateY(100%);
+  }
+  .drawer-backdrop[data-open="true"] .drawer {
+    transform: translateY(0);
+  }
+}

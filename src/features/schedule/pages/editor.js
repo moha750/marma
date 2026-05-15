@@ -1,10 +1,14 @@
-// صفحة أيام وفترات العمل - module pattern (SPA + legacy)
-// كل أرضية لها فتراتها الخاصة. للمالك فقط.
+// أيام وفترات العمل — محرر الجدول. للمالك فقط.
+// تحديث 2026: تبويبات الأرضيات بـ chip-rail، بطاقات أيام محدّثة، رؤوس فترات بـ chips،
+// زر "نسخ إلى أيام أخرى" لكل يوم، modal أنظف للفترة + مع معاينات.
 
 (function () {
   const TEMPLATE = `
     <div class="page-header">
-      <h2>أيام وفترات العمل</h2>
+      <div>
+        <h2>أيام وفترات العمل</h2>
+        <div class="page-subtitle">أوقات افتتاح كل أرضية، مدة الموعد، وسعر الساعة</div>
+      </div>
     </div>
     <div id="schedule-container">
       <div class="loader-center"><div class="loader loader--lg"></div></div>
@@ -42,16 +46,22 @@
     if (isOvernight) endMins += 24 * 60;
     const totalMins = endMins - startMins;
     const hours = Math.floor(totalMins / 60);
-    const mins = totalMins % 60;
+    const mins  = totalMins % 60;
     let durationLabel;
     if (mins === 0) durationLabel = `${hours} ساعة`;
     else if (hours === 0) durationLabel = `${mins} دقيقة`;
     else durationLabel = `${hours} ساعة و ${mins} دقيقة`;
     const closeFormatted = window.utils.formatTimeOfDay(close);
     const suffix = isOvernight
-      ? `<strong>تنتهي ${closeFormatted} في اليوم التالي</strong>`
+      ? `<strong>تنتهي ${closeFormatted} اليوم التالي</strong>`
       : 'في اليوم نفسه';
-    return `<div style="background:${isOvernight ? 'var(--color-warning-light)' : 'var(--color-primary-light)'};color:${isOvernight ? 'var(--color-warning)' : 'var(--color-primary-dark)'};padding:10px 14px;border-radius:var(--radius);font-weight:500;margin-bottom:16px">⏱ المدة: <strong>${durationLabel}</strong> — ${suffix}</div>`;
+    const kind = isOvernight ? 'warning' : 'success';
+    return `
+      <div class="schedule-preview schedule-preview--${kind}">
+        <i data-lucide="${isOvernight ? 'moon' : 'clock'}"></i>
+        <div>المدة: <strong>${durationLabel}</strong> — ${suffix}</div>
+      </div>
+    `;
   }
 
   function previewSlots(open, close, durationMins) {
@@ -64,7 +74,12 @@
     const totalMins = endMins - startMins;
     const slotCount = Math.floor(totalMins / durationMins);
     if (slotCount <= 0) {
-      return `<div style="background:var(--color-danger-light);color:var(--color-danger);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;font-weight:500;display:flex;align-items:center;gap:8px"><i data-lucide="triangle-alert"></i> مدة الفترة أقصر من مدة الموعد - لن تُنشأ أي مواعيد</div>`;
+      return `
+        <div class="schedule-preview schedule-preview--danger">
+          <i data-lucide="triangle-alert"></i>
+          <div>مدة الفترة أقصر من مدة الموعد — لن تُنشأ أي مواعيد</div>
+        </div>
+      `;
     }
     const fmt = (mins) => {
       const h = Math.floor(mins / 60) % 24;
@@ -72,16 +87,22 @@
       return window.utils.formatTimeOfDay(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     };
     const firstStart = startMins;
-    const firstEnd = firstStart + durationMins;
-    const lastStart = startMins + (slotCount - 1) * durationMins;
-    const lastEnd = lastStart + durationMins;
+    const firstEnd   = firstStart + durationMins;
+    const lastStart  = startMins + (slotCount - 1) * durationMins;
+    const lastEnd    = lastStart + durationMins;
     const slotWord = slotCount === 1 ? 'موعد' : (slotCount === 2 ? 'موعدان' : (slotCount <= 10 ? 'مواعيد' : 'موعداً'));
-    return `<div style="background:var(--color-success-light);color:var(--color-primary-dark);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <i data-lucide="calendar-days"></i> <span>سيتم إنشاء <strong>${slotCount}</strong> ${slotWord} في هذه الفترة</span>
-      <div style="font-size:0.85rem;margin-top:4px;opacity:0.85;font-weight:normal">
-        ${slotCount === 1 ? '' : 'أول موعد:'} <strong>${fmt(firstStart)} → ${fmt(firstEnd)}</strong>${slotCount > 1 ? ` &nbsp;·&nbsp; آخر موعد: <strong>${fmt(lastStart)} → ${fmt(lastEnd)}</strong>` : ''}
+    return `
+      <div class="schedule-preview schedule-preview--accent">
+        <i data-lucide="calendar-check"></i>
+        <div>
+          سيتم إنشاء <strong>${slotCount}</strong> ${slotWord}
+          <div class="text-xs" style="margin-top:2px;opacity:0.85">
+            ${slotCount === 1 ? '' : 'أول:'} <strong>${fmt(firstStart)} → ${fmt(firstEnd)}</strong>
+            ${slotCount > 1 ? `  ·  آخر: <strong>${fmt(lastStart)} → ${fmt(lastEnd)}</strong>` : ''}
+          </div>
+        </div>
       </div>
-    </div>`;
+    `;
   }
 
   function toMinuteRange(p) {
@@ -92,11 +113,7 @@
     if (end <= start) end += 24 * 60;
     return [start, end];
   }
-
-  function rangesOverlap(a, b) {
-    return a[0] < b[1] && b[0] < a[1];
-  }
-
+  function rangesOverlap(a, b) { return a[0] < b[1] && b[0] < a[1]; }
   function detectOverlap(periods) {
     const ranges = periods.map((p) => toMinuteRange(p));
     for (let i = 0; i < ranges.length; i++) {
@@ -112,7 +129,7 @@
       container.innerHTML = TEMPLATE;
       const isOwner = ctx.profile.role === 'owner';
       const scheduleContainer = container.querySelector('#schedule-container');
-      const fieldsHref = '/fields';
+      const fieldsHref = window.utils.path('/fields');
 
       let fields = [];
       let selectedFieldId = null;
@@ -125,24 +142,27 @@
       function attachDurationPreview(form, previewEl) {
         const openEl = form.querySelector('[name="open"]');
         const closeEl = form.querySelector('[name="close"]');
-        const update = () => { previewEl.innerHTML = previewDuration(openEl.value, closeEl.value); window.utils.renderIcons(previewEl); };
+        const update = () => {
+          previewEl.innerHTML = previewDuration(openEl.value, closeEl.value);
+          window.utils.renderIcons(previewEl);
+        };
         openEl.addEventListener('input', update);
         closeEl.addEventListener('input', update);
         update();
       }
 
       function attachSlotsPreview(form, previewEl) {
-        const openEl = form.querySelector('[name="open"]');
+        const openEl  = form.querySelector('[name="open"]');
         const closeEl = form.querySelector('[name="close"]');
-        const durationEl = form.querySelector('[name="duration"]');
+        const durEl   = form.querySelector('[name="duration"]');
         const update = () => {
-          const dur = parseInt(durationEl.value, 10) || 0;
+          const dur = parseInt(durEl.value, 10) || 0;
           previewEl.innerHTML = previewSlots(openEl.value, closeEl.value, dur);
           window.utils.renderIcons(previewEl);
         };
         openEl.addEventListener('input', update);
         closeEl.addEventListener('input', update);
-        durationEl.addEventListener('change', update);
+        durEl.addEventListener('change', update);
         update();
       }
 
@@ -152,13 +172,12 @@
         if (!selectedFieldId) return;
         const rows = await window.api.listWorkingPeriods(selectedFieldId);
         rows.forEach((r) => {
-          const open = (r.open_time || '').substring(0, 5);
+          const open  = (r.open_time  || '').substring(0, 5);
           const close = (r.close_time || '').substring(0, 5);
           periodsByDay[r.day_of_week].push({
-            open,
-            close,
+            open, close,
             duration: Number(r.slot_duration_minutes) || 60,
-            price: Number(r.hourly_price) || 0
+            price:    Number(r.hourly_price) || 0
           });
         });
         Object.keys(periodsByDay).forEach((dow) => {
@@ -170,17 +189,16 @@
         if (!alive) return;
         scheduleContainer.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
         try {
-          fields = window.store
-            ? await window.store.get('fields:all')
-            : await window.api.listFields(true);
+          fields = window.store ? await window.store.get('fields:all') : await window.api.listFields(true);
           if (!alive) return;
           if (!fields.length) {
             scheduleContainer.innerHTML = `
               <div class="card">
                 <div class="empty-state">
-                  <div class="icon"><i data-lucide="goal"></i></div>
+                  <div class="empty-icon"><i data-lucide="goal"></i></div>
                   <h3>لا توجد أرضيات بعد</h3>
-                  <p>أضف أرضية واحدة على الأقل من <a href="${fieldsHref}">صفحة الأرضيات</a> قبل ضبط أوقات العمل.</p>
+                  <p>أضف أرضية واحدة على الأقل قبل ضبط أوقات العمل.</p>
+                  <a href="${fieldsHref}" class="btn btn--primary"><i data-lucide="plus"></i> إضافة أرضية</a>
                 </div>
               </div>
             `;
@@ -193,79 +211,116 @@
           render();
         } catch (err) {
           if (!alive) return;
-          scheduleContainer.innerHTML = `<div class="card"><div class="empty-state"><p class="text-danger">${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
+          scheduleContainer.innerHTML = `
+            <div class="card">
+              <div class="empty-state">
+                <div class="empty-icon"><i data-lucide="triangle-alert"></i></div>
+                <p class="text-danger">${window.utils.escapeHtml(window.utils.formatError(err))}</p>
+              </div>
+            </div>
+          `;
+          window.utils.renderIcons(scheduleContainer);
         }
       }
 
       function render() {
         const selectedField = fields.find((f) => f.id === selectedFieldId) || fields[0];
 
+        // إحصاء سريع للجدول الحالي
+        const totalPeriods = Object.values(periodsByDay).reduce((sum, arr) => sum + arr.length, 0);
+        const openDays = Object.values(periodsByDay).filter((arr) => arr.length).length;
+
         scheduleContainer.innerHTML = `
+          <!-- شريط اختيار الأرضية -->
+          <div class="chip-rail mb-md" id="field-tabs">
+            ${fields.map((f) => `
+              <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}" data-field-id="${f.id}">
+                <i data-lucide="goal" style="width:12px;height:12px"></i>
+                <span>${window.utils.escapeHtml(f.name)}</span>
+                ${!f.is_active ? '<span class="text-tertiary text-xs">معطّلة</span>' : ''}
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- ملخص الأرضية المختارة + أفعال -->
           <div class="card mb-md">
-            <div class="card-body">
-              <div class="form-group" style="margin:0">
-                <label class="form-label">اختر الأرضية</label>
-                <select class="form-control" id="field-selector">
-                  ${fields.map((f) => `<option value="${f.id}" ${f.id === selectedFieldId ? 'selected' : ''}>${window.utils.escapeHtml(f.name)}${!f.is_active ? ' (معطّلة)' : ''}</option>`).join('')}
-                </select>
-                <span class="form-help">لكل أرضية فتراتها وأسعارها الخاصة. اختر أرضية لإدارة جدولها.</span>
+            <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap">
+              <div>
+                <div class="fw-semibold" style="font-size:var(--text-lg)">${window.utils.escapeHtml(selectedField.name)}</div>
+                <div class="text-muted text-xs">${openDays} أيام مفتوحة · ${totalPeriods} ${totalPeriods === 1 ? 'فترة' : 'فترات'} إجمالاً</div>
               </div>
+              ${isOwner ? `
+                <button class="btn btn--primary" id="add-period-btn">
+                  <i data-lucide="plus"></i> إضافة فترة لعدة أيام
+                </button>
+              ` : ''}
             </div>
           </div>
 
-          <div class="card mb-md">
-            <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-              <div style="flex:1;min-width:240px">
-                <div style="font-weight:700;font-size:1.05rem">${window.utils.escapeHtml(selectedField.name)}</div>
-                <div class="text-muted" style="font-size:0.9rem;margin-top:4px">أضف فترات العمل وحدد المدة والسعر لكل فترة.</div>
-              </div>
-              ${isOwner ? '<button class="btn btn--primary" id="add-period-btn">+ إضافة فترة</button>' : ''}
-            </div>
-          </div>
-
-          <div id="days-grid" style="display:flex;flex-direction:column;gap:16px"></div>
+          <!-- شبكة الأيام -->
+          <div id="days-grid" class="days-grid"></div>
         `;
 
-        scheduleContainer.querySelector('#field-selector').addEventListener('change', async (e) => {
-          selectedFieldId = e.target.value;
-          scheduleContainer.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
-          try {
-            await loadPeriodsForField();
-            if (!alive) return;
-            render();
-          } catch (err) {
-            window.utils.toast(window.utils.formatError(err), 'error');
-          }
+        // تبديل الأرضية بالنقر على chip
+        scheduleContainer.querySelectorAll('#field-tabs [data-field-id]').forEach((chip) => {
+          chip.addEventListener('click', async () => {
+            selectedFieldId = chip.dataset.fieldId;
+            scheduleContainer.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
+            try {
+              await loadPeriodsForField();
+              if (!alive) return;
+              render();
+            } catch (err) {
+              window.utils.toast(window.utils.formatError(err), 'error');
+            }
+          });
         });
 
         if (isOwner) {
-          scheduleContainer.querySelector('#add-period-btn').addEventListener('click', () => {
-            openMultiDayPeriodModal();
-          });
+          scheduleContainer.querySelector('#add-period-btn').addEventListener('click', openMultiDayPeriodModal);
         }
 
         const grid = scheduleContainer.querySelector('#days-grid');
-        DAYS.forEach((day) => {
-          grid.appendChild(buildDayCard(day));
-        });
+        DAYS.forEach((day) => grid.appendChild(buildDayCard(day)));
         window.utils.renderIcons(scheduleContainer);
       }
 
       function buildDayCard(day) {
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card day-card';
         const periods = periodsByDay[day.dow] || [];
+        const isOpen = periods.length > 0;
+
         card.innerHTML = `
           <div class="card-header">
-            <span>${day.name}</span>
-            ${isOwner ? '<button class="btn btn--primary btn--sm" data-act="add">+ إضافة فترة</button>' : ''}
+            <div style="display:flex;align-items:center;gap:var(--space-2)">
+              <span class="day-card-name">${day.name}</span>
+              ${isOpen
+                ? `<span class="chip-status chip-status--success">${periods.length} ${periods.length === 1 ? 'فترة' : 'فترات'}</span>`
+                : `<span class="chip-status chip-status--muted">مغلق</span>`}
+            </div>
+            ${isOwner ? `
+              <div class="flex-row" style="gap:var(--space-1)">
+                ${isOpen ? `
+                  <button class="btn btn--xs btn--ghost" data-act="copy" title="نسخ الفترات إلى أيام أخرى">
+                    <i data-lucide="copy"></i>
+                  </button>
+                ` : ''}
+                <button class="btn btn--xs btn--accent-quiet" data-act="add" title="إضافة فترة">
+                  <i data-lucide="plus"></i>
+                  <span>فترة</span>
+                </button>
+              </div>
+            ` : ''}
           </div>
-          <div class="card-body" data-periods-body>
+          <div class="card-body day-card-body" data-periods-body>
             ${renderPeriodsList(periods, day.dow)}
           </div>
         `;
         if (isOwner) {
           card.querySelector('[data-act="add"]').addEventListener('click', () => openPeriodEditor(day, null));
+          const copyBtn = card.querySelector('[data-act="copy"]');
+          if (copyBtn) copyBtn.addEventListener('click', () => openCopyDayModal(day));
           attachPeriodActions(card, day);
         }
         return card;
@@ -274,34 +329,42 @@
       function renderPeriodsList(periods, dow) {
         if (!periods.length) {
           return `
-            <div class="text-muted text-center" style="padding:12px;background:var(--color-bg);border-radius:var(--radius)">
-              ⛔ مغلق - لا توجد فترات حجز لهذا اليوم
+            <div class="day-empty">
+              <i data-lucide="moon-star"></i>
+              <span>مغلق — لا توجد فترات حجز</span>
             </div>
           `;
         }
         return `
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${periods.map((p, idx) => `
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--color-primary-light);border-radius:var(--radius);color:var(--color-primary-dark);flex-wrap:wrap">
-                <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:220px">
-                  <div style="font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                    <i data-lucide="clock"></i> <span>${window.utils.formatTimeOfDay(p.open)} → ${window.utils.formatTimeOfDay(p.close)}</span>
-                    ${p.close <= p.open ? '<span class="text-muted" style="font-size:0.85rem;margin-inline-start:8px;font-weight:500">(تنتهي اليوم التالي)</span>' : ''}
+          <div class="period-list">
+            ${periods.map((p, idx) => {
+              const overnight = p.close <= p.open;
+              return `
+                <div class="period-row">
+                  <div class="period-row-main">
+                    <div class="period-row-time">
+                      <i data-lucide="clock"></i>
+                      <span>${window.utils.formatTimeOfDay(p.open)} → ${window.utils.formatTimeOfDay(p.close)}</span>
+                      ${overnight ? '<span class="chip-status chip-status--warning" style="margin-inline-start:auto"><i data-lucide="moon" style="width:10px;height:10px"></i> اليوم التالي</span>' : ''}
+                    </div>
+                    <div class="period-row-meta">
+                      <span><i data-lucide="timer"></i> ${formatDuration(p.duration)}</span>
+                      <span><i data-lucide="banknote"></i> ${window.utils.formatCurrency(p.price)}<span class="text-tertiary">/س</span></span>
+                    </div>
                   </div>
-                  <div style="font-size:0.9rem;opacity:0.85">
-                    مدة الموعد: <strong>${formatDuration(p.duration)}</strong>
-                    &nbsp;·&nbsp;
-                    السعر: <strong>${window.utils.formatCurrency(p.price)}/ساعة</strong>
-                  </div>
+                  ${isOwner ? `
+                    <div class="actions-inline" style="opacity:1">
+                      <button class="btn btn--xs btn--ghost" data-act="edit" data-dow="${dow}" data-idx="${idx}" title="تعديل">
+                        <i data-lucide="pencil"></i>
+                      </button>
+                      <button class="btn btn--xs btn--danger-quiet" data-act="delete" data-dow="${dow}" data-idx="${idx}" title="حذف">
+                        <i data-lucide="trash-2"></i>
+                      </button>
+                    </div>
+                  ` : ''}
                 </div>
-                ${isOwner ? `
-                  <div class="flex-row" style="gap:4px;flex-wrap:nowrap">
-                    <button class="btn btn--secondary btn--sm" data-act="edit" data-dow="${dow}" data-idx="${idx}">تعديل</button>
-                    <button class="btn btn--danger btn--sm" data-act="delete" data-dow="${dow}" data-idx="${idx}">حذف</button>
-                  </div>
-                ` : ''}
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         `;
       }
@@ -321,7 +384,7 @@
             if (!period) return;
             const ok = await window.utils.confirm({
               title: 'حذف فترة',
-              message: `حذف الفترة ${window.utils.formatTimeOfDay(period.open)} → ${window.utils.formatTimeOfDay(period.close)} من ${day.name}؟`,
+              message: `حذف ${window.utils.formatTimeOfDay(period.open)} → ${window.utils.formatTimeOfDay(period.close)} من ${day.name}؟`,
               confirmText: 'حذف',
               danger: true
             });
@@ -338,7 +401,6 @@
         const currentPrice = existing ? Number(existing.price) : 0;
         const formHtml = `
           <form id="period-form" autocomplete="off">
-            <p class="text-muted mb-md">${editing ? 'تعديل' : 'إضافة'} فترة عمل ليوم ${day.name}:</p>
             <div class="form-row cols-2">
               <div class="form-group">
                 <label class="form-label">من الساعة <span class="required">*</span></label>
@@ -358,8 +420,11 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">السعر بالساعة (ر.س) <span class="required">*</span></label>
-                <input type="number" min="0" step="0.01" class="form-control" name="price" required value="${currentPrice}">
+                <label class="form-label">سعر الساعة <span class="required">*</span></label>
+                <div class="input-group">
+                  <input type="number" min="0" step="0.01" class="form-control" name="price" required value="${currentPrice}">
+                  <span class="input-addon">ر.س</span>
+                </div>
               </div>
             </div>
             <div id="single-slots-preview"></div>
@@ -370,7 +435,7 @@
           <button type="submit" class="btn btn--primary" form="period-form">${editing ? 'حفظ' : 'إضافة'}</button>
         `;
         const ctrl = window.utils.openModal({
-          title: editing ? `تعديل فترة - ${day.name}` : `إضافة فترة - ${day.name}`,
+          title: editing ? `تعديل فترة — ${day.name}` : `إضافة فترة — ${day.name}`,
           body: formHtml,
           footer
         });
@@ -381,7 +446,7 @@
         periodForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
-          const open = fd.get('open');
+          const open  = fd.get('open');
           const close = fd.get('close');
           const duration = parseInt(fd.get('duration'), 10) || 60;
           const price = parseFloat(fd.get('price')) || 0;
@@ -395,7 +460,7 @@
           else newPeriods.push(newPeriod);
           const conflict = detectOverlap(newPeriods);
           if (conflict) {
-            window.utils.toast(`الفترة تتداخل مع فترة موجودة: ${window.utils.formatTimeOfDay(conflict.open)} → ${window.utils.formatTimeOfDay(conflict.close)}`, 'error');
+            window.utils.toast(`الفترة تتداخل مع: ${window.utils.formatTimeOfDay(conflict.open)} → ${window.utils.formatTimeOfDay(conflict.close)}`, 'error');
             return;
           }
           ctrl.close();
@@ -404,9 +469,10 @@
       }
 
       function openMultiDayPeriodModal() {
+        const fieldName = fields.find((f) => f.id === selectedFieldId).name;
         const formHtml = `
           <form id="multi-period-form" autocomplete="off">
-            <p class="text-muted mb-md">إضافة فترة عمل لـ <strong>${window.utils.escapeHtml(fields.find((f) => f.id === selectedFieldId).name)}</strong></p>
+            <p class="text-muted text-sm mb-md">إضافة فترة عمل لـ <strong class="text-accent">${window.utils.escapeHtml(fieldName)}</strong></p>
             <div class="form-row cols-2">
               <div class="form-group">
                 <label class="form-label">من الساعة <span class="required">*</span></label>
@@ -426,33 +492,34 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">السعر بالساعة (ر.س) <span class="required">*</span></label>
-                <input type="number" min="0" step="0.01" class="form-control" name="price" required value="0">
+                <label class="form-label">سعر الساعة <span class="required">*</span></label>
+                <div class="input-group">
+                  <input type="number" min="0" step="0.01" class="form-control" name="price" required value="0">
+                  <span class="input-addon">ر.س</span>
+                </div>
               </div>
             </div>
             <div id="multi-slots-preview"></div>
             <div class="form-group">
               <label class="form-label">الأيام المستهدفة</label>
-              <div style="display:flex;flex-direction:column;gap:6px;background:var(--color-bg);padding:12px;border-radius:var(--radius)">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+              <div class="schedule-mode-picker">
+                <label class="form-check">
                   <input type="radio" name="mode" value="all" checked>
-                  <span>تطبيق على كل أيام الأسبوع</span>
+                  <span>كل أيام الأسبوع</span>
                 </label>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+                <label class="form-check">
                   <input type="radio" name="mode" value="custom">
-                  <span>تخصيص أيام محددة</span>
+                  <span>أيام محددة</span>
                 </label>
               </div>
             </div>
-            <div id="days-picker" class="hidden" style="background:var(--color-info-light);padding:12px;border-radius:var(--radius)">
-              <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:8px">
-                ${DAYS.map((d) => `
-                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                    <input type="checkbox" name="day_${d.dow}" value="${d.dow}">
-                    <span>${d.name}</span>
-                  </label>
-                `).join('')}
-              </div>
+            <div id="days-picker" class="schedule-days-picker hidden">
+              ${DAYS.map((d) => `
+                <label class="form-check">
+                  <input type="checkbox" name="day_${d.dow}" value="${d.dow}">
+                  <span>${d.name}</span>
+                </label>
+              `).join('')}
             </div>
           </form>
         `;
@@ -460,7 +527,7 @@
           <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
           <button type="submit" class="btn btn--primary" form="multi-period-form">إضافة</button>
         `;
-        const ctrl = window.utils.openModal({ title: 'إضافة فترة عمل', body: formHtml, footer });
+        const ctrl = window.utils.openModal({ title: 'إضافة فترة لعدة أيام', body: formHtml, footer });
         const form = ctrl.modal.querySelector('#multi-period-form');
         const daysPicker = ctrl.modal.querySelector('#days-picker');
         attachDurationPreview(form, ctrl.modal.querySelector('#multi-duration-preview'));
@@ -475,7 +542,7 @@
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const fd = new FormData(form);
-          const open = fd.get('open');
+          const open  = fd.get('open');
           const close = fd.get('close');
           const duration = parseInt(fd.get('duration'), 10) || 60;
           const price = parseFloat(fd.get('price')) || 0;
@@ -507,13 +574,13 @@
             }
           }
           if (conflicts.length === targetDows.length) {
-            window.utils.toast(`الفترة تتداخل مع فترات موجودة في كل الأيام المستهدفة (${conflicts.join('، ')})`, 'error');
+            window.utils.toast(`الفترة تتداخل في كل الأيام (${conflicts.join('، ')})`, 'error');
             return;
           }
           if (conflicts.length) {
             const ok = await window.utils.confirm({
               title: 'تداخل في بعض الأيام',
-              message: `الأيام التالية فيها تداخل وسيتم تخطّيها: ${conflicts.join('، ')}. هل تريد المتابعة لباقي الأيام؟`,
+              message: `الأيام التالية فيها تداخل وسيتم تخطّيها: ${conflicts.join('، ')}. المتابعة لباقي الأيام؟`,
               confirmText: 'متابعة'
             });
             if (!ok) return;
@@ -525,7 +592,53 @@
               await window.api.setDayPeriods(selectedFieldId, dow, newPeriodsByDay[dow]);
               periodsByDay[dow] = newPeriodsByDay[dow];
             }
-            window.utils.toast(`تمت إضافة الفترة على ${savedDows.length} ${savedDows.length === 1 ? 'يوم' : 'أيام'}`, 'success');
+            window.utils.toast(`تمت الإضافة على ${savedDows.length} ${savedDows.length === 1 ? 'يوم' : 'أيام'}`, 'success');
+            render();
+          } catch (err) {
+            window.utils.toast(window.utils.formatError(err), 'error');
+            await loadPeriodsForField();
+            render();
+          }
+        });
+      }
+
+      function openCopyDayModal(sourceDay) {
+        const sourcePeriods = periodsByDay[sourceDay.dow] || [];
+        if (!sourcePeriods.length) return;
+        const formHtml = `
+          <p class="text-muted text-sm mb-md">انسخ فترات <strong class="text-accent">${sourceDay.name}</strong> (${sourcePeriods.length} ${sourcePeriods.length === 1 ? 'فترة' : 'فترات'}) إلى:</p>
+          <div class="schedule-days-picker">
+            ${DAYS.filter((d) => d.dow !== sourceDay.dow).map((d) => `
+              <label class="form-check">
+                <input type="checkbox" name="day_${d.dow}" value="${d.dow}">
+                <span>${d.name}</span>
+              </label>
+            `).join('')}
+          </div>
+          <p class="form-help mt-md">سيتم استبدال أي فترات موجودة في الأيام المختارة بفترات ${sourceDay.name}.</p>
+        `;
+        const footer = `
+          <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+          <button type="button" class="btn btn--primary" id="copy-confirm">نسخ</button>
+        `;
+        const ctrl = window.utils.openModal({ title: `نسخ فترات ${sourceDay.name}`, body: formHtml, footer });
+        ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+        ctrl.modal.querySelector('#copy-confirm').addEventListener('click', async () => {
+          const targetDows = DAYS.filter((d) => d.dow !== sourceDay.dow)
+            .map((d) => d.dow)
+            .filter((dow) => ctrl.modal.querySelector(`input[name="day_${dow}"]`).checked);
+          if (!targetDows.length) {
+            window.utils.toast('اختر يوماً واحداً على الأقل', 'error');
+            return;
+          }
+          ctrl.close();
+          try {
+            for (const dow of targetDows) {
+              const copy = sourcePeriods.map((p) => ({ ...p }));
+              await window.api.setDayPeriods(selectedFieldId, dow, copy);
+              periodsByDay[dow] = copy.slice().sort((a, b) => a.open.localeCompare(b.open));
+            }
+            window.utils.toast(`تم النسخ إلى ${targetDows.length} ${targetDows.length === 1 ? 'يوم' : 'أيام'}`, 'success');
             render();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
@@ -546,7 +659,6 @@
         }
       }
 
-      // realtime: لو تغيرت أرضية (إضافة/تعديل/حذف) أعد التحميل
       if (window.realtime) {
         const debouncedInit = window.utils.debounce(init, 400);
         cleanup.push(window.realtime.on('fields:change', debouncedInit));

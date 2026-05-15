@@ -16,7 +16,13 @@
     <div id="calendar"></div>
   `;
 
-  const FIELD_COLORS = ['#16a34a', '#2563eb', '#dc2626', '#ca8a04', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function fieldPalette() {
+    return ['--cat-1', '--cat-2', '--cat-3', '--cat-4', '--cat-5', '--cat-6', '--cat-7', '--cat-8']
+      .map(token);
+  }
 
   const page = {
     async mount(container, ctx) {
@@ -39,7 +45,7 @@
       page._cleanup = cleanup;
 
       function colorForField(fieldId) {
-        return fieldColorMap[fieldId] || '#6b7280';
+        return fieldColorMap[fieldId] || token('--neutral-600');
       }
 
       function renderLegend() {
@@ -67,10 +73,10 @@
             const color = colorForField(b.field_id);
             let bg, border, classes = [];
             if (b.status === 'cancelled') {
-              bg = '#9ca3af'; border = '#6b7280';
+              bg = token('--neutral-500'); border = token('--neutral-600');
               classes.push('status-cancelled');
             } else if (b.status === 'pending') {
-              bg = '#ca8a04'; border = '#854d0e';
+              bg = token('--warning'); border = token('--warning');
               classes.push('status-pending');
             } else {
               bg = color; border = color;
@@ -99,8 +105,9 @@
           ? await window.store.get('fields:all')
           : await window.api.listFields(true);
         if (!alive) return;
+        const palette = fieldPalette();
         fields.forEach((f, i) => {
-          fieldColorMap[f.id] = FIELD_COLORS[i % FIELD_COLORS.length];
+          fieldColorMap[f.id] = palette[i % palette.length];
         });
         renderLegend();
       } catch (err) {

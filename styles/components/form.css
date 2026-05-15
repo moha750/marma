@@ -1,99 +1,176 @@
-/* Forms - inputs, filters, search, combobox */
+/* الحقول — تسميات علوية، تركيز بدائرة لونيّة، combobox مُحسَّن */
+
 .form-group {
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-4);
 }
 
 .form-label {
   display: block;
-  margin-bottom: var(--space-xs);
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--color-text);
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
 }
 
 .form-label .required {
-  color: var(--color-danger);
+  color: var(--danger);
+  margin-inline-start: 2px;
 }
 
+.form-label .optional {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-xs);
+  margin-inline-start: var(--space-2);
+}
+
+/* عنصر الإدخال الرئيسي */
 .form-control {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text-primary);
   font: inherit;
-  font-size: 0.95rem;
-  background: var(--color-card);
-  color: var(--color-text);
-  transition: border-color var(--transition), box-shadow var(--transition);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow   var(--duration-fast) var(--ease-out),
+    background   var(--duration-fast) var(--ease-out);
+}
+
+.form-control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-control:hover:not(:focus):not(:disabled) {
+  border-color: var(--border-strong);
 }
 
 .form-control:focus {
   outline: 0;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  border-color: var(--border-focus);
+  box-shadow: var(--ring-focus);
 }
 
+.form-control:disabled {
+  background: var(--surface-2);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.form-control[aria-invalid="true"],
+.form-control.is-invalid {
+  border-color: var(--danger);
+}
+.form-control[aria-invalid="true"]:focus,
+.form-control.is-invalid:focus {
+  box-shadow: var(--ring-danger);
+}
+
+/* textarea */
 textarea.form-control {
+  height: auto;
+  min-height: 88px;
+  padding: var(--space-3);
   resize: vertical;
-  min-height: 80px;
   font-family: inherit;
+  line-height: var(--leading-normal);
 }
 
+/* select */
+select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8B84' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: left var(--space-3) center;
+  padding-inline-start: var(--space-3);
+  padding-inline-end: var(--space-8);
+}
+[dir="rtl"] select.form-control {
+  background-position: left var(--space-3) center;
+}
+
+/* مساعد/خطأ تحت الحقل */
 .form-help {
   display: block;
-  margin-top: var(--space-xs);
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: var(--leading-snug);
 }
 
 .form-error {
   display: block;
-  margin-top: var(--space-xs);
-  font-size: 0.85rem;
-  color: var(--color-danger);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--danger);
+  line-height: var(--leading-snug);
 }
 
+/* شبكة الحقول */
 .form-row {
   display: grid;
-  gap: var(--space-md);
+  gap: var(--space-4);
 }
-
 .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
 
-@media (max-width: 540px) {
-  .form-row.cols-2 { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .form-row.cols-2,
+  .form-row.cols-3 { grid-template-columns: 1fr; }
 }
 
-/* Filters bar (للجداول والصفحات) */
+/* ─── شريط الفلاتر ─── */
+
 .filters-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
+  gap: var(--space-3);
   align-items: end;
-  padding: var(--space-md);
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: var(--space-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  margin-bottom: var(--space-4);
 }
 
 .filters-bar .form-group {
   margin: 0;
-  flex: 1;
-  min-width: 160px;
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
-/* Search box */
+/* ─── صندوق البحث ─── */
+
 .search-box {
   position: relative;
   max-width: 360px;
 }
 
-.search-box .form-control {
-  padding-inline-end: 36px;
+.search-box::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--space-3);
+  width: 16px;
+  margin-block: auto;
+  height: 16px;
+  background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A8B84' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='11' cy='11' r='8'%3e%3c/circle%3e%3cline x1='21' y1='21' x2='16.65' y2='16.65'%3e%3c/line%3e%3c/svg%3e") no-repeat center;
+  pointer-events: none;
 }
 
-/* Combobox (customer picker في حجز جديد) */
+.search-box .form-control {
+  padding-inline-end: var(--space-10);
+}
+
+/* ─── combobox (منتقي العميل) ─── */
+
 .combobox {
   position: relative;
 }
@@ -102,37 +179,107 @@ textarea.form-control {
   position: absolute;
   top: calc(100% + 4px);
   inset-inline: 0;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
-  max-height: 220px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  max-height: 240px;
   overflow-y: auto;
   z-index: 20;
   display: none;
+  padding: var(--space-1);
 }
 
 .combobox.open .combobox-list { display: block; }
 
 .combobox-item {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
 }
 
-.combobox-item:last-child { border-bottom: 0; }
+.combobox-item + .combobox-item { margin-top: 2px; }
+
 .combobox-item:hover,
 .combobox-item.active {
-  background: var(--color-primary-light);
+  background: var(--accent-50);
+  color: var(--accent-700);
 }
 
 .combobox-item.create-new {
-  color: var(--color-primary);
-  font-weight: 600;
+  color: var(--accent-700);
+  font-weight: var(--weight-semibold);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
 }
 
 .combobox-item .item-sub {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
   margin-top: 2px;
+}
+
+.combobox-item:hover .item-sub,
+.combobox-item.active .item-sub {
+  color: var(--accent-600);
+}
+
+/* ─── ملاحق (addons) — لاحقة العملة، البادئة ─── */
+
+.input-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.input-group .form-control {
+  border-radius: 0;
+}
+
+.input-group > :first-child {
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
+}
+
+.input-group > :last-child {
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
+}
+
+.input-addon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.input-addon + .form-control,
+.form-control + .input-addon { border-inline-start-width: 0; }
+
+/* ─── خانة الاختيار + المفتاح ─── */
+
+.form-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-500);
+  cursor: pointer;
 }

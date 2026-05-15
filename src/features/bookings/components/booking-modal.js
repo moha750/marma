@@ -58,17 +58,23 @@ window.bookingModal = (function () {
       booking.customer_input_name.trim() !== booking.customers.full_name.trim();
 
     const pendingBanner = isPending
-      ? `<div style="background:var(--color-warning-light);color:var(--color-warning);padding:10px 14px;border-radius:var(--radius);margin-bottom:16px;font-weight:600">
-           ⏳ هذا الحجز بانتظار موافقتك
+      ? `<div class="trial-banner trial-banner--grace" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+           <span class="trial-banner-icon"><i data-lucide="hourglass"></i></span>
+           <span>هذا الحجز بانتظار موافقتك</span>
          </div>`
       : '';
 
     const nameMismatchBanner = hasNameMismatch
-      ? `<div style="background:var(--color-info-light);color:var(--color-info);padding:12px 14px;border-radius:var(--radius);margin-bottom:16px;font-size:0.95rem">
-           <strong>تنبيه:</strong> هذا الرقم مسجّل سابقاً باسم
-           "<strong>${window.utils.escapeHtml(booking.customers.full_name)}</strong>"،
-           لكن العميل أدخل في الحجز اسم "<strong>${window.utils.escapeHtml(booking.customer_input_name)}</strong>".
-           <br>عند التأكيد، سيُسأل عن الاسم الذي تريد اعتماده.
+      ? `<div class="trial-banner trial-banner--trial" style="margin-bottom:var(--space-4);border-radius:var(--radius-md);display:block">
+           <div style="display:flex;align-items:flex-start;gap:var(--space-2)">
+             <span class="trial-banner-icon" style="margin-top:2px"><i data-lucide="info"></i></span>
+             <div>
+               <strong>تنبيه:</strong> الرقم مسجّل سابقاً باسم
+               "<strong>${window.utils.escapeHtml(booking.customers.full_name)}</strong>"،
+               لكن العميل أدخل في الحجز اسم "<strong>${window.utils.escapeHtml(booking.customer_input_name)}</strong>".
+               عند التأكيد، سيُسأل عن الاسم الذي تريد اعتماده.
+             </div>
+           </div>
          </div>`
       : '';
 
@@ -114,7 +120,7 @@ window.bookingModal = (function () {
             <input type="hidden" name="customer_id" id="customer-id">
             <div class="combobox-list" id="customer-list"></div>
           </div>
-          <div id="new-customer-fields" class="hidden mt-md" style="background:var(--color-info-light);padding:12px;border-radius:var(--radius)">
+          <div id="new-customer-fields" class="hidden mt-md" style="background:var(--surface-2);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
             <div class="form-row cols-2">
               <div class="form-group" style="margin:0">
                 <label class="form-label">اسم العميل الجديد <span class="required">*</span></label>
@@ -170,7 +176,8 @@ window.bookingModal = (function () {
     const ctrl = window.utils.openModal({
       title: editing ? 'تعديل حجز' : 'حجز جديد',
       body,
-      footer: footerEl
+      footer: footerEl,
+      size: 'lg'
     });
 
     const form = ctrl.modal.querySelector('#booking-form');

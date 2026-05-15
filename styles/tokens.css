@@ -1,51 +1,227 @@
-/* Design tokens - متغيرات النظام
-   تُحمَّل قبل كل شيء آخر لأن باقي الملفات تستهلك هذه المتغيرات */
+/* Design tokens — متغيرات النظام
+   تُحمَّل قبل كل شيء آخر.
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+   نظام "Quiet Pitch" — قاعدة محايدة دافئة + لون علامة واحد (أخضر عشب الملعب)
+   حدود رفيعة + ظل خفيف + إنارة داخلية = توقيع بصري يقرأ كمستند موثّق.
+
+   تتضمن: مقياس Tokens جديد كامل + جسر للأسماء القديمة (--color-primary وغيرها)
+   لكي تستمر مكونات CSS الحالية بالعمل قبل الترحيل في المرحلة 2.
+*/
 
 :root {
-  /* الألوان */
-  --color-primary: #16a34a;
-  --color-primary-dark: #15803d;
-  --color-primary-light: #dcfce7;
-  --color-bg: #f5f7fa;
-  --color-card: #ffffff;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-  --color-text: #111827;
-  --color-text-muted: #6b7280;
-  --color-text-light: #9ca3af;
-  --color-danger: #dc2626;
-  --color-danger-light: #fee2e2;
-  --color-warning: #ca8a04;
-  --color-warning-light: #fef3c7;
-  --color-success: #16a34a;
-  --color-success-light: #dcfce7;
-  --color-info: #2563eb;
-  --color-info-light: #dbeafe;
+  /* ─────────────────────────────────────────────
+     1) الألوان — وضع فاتح (افتراضي)
+     ───────────────────────────────────────────── */
 
-  /* المسافات */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
+  /* الأسطح */
+  --surface-0: #FAFAF7;         /* الخلفية الأم — أبيض دافئ */
+  --surface-1: #FFFFFF;         /* البطاقات، النوافذ */
+  --surface-2: #F4F4EF;         /* الحقول، خلفيات غائرة */
+  --surface-3: #ECECE6;         /* أعمق — zebra الجدول */
+  --surface-overlay: rgba(20, 22, 18, 0.55);
 
-  /* الحواف */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
+  /* الحدود */
+  --border-subtle:  #EAEAE4;
+  --border-default: #DCDCD3;
+  --border-strong:  #B8B8AC;
+  --border-focus:   #0F9D58;
 
-  /* الظلال */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  /* النصوص */
+  --text-primary:   #14160F;    /* أسود دافئ */
+  --text-secondary: #555651;
+  --text-tertiary:  #8A8B84;
+  --text-disabled:  #B8B8AC;
+  --text-on-accent: #FFFFFF;
 
-  /* الأبعاد */
-  --sidebar-width: 240px;
-  --header-height: 64px;
+  /* العلامة — أخضر عشب الملعب */
+  --accent-50:  #E8F6EE;
+  --accent-100: #C7E8D2;
+  --accent-300: #66C189;
+  --accent-500: #0F9D58;        /* الفعل الأساسي */
+  --accent-600: #0B7D45;
+  --accent-700: #075E33;
 
-  /* الانتقالات */
-  --transition: 0.15s ease;
+  /* دلالي */
+  --success: #0F9D58;
+  --success-tint: #E8F6EE;
+  --success-on: #FFFFFF;
+
+  --warning: #C77700;
+  --warning-tint: #FCEFD9;
+  --warning-on: #FFFFFF;
+
+  --danger: #C8362C;
+  --danger-tint: #FBE7E5;
+  --danger-on: #FFFFFF;
+
+  --info: #2563A8;
+  --info-tint: #DEE8F4;
+  --info-on: #FFFFFF;
+
+  /* محايد — للحالات الخامدة (ملغى/مؤرشف) حيث لا يصح اللون الدلالي */
+  --neutral-500: #9CA3A0;
+  --neutral-600: #6F756E;
+
+  /* لوحة فئويّة — لتمييز كيانات متعددة بصرياً (ملاعب، فئات، أعضاء)
+     مضبوطة على درجة هدوء تتسق مع قاعدة Quiet Pitch المحايدة. */
+  --cat-1: #2BA365;   /* أخضر */
+  --cat-2: #2E70C7;   /* أزرق */
+  --cat-3: #C73B33;   /* أحمر */
+  --cat-4: #C77700;   /* كهرماني */
+  --cat-5: #7C4DD3;   /* بنفسجي */
+  --cat-6: #1B8FA8;   /* فيروزي */
+  --cat-7: #C73D86;   /* وردي */
+  --cat-8: #7A9E2E;   /* أخضر زيتوني */
+
+  /* ─────────────────────────────────────────────
+     2) الطباعة
+     ───────────────────────────────────────────── */
+
+  --font-sans: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, 'JetBrains Mono', Consolas, monospace;
+
+  --text-3xs: 0.6875rem;   /* 11px */
+  --text-2xs: 0.75rem;     /* 12px */
+  --text-xs:  0.8125rem;   /* 13px */
+  --text-sm:  0.875rem;    /* 14px */
+  --text-md:  0.9375rem;   /* 15px */
+  --text-lg:  1.0625rem;   /* 17px */
+  --text-xl:  1.3125rem;   /* 21px */
+  --text-2xl: 1.75rem;     /* 28px */
+  --text-3xl: 2.5rem;      /* 40px */
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --leading-tight:  1.25;
+  --leading-snug:   1.4;
+  --leading-normal: 1.55;
+  --leading-loose:  1.7;
+
+  /* ─────────────────────────────────────────────
+     3) المسافات (مقياس 4px)
+     ───────────────────────────────────────────── */
+
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ─────────────────────────────────────────────
+     4) الحواف (radius)
+     ───────────────────────────────────────────── */
+
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   20px;
+  --radius-full: 999px;
+
+  /* ─────────────────────────────────────────────
+     5) الارتفاع — التوقيع البصري المميز
+        حد + ظل + إنارة داخلية معاً
+     ───────────────────────────────────────────── */
+
+  --shadow-1:
+    0 1px 2px rgba(20, 22, 18, 0.04),
+    0 0 0 1px var(--border-subtle);
+  --shadow-2:
+    0 4px 12px -2px rgba(20, 22, 18, 0.08),
+    0 0 0 1px var(--border-subtle);
+  --shadow-3:
+    0 16px 32px -8px rgba(20, 22, 18, 0.16),
+    0 0 0 1px var(--border-default);
+
+  --ring-inset:  inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --ring-focus:  0 0 0 3px rgba(15, 157, 88, 0.24);
+  --ring-danger: 0 0 0 3px rgba(200, 54, 44, 0.24);
+
+  /* ─────────────────────────────────────────────
+     6) الحركة
+     ───────────────────────────────────────────── */
+
+  --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast:    140ms;
+  --duration-normal:  220ms;
+  --duration-slow:    360ms;
+
+  /* ─────────────────────────────────────────────
+     7) أبعاد القالب
+     ───────────────────────────────────────────── */
+
+  --sidebar-width:           232px;
+  --sidebar-width-collapsed: 64px;
+  --header-height:           56px;
+  --bottom-nav-height:       64px;
+  --page-max-width:          1400px;
+
+  /* ─────────────────────────────────────────────
+     8) جسر للأسماء القديمة (Phase-2 سيُزيلها بعد الترحيل)
+        كل مكونات CSS الحالية تستخدم هذه الأسماء.
+     ───────────────────────────────────────────── */
+
+  --color-primary:       var(--accent-500);
+  --color-primary-dark:  var(--accent-600);
+  --color-primary-light: var(--accent-50);
+
+  --color-bg:            var(--surface-0);
+  --color-card:          var(--surface-1);
+
+  --color-border:        var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-text:        var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  --color-text-light: var(--text-tertiary);
+
+  --color-danger:        var(--danger);
+  --color-danger-light:  var(--danger-tint);
+  --color-warning:       var(--warning);
+  --color-warning-light: var(--warning-tint);
+  --color-success:       var(--success);
+  --color-success-light: var(--success-tint);
+  --color-info:          var(--info);
+  --color-info-light:    var(--info-tint);
+
+  --space-xs:  var(--space-1);
+  --space-sm:  var(--space-2);
+  --space-md:  var(--space-4);
+  --space-lg:  var(--space-6);
+  --space-xl:  var(--space-8);
+  --space-2xl: var(--space-12);
+
+  --radius:    var(--radius-md);
+
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+
+  --transition: var(--duration-fast) var(--ease-out);
+
+  /* محرف للأرقام الجدوليّة — لمحاذاة الأرقام عمودياً في الجداول */
+  font-feature-settings: "tnum" 1, "lnum" 1, "calt" 1;
+}
+
+/* احترام تفضيل المستخدم لتقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0.01ms;
+    --duration-fast:    0.01ms;
+    --duration-normal:  0.01ms;
+    --duration-slow:    0.01ms;
+  }
 }

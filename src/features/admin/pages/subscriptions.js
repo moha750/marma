@@ -33,7 +33,7 @@
                 <tr>
                   <th>التاريخ</th>
                   <th>الملعب</th>
-                  <th>الخطة</th>
+                  <th>الباقة المطلوبة</th>
                   <th>المبلغ</th>
                   <th>المرجع</th>
                   <th>ملاحظة</th>
@@ -45,7 +45,10 @@
                   <tr>
                     <td>${window.utils.formatDateTime(s.created_at)}</td>
                     <td><strong>${window.utils.escapeHtml(s.tenant_name)}</strong></td>
-                    <td>${window.utils.escapeHtml(s.plan_name)}</td>
+                    <td class="tabular-nums">
+                      ${s.requested_fields || '—'} أرضية + ${s.requested_staff || '—'} موظف
+                      <div class="text-xs text-tertiary">${window.utils.escapeHtml(s.plan_name)}</div>
+                    </td>
                     <td>${window.utils.formatCurrency(s.amount)}</td>
                     <td><code>${window.utils.escapeHtml(s.payment_reference)}</code></td>
                     <td>${s.note ? window.utils.escapeHtml(s.note) : '—'}</td>

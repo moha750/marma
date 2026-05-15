@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إنشاء حساب - مَرْمى</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
+  <title>إنشاء حساب - مَرمى</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <link rel="stylesheet" href="../styles/main.css">
 </head>
 <body>
   <div class="auth-page">
     <div class="auth-card">
       <div class="logo">
-        <div class="logo-icon"><i data-lucide="goal"></i></div>
+        <img src="../assets/logo.svg" alt="مَرمى" class="auth-logo" width="64" height="64">
         <h1 id="page-title">إنشاء حساب جديد</h1>
         <p class="subtitle" id="page-subtitle">سجل ملعبك الآن - 3 أيام تجربة مجانية</p>
       </div>
@@ -169,16 +171,16 @@
           // محاولة تسجيل دخول مباشر بعد التسجيل (في حالة عدم تفعيل تأكيد البريد)
           if (data.session) {
             window.utils.toast(welcomeMsg, 'success');
-            setTimeout(() => window.location.replace('/dashboard'), 800);
+            setTimeout(() => window.location.replace(window.utils.path('/dashboard')), 800);
           } else {
             // التسجيل تم لكن يحتاج تأكيد البريد - نسجّل الدخول مباشرة
             const { error: signInError } = await window.sb.auth.signInWithPassword({ email, password });
             if (signInError) {
               window.utils.toast('تم إنشاء الحساب! يرجى تأكيد البريد الإلكتروني ثم تسجيل الدخول', 'success');
-              setTimeout(() => window.location.replace('/auth/login'), 2000);
+              setTimeout(() => window.location.replace(window.utils.path('/auth/login')), 2000);
             } else {
               window.utils.toast(welcomeMsg, 'success');
-              setTimeout(() => window.location.replace('/dashboard'), 800);
+              setTimeout(() => window.location.replace(window.utils.path('/dashboard')), 800);
             }
           }
         } catch (err) {

@@ -1,0 +1,196 @@
+/* محرر أيام وفترات العمل — أنماط مخصصة للصفحة */
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.day-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-card-name {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+}
+
+.day-card-body {
+  padding: var(--space-3) var(--space-4);
+}
+
+/* صف يوم مغلق */
+.day-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.day-empty svg.lucide,
+.day-empty i[data-lucide] {
+  width: 16px;
+  height: 16px;
+}
+
+/* قائمة الفترات */
+.period-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.period-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--accent-50);
+  border: 1px solid var(--accent-100);
+  border-radius: var(--radius-md);
+  color: var(--accent-700);
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+
+[data-theme="dark"] .period-row {
+  background: var(--accent-50);
+  border-color: var(--accent-100);
+  color: var(--accent-600);
+}
+
+.period-row:hover {
+  border-color: var(--accent-300);
+}
+
+.period-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.period-row-time {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  flex-wrap: wrap;
+}
+
+.period-row-time svg.lucide,
+.period-row-time i[data-lucide] {
+  width: 14px;
+  height: 14px;
+}
+
+.period-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--accent-700);
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .period-row-meta {
+  color: var(--accent-600);
+}
+
+.period-row-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.period-row-meta svg.lucide,
+.period-row-meta i[data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+/* صناديق معاينة المدة وعدد المواعيد داخل الـ modals */
+.schedule-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid transparent;
+}
+
+.schedule-preview svg.lucide,
+.schedule-preview i[data-lucide] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.schedule-preview--success,
+.schedule-preview--accent {
+  background: var(--accent-50);
+  color: var(--accent-700);
+  border-color: var(--accent-100);
+}
+
+[data-theme="dark"] .schedule-preview--success,
+[data-theme="dark"] .schedule-preview--accent {
+  color: var(--accent-600);
+}
+
+.schedule-preview--warning {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
+
+.schedule-preview--danger {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+/* اختيار نمط الأيام داخل الـ modal */
+.schedule-mode-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.schedule-mode-picker .form-check {
+  font-weight: var(--weight-semibold);
+  padding: var(--space-1) var(--space-2);
+}
+
+.schedule-days-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+}
+
+.schedule-days-picker .form-check {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+
+.schedule-days-picker .form-check:hover {
+  background: var(--surface-1);
+  outline: 1px solid var(--border-default);
+}

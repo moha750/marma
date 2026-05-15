@@ -1,0 +1,185 @@
+/* Charts — أنماط مشتركة لكل مكونات الرسم (sparkline, bar, donut, heatmap) */
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ─── Sparkline ─────────────────────────────────────── */
+
+.chart-sparkline {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Bar Chart ─────────────────────────────────────── */
+
+.chart-bar-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-bar-svg .chart-bar rect {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.chart-bar-svg .chart-bar:hover rect {
+  opacity: 1;
+}
+
+.chart-bar-svg text {
+  font-family: var(--font-sans);
+  user-select: none;
+}
+
+/* ─── Donut ─────────────────────────────────────────── */
+
+.chart-donut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.chart-donut-svg {
+  flex-shrink: 0;
+}
+
+.chart-donut-svg circle {
+  transition: stroke-dasharray var(--duration-slow) var(--ease-out);
+}
+
+.chart-donut-svg text {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chart-donut-legend li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.chart-donut-legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-donut-legend .label {
+  color: var(--text-secondary);
+}
+
+.chart-donut-legend .value {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.chart-donut-legend .pct {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: end;
+}
+
+/* ─── Heatmap ───────────────────────────────────────── */
+
+.chart-heatmap {
+  border-collapse: separate;
+  border-spacing: 2px;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.chart-heatmap th {
+  font-size: var(--text-3xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  padding: 2px var(--space-1);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-heatmap th.chart-heatmap-daylabel {
+  text-align: end;
+  padding-inline-end: var(--space-2);
+  white-space: nowrap;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  width: 56px;
+}
+
+.chart-heatmap td.chart-heatmap-cell {
+  background: var(--surface-2);
+  border-radius: 3px;
+  height: 26px;
+  padding: 0;
+  position: relative;
+  cursor: default;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.chart-heatmap td.chart-heatmap-cell:hover {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 1px;
+  z-index: 1;
+  transform: scale(1.04);
+}
+
+.chart-heatmap td.is-zero    { background: var(--surface-2); opacity: 0.5; }
+.chart-heatmap td.is-step-1  { background: var(--accent-100); }
+.chart-heatmap td.is-step-2  { background: var(--accent-300); }
+.chart-heatmap td.is-step-3  { background: var(--accent-500); }
+.chart-heatmap td.is-step-4  { background: var(--accent-600); }
+.chart-heatmap td.is-step-5  { background: var(--accent-700); }
+
+[data-theme="dark"] .chart-heatmap td.is-step-1  { background: rgba(51, 199, 122, 0.18); }
+[data-theme="dark"] .chart-heatmap td.is-step-2  { background: rgba(51, 199, 122, 0.35); }
+[data-theme="dark"] .chart-heatmap td.is-step-3  { background: rgba(51, 199, 122, 0.55); }
+[data-theme="dark"] .chart-heatmap td.is-step-4  { background: rgba(51, 199, 122, 0.75); }
+[data-theme="dark"] .chart-heatmap td.is-step-5  { background: rgba(51, 199, 122, 0.95); }
+
+/* Legend الـ Heatmap */
+.chart-heatmap-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  font-size: var(--text-3xs);
+  color: var(--text-tertiary);
+}
+
+.chart-heatmap-legend .chart-heatmap-cell {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+/* تمكين التمرير الأفقي للـ heatmap على الشاشات الصغيرة */
+.chart-heatmap-wrap {
+  overflow-x: auto;
+}

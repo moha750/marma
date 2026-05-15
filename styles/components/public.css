@@ -1,246 +1,442 @@
-/* الصفحة العامة للحجز (book.html) - steps, field-tiles, slot-grid */
+/* الصفحة العامة للحجز (book.html) — واجهة العميل النهائي.
+   تحديث 2026: hero strip، action-card للأرضيات، slot grid أنظف،
+   شريط فعل سفلي ثابت يحمل السعر + زر التأكيد.
+*/
 
 .public-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--color-bg) 0%, #ffffff 100%);
-  padding: var(--space-md);
+  background: var(--surface-0);
+  padding-bottom: 120px;       /* مساحة لشريط الفعل السفلي */
 }
 
 .public-container {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--space-md) 0;
+  padding: 0 var(--space-4) var(--space-8);
 }
 
+/* الشريط العلوي اللوني — توقيع بصري للملعب */
+.public-hero-strip {
+  height: 8px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent-600));
+  margin: 0 calc(var(--space-4) * -1) var(--space-6);
+}
+
+/* رأس الصفحة */
 .public-header {
-  text-align: center;
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-6);
 }
 
-.public-header .pitch-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-sm);
+.public-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
-.public-header h1 {
-  margin-bottom: var(--space-xs);
+.public-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.public-header .pitch-meta {
-  color: var(--color-text-muted);
-  font-size: 1rem;
+.public-brand-logo img {
+  width: 44px;
+  height: 44px;
+  display: block;
+}
+
+[data-theme="dark"] .public-brand-logo img {
+  filter: brightness(1.15) saturate(1.1);
+}
+
+.public-brand-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.public-brand-text h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
+
+.public-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.public-meta svg.lucide {
+  width: 14px;
+  height: 14px;
+}
+
+.public-tagline {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
 }
 
 /* خطوة مرقّمة */
 .step {
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-md);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .step-title {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-  font-weight: 700;
-  font-size: 1.1rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+  color: var(--text-primary);
 }
 
 .step-num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
+  background: var(--accent-50);
+  color: var(--accent-700);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .step-num {
+  background: var(--accent-100);
+  color: var(--accent-600);
 }
 
 /* بطاقات اختيار الأرضية */
 .field-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
 }
 
 .field-tile {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  text-align: start;
-  background: var(--color-card);
-  transition: all var(--transition);
+  text-align: center;
   font: inherit;
-  color: var(--color-text);
+  color: var(--text-primary);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-instant) var(--ease-out);
 }
 
 .field-tile:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
+  border-color: var(--accent-300);
+  background: var(--surface-2);
 }
 
-.field-tile.selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+.field-tile:active {
+  transform: scale(0.98);
 }
 
-.field-tile .name {
-  font-weight: 700;
-  margin-bottom: 6px;
+.field-tile.is-selected {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  box-shadow: inset 0 0 0 1px var(--accent-500);
 }
 
-.field-tile .price {
-  color: var(--color-primary-dark);
-  font-weight: 600;
+[data-theme="dark"] .field-tile.is-selected {
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+
+.field-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.field-tile.is-selected .field-tile-icon {
+  background: var(--accent-500);
+  color: var(--text-on-accent);
+}
+
+.field-tile-icon svg.lucide {
+  width: 20px;
+  height: 20px;
+}
+
+.field-tile-name {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
 }
 
 /* شبكة المواعيد */
 .slot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--space-2);
 }
 
 .slot-btn {
-  border: 2px solid var(--color-border);
-  background: var(--color-card);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
   font: inherit;
-  font-weight: 600;
-  color: var(--color-text);
+  color: var(--text-primary);
   text-align: center;
-  transition: all var(--transition);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-instant) var(--ease-out);
 }
 
 .slot-btn:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  color: var(--accent-700);
 }
 
-.slot-btn.selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #fff;
+.slot-btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
-.slot-btn:disabled {
+.slot-btn.is-selected {
+  border-color: var(--accent-500);
+  background: var(--accent-500);
+  color: var(--text-on-accent);
+}
+
+.slot-btn:disabled,
+.slot-btn.is-busy {
   cursor: not-allowed;
-  background: var(--color-bg);
-  color: var(--color-text-light);
-  border-color: var(--color-border);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  border-color: var(--border-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+.slot-btn.is-busy::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0,
+    transparent 6px,
+    var(--danger-tint) 6px,
+    var(--danger-tint) 8px
+  );
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .slot-btn .slot-time {
-  font-size: 1rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
   margin-bottom: 2px;
 }
 
 .slot-btn .slot-status {
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   opacity: 0.85;
 }
 
-.slot-btn.is-busy {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-  border-color: var(--color-danger-light);
+.slot-btn.is-busy .slot-status {
+  color: var(--danger);
+  opacity: 1;
 }
 
-.slot-btn.is-past {
-  opacity: 0.5;
-}
-
-.slot-empty {
-  padding: var(--space-md);
-  background: var(--color-bg);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
+/* حالات الـ slots المعدومة/التحميل */
+.slot-empty,
+.slot-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
   text-align: center;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
-/* قائمة المواعيد المحجوزة */
-.busy-slots-list {
+.slot-empty svg.lucide,
+.slot-empty i[data-lucide] {
+  width: 18px;
+  height: 18px;
+}
+
+/* شريط الفعل السفلي الثابت */
+.public-action-bar {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  background: var(--surface-1);
+  border-block-start: 1px solid var(--border-default);
+  box-shadow: 0 -4px 12px rgba(20, 22, 18, 0.06);
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  z-index: 40;
+}
+
+.public-action-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.public-action-summary-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: var(--space-sm);
-  max-height: 180px;
-  overflow-y: auto;
+  gap: 2px;
 }
 
-.busy-slot {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 500;
+.public-action-summary-amount {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--accent-700);
+  font-variant-numeric: tabular-nums;
 }
 
-.no-busy-slots {
-  background: var(--color-success-light);
-  color: var(--color-primary-dark);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  margin-top: var(--space-sm);
+[data-theme="dark"] .public-action-summary-amount {
+  color: var(--accent-600);
 }
 
-/* ملخص السعر */
-.price-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--color-primary-light);
-  padding: var(--space-md);
-  border-radius: var(--radius);
-  margin-bottom: var(--space-md);
-  font-weight: 600;
+.public-action-summary-meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
-.price-summary .amount {
-  font-size: 1.4rem;
-  color: var(--color-primary-dark);
+.public-action-bar .btn {
+  flex-shrink: 0;
+  min-width: 160px;
+}
+
+@media (max-width: 480px) {
+  .public-action-bar .btn {
+    min-width: 0;
+  }
+  .public-action-summary-amount {
+    font-size: var(--text-lg);
+  }
 }
 
 /* شاشة النجاح */
 .success-screen {
   text-align: center;
-  padding: var(--space-2xl) var(--space-md);
-  background: var(--color-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-success);
+  padding: var(--space-12) var(--space-4) var(--space-8);
 }
 
-.success-screen .check-icon {
-  font-size: 4rem;
-  color: var(--color-success);
-  margin-bottom: var(--space-md);
+.success-screen--error {
+  padding-top: var(--space-12);
+}
+
+.success-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: var(--success-tint);
+  color: var(--success);
+  border-radius: 50%;
+  margin-bottom: var(--space-4);
+}
+
+.success-check.error {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+.success-check svg.lucide {
+  width: 36px;
+  height: 36px;
 }
 
 .success-screen h2 {
-  color: var(--color-primary-dark);
-  margin-bottom: var(--space-sm);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--accent-700);
 }
 
-.success-screen .booking-id {
-  background: var(--color-bg);
+[data-theme="dark"] .success-screen h2 {
+  color: var(--accent-600);
+}
+
+.success-screen h2.text-danger {
+  color: var(--danger);
+}
+
+.success-screen p {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.booking-id {
   display: inline-block;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-family: monospace;
-  margin: var(--space-md) 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.success-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.success-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+
+/* تبسيط ملخص السعر القديم (يبقى للتوافق) */
+.price-summary {
+  display: none;
 }

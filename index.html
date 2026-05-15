@@ -3,62 +3,633 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مَرْمى - نظام إدارة حجوزات ملاعب كرة القدم</title>
+  <meta name="theme-color" content="#0F9D58">
+  <meta name="description" content="مَرمى — نظام عربي متكامل لإدارة حجوزات ملاعب كرة القدم: تقويم بصري، رابط حجز عام لعملائك، تقارير مالية، وإدارة طاقم. ابدأ تجربة مجانية لمدة 3 أيام.">
+  <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
+  <title>مَرمى - نظام إدارة حجوزات ملاعب كرة القدم</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-  <div class="landing">
-    <header class="landing-header">
-      <div class="landing-brand"><i data-lucide="goal"></i> مَرْمى</div>
+  <div class="l-page">
 
-      <!-- CTAs للزائر غير المسجّل -->
-      <div class="flex-row" data-cta="anon">
-        <a href="/auth/login" class="btn btn--ghost">تسجيل الدخول</a>
-        <a href="/auth/signup" class="btn btn--primary">إنشاء حساب</a>
-      </div>
+    <!-- ============ 1) الهيدر الثابت ============ -->
+    <header class="l-header" id="l-header">
+      <div class="l-header-inner">
+        <a href="#" class="l-brand" aria-label="مَرمى — الصفحة الرئيسية">
+          <img src="assets/logo-mark.svg" alt="" class="l-brand-mark" aria-hidden="true">
+          <img src="assets/logo-wordmark.svg" alt="مَرمى" class="l-brand-wordmark">
+        </a>
 
-      <!-- CTA للمستخدم المسجّل (مخفي افتراضياً، يُظهر بـ JS) -->
-      <div class="flex-row hidden" data-cta="auth">
-        <a href="#" class="btn btn--primary" data-action="open-app">افتح لوحة التحكم ←</a>
+        <nav class="l-nav" aria-label="التنقل الرئيسي">
+          <a href="#pillars" class="l-nav-link">المميزات</a>
+          <a href="#howit" class="l-nav-link">كيف يعمل</a>
+          <a href="#pricing" class="l-nav-link">الأسعار</a>
+          <a href="#faq" class="l-nav-link">أسئلة شائعة</a>
+        </nav>
+
+        <div class="l-header-actions">
+          <span class="l-header-theme" id="l-theme-host"></span>
+
+          <!-- زائر -->
+          <span class="flex-row" data-cta="anon" style="display:inline-flex; gap:8px;">
+            <a href="/auth/login" class="btn btn--ghost btn--sm">تسجيل الدخول</a>
+            <a href="/auth/signup" class="btn btn--primary btn--sm">إنشاء حساب</a>
+          </span>
+
+          <!-- مسجَّل -->
+          <span class="flex-row hidden" data-cta="auth" style="display:inline-flex; gap:8px;">
+            <a href="#" class="btn btn--primary btn--sm" data-action="open-app">افتح لوحة التحكم ←</a>
+          </span>
+        </div>
       </div>
     </header>
 
-    <section class="landing-hero">
-      <h1>إدارة ملعبك أصبحت أسهل</h1>
-      <p>نظام متكامل لإدارة حجوزات ملاعب كرة القدم: تقويم بصري، إدارة عملاء وأرضيات، تقارير مالية، ودعوة موظفين — كل ذلك في مكان واحد.</p>
+    <!-- ============ 2) Hero ============ -->
+    <section class="l-hero">
+      <div class="l-container l-hero-inner">
+        <div class="l-hero-copy">
+          <span class="l-eyebrow">
+            <i data-lucide="sparkles"></i>
+            تجربة 3 أيام مجانًا
+          </span>
+          <h1>إدارة ملعبك<br><span class="accent">من تقويم واحد</span></h1>
+          <p>استبدل دفاتر الحجوزات ورسائل واتساب بنظام عربي متكامل: تقويم بصري، رابط حجز خاص بك يستخدمه عملاؤك مباشرة، تقارير مالية لحظية، وإدارة طاقم العمل — في مكان واحد.</p>
 
-      <div class="landing-cta" data-cta="anon">
-        <a href="/auth/signup" class="btn btn--primary">ابدأ مجاناً الآن</a>
-        <a href="/auth/login" class="btn btn--secondary">لدي حساب بالفعل</a>
-      </div>
+          <div class="l-hero-cta" data-cta="anon">
+            <a href="/auth/signup" class="btn btn--primary btn--lg">
+              <i data-lucide="rocket"></i>
+              ابدأ مجانًا الآن
+            </a>
+            <a href="#howit" class="btn btn--secondary btn--lg">شاهد كيف يعمل</a>
+          </div>
 
-      <div class="landing-cta hidden" data-cta="auth">
-        <a href="#" class="btn btn--primary" data-action="open-app">افتح لوحة التحكم ←</a>
+          <div class="l-hero-cta hidden" data-cta="auth">
+            <a href="#" class="btn btn--primary btn--lg" data-action="open-app">افتح لوحة التحكم ←</a>
+          </div>
+
+          <div class="l-hero-meta">
+            <span class="l-hero-meta-item"><i data-lucide="check"></i> بدون بطاقة ائتمانية</span>
+            <span class="l-hero-meta-item"><i data-lucide="check"></i> إعداد في 5 دقائق</span>
+            <span class="l-hero-meta-item"><i data-lucide="check"></i> دعم عربي</span>
+          </div>
+        </div>
+
+        <div class="l-hero-visual" aria-hidden="true">
+          <div class="l-mockup-card">
+            <div class="l-mockup-head">
+              <div>
+                <div class="l-mockup-head-title">ملعب الشمال — الأرضية أ</div>
+                <div class="l-mockup-head-date">الأربعاء 14 مايو</div>
+              </div>
+              <span class="l-mockup-pill">مباشر</span>
+            </div>
+
+            <div class="l-mockup-slots">
+              <div class="l-mockup-slot is-busy">
+                <div class="l-mockup-slot-time">04:00</div>
+                <div class="l-mockup-slot-status">محجوز</div>
+              </div>
+              <div class="l-mockup-slot is-available">
+                <div class="l-mockup-slot-time">05:00</div>
+                <div class="l-mockup-slot-status">150 ر.س</div>
+              </div>
+              <div class="l-mockup-slot">
+                <div class="l-mockup-slot-time">06:00</div>
+                <div class="l-mockup-slot-status">150 ر.س</div>
+              </div>
+              <div class="l-mockup-slot is-available">
+                <div class="l-mockup-slot-time">07:00</div>
+                <div class="l-mockup-slot-status">200 ر.س</div>
+              </div>
+              <div class="l-mockup-slot is-busy">
+                <div class="l-mockup-slot-time">08:00</div>
+                <div class="l-mockup-slot-status">محجوز</div>
+              </div>
+              <div class="l-mockup-slot">
+                <div class="l-mockup-slot-time">09:00</div>
+                <div class="l-mockup-slot-status">200 ر.س</div>
+              </div>
+            </div>
+
+            <div class="l-mockup-foot">
+              <span>الإيرادات اليوم</span>
+              <span class="l-mockup-foot-amount">1,250 ر.س</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="landing-features">
-      <div class="feature">
-        <div class="feature-icon"><i data-lucide="calendar-days"></i></div>
-        <h3>تقويم ذكي</h3>
-        <p class="text-muted">عرض شهري وأسبوعي ويومي مع منع تلقائي لتعارض الحجوزات.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><i data-lucide="users"></i></div>
-        <h3>قاعدة عملاء</h3>
-        <p class="text-muted">احتفظ بسجل كامل للعملاء وحجوزاتهم السابقة.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><i data-lucide="bar-chart-3"></i></div>
-        <h3>تقارير مالية</h3>
-        <p class="text-muted">تقارير يومية وشهرية بالإيرادات والمدفوعات.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon"><i data-lucide="shield-check"></i></div>
-        <h3>بيانات معزولة</h3>
-        <p class="text-muted">بياناتك خاصة بك وحدك - أمان وعزل كامل بين الملاعب.</p>
+    <!-- ============ 3) شريط الثقة ============ -->
+    <section class="l-trust">
+      <div class="l-container l-trust-inner">
+        <div class="l-trust-item">
+          <i data-lucide="gift"></i>
+          <span>تجربة 3 أيام مجانًا</span>
+        </div>
+        <div class="l-trust-item">
+          <i data-lucide="credit-card"></i>
+          <span>بدون التزام شهري</span>
+        </div>
+        <div class="l-trust-item">
+          <i data-lucide="lock"></i>
+          <span>بيانات معزولة عبر Supabase</span>
+        </div>
+        <div class="l-trust-item">
+          <i data-lucide="message-circle"></i>
+          <span>دعم باللغة العربية</span>
+        </div>
       </div>
     </section>
+
+    <!-- ============ 4) الركائز الثلاث ============ -->
+    <section class="l-section l-pillars" id="pillars">
+      <div class="l-container">
+        <div class="l-section-head is-centered reveal">
+          <span class="l-eyebrow"><i data-lucide="zap"></i> لماذا مَرمى</span>
+          <h2 class="l-section-title">ثلاث مشاكل يومية — حلٌّ واحد</h2>
+          <p class="l-section-lead">إذا كنت تدير ملعبك بدفتر، أو رسائل واتساب، أو ملف Excel — هذه المشاكل الثلاث تبدأ في الاختفاء منذ يومك الأول معنا.</p>
+        </div>
+
+        <div class="l-pillars-grid">
+          <article class="l-pillar reveal">
+            <div class="l-pillar-icon"><i data-lucide="layout-dashboard"></i></div>
+            <h3>وداعًا للفوضى</h3>
+            <p>كل الحجوزات في تقويم واحد بصري — شهري وأسبوعي ويومي. النظام يمنع تلقائيًا أي تعارض في الوقت، فلا حجزَين على نفس الموعد أبدًا.</p>
+          </article>
+
+          <article class="l-pillar reveal">
+            <div class="l-pillar-icon"><i data-lucide="link-2"></i></div>
+            <h3>رابط حجز خاص بك</h3>
+            <p>شارك رابط ملعبك في بايو إنستغرام أو واتساب. عملاؤك يحجزون بأنفسهم في دقيقة — يختارون الأرضية والموعد، ويصلك الطلب فورًا للتأكيد.</p>
+          </article>
+
+          <article class="l-pillar reveal">
+            <div class="l-pillar-icon"><i data-lucide="trending-up"></i></div>
+            <h3>تعرف أرقامك</h3>
+            <p>تقارير يومية وشهرية تُظهر إيراداتك، مدفوعاتك، أكثر الأرضيات حجزًا، وأكثر الأوقات طلبًا — لتأخذ قرارات مبنية على بيانات، لا على تخمين.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5) ميزات بالتفصيل ============ -->
+    <section class="l-section l-section-narrow" id="features">
+      <div class="l-container">
+        <div class="l-section-head is-centered reveal">
+          <span class="l-eyebrow"><i data-lucide="layers"></i> المميزات</span>
+          <h2 class="l-section-title">كل أداة تحتاجها لإدارة ملعبك</h2>
+        </div>
+
+        <div class="l-features-stack">
+
+          <!-- ميزة 1: التقويم -->
+          <div class="l-feature-row reveal">
+            <div class="l-feature-copy">
+              <span class="l-eyebrow"><i data-lucide="calendar-days"></i> تقويم ذكي</span>
+              <h3>كل حجوزاتك في عرض واحد</h3>
+              <p>تنقّل بين العرض الشهري والأسبوعي واليومي بنقرة. النظام يمنع تلقائيًا أي تعارض، ويُظهر لك على لوحة واحدة كل ملاعبك ومواعيدها.</p>
+              <ul class="l-feature-list">
+                <li><i data-lucide="check-circle-2"></i> ثلاثة أعرض: شهري، أسبوعي، يومي</li>
+                <li><i data-lucide="check-circle-2"></i> منع تعارض الحجوزات تلقائيًا</li>
+                <li><i data-lucide="check-circle-2"></i> فلترة حسب الأرضية أو الحالة</li>
+              </ul>
+            </div>
+            <div class="l-feature-visual" aria-hidden="true">
+              <div class="l-mockup-calendar">
+                <div class="l-mockup-calendar-head">
+                  <span>مايو 2026</span>
+                  <span style="color: var(--text-tertiary); font-weight: 400;">23 حجز</span>
+                </div>
+                <div class="l-mockup-calendar-grid">
+                  <div class="l-mockup-day">1</div>
+                  <div class="l-mockup-day has-booking">2</div>
+                  <div class="l-mockup-day">3</div>
+                  <div class="l-mockup-day has-booking">4</div>
+                  <div class="l-mockup-day has-booking">5</div>
+                  <div class="l-mockup-day">6</div>
+                  <div class="l-mockup-day has-booking">7</div>
+                  <div class="l-mockup-day">8</div>
+                  <div class="l-mockup-day has-booking">9</div>
+                  <div class="l-mockup-day has-booking">10</div>
+                  <div class="l-mockup-day has-booking">11</div>
+                  <div class="l-mockup-day">12</div>
+                  <div class="l-mockup-day has-booking">13</div>
+                  <div class="l-mockup-day is-today">14</div>
+                  <div class="l-mockup-day has-booking">15</div>
+                  <div class="l-mockup-day">16</div>
+                  <div class="l-mockup-day has-booking">17</div>
+                  <div class="l-mockup-day">18</div>
+                  <div class="l-mockup-day has-booking">19</div>
+                  <div class="l-mockup-day has-booking">20</div>
+                  <div class="l-mockup-day">21</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ميزة 2: العملاء -->
+          <div class="l-feature-row is-reverse reveal">
+            <div class="l-feature-copy">
+              <span class="l-eyebrow"><i data-lucide="users"></i> قاعدة عملاء</span>
+              <h3>اعرف من يلعب في ملعبك</h3>
+              <p>كل حجز يُضاف لسجل العميل تلقائيًا. يمكنك مراجعة تاريخ كل عميل، اسمه، رقمه، وعدد مرات حجزه — لتقديم خدمة أكثر شخصية وعروض ولاء.</p>
+              <ul class="l-feature-list">
+                <li><i data-lucide="check-circle-2"></i> سجل كامل لكل عميل وحجوزاته</li>
+                <li><i data-lucide="check-circle-2"></i> بحث سريع بالاسم أو الرقم</li>
+                <li><i data-lucide="check-circle-2"></i> تواصل واتساب مباشر بنقرة</li>
+              </ul>
+            </div>
+            <div class="l-feature-visual" aria-hidden="true">
+              <div class="l-mockup-table">
+                <div class="l-mockup-table-row">
+                  <span class="l-mockup-avatar">س</span>
+                  <div>
+                    <div class="l-mockup-table-name">سامي العتيبي</div>
+                    <div class="l-mockup-table-sub">12 حجز · آخر زيارة قبل 3 أيام</div>
+                  </div>
+                  <span class="l-mockup-table-badge">VIP</span>
+                </div>
+                <div class="l-mockup-table-row">
+                  <span class="l-mockup-avatar">ف</span>
+                  <div>
+                    <div class="l-mockup-table-name">فيصل الزهراني</div>
+                    <div class="l-mockup-table-sub">7 حجوزات · آخر زيارة الأسبوع الماضي</div>
+                  </div>
+                  <span class="l-mockup-table-badge">منتظم</span>
+                </div>
+                <div class="l-mockup-table-row">
+                  <span class="l-mockup-avatar">ع</span>
+                  <div>
+                    <div class="l-mockup-table-name">عبدالله المطيري</div>
+                    <div class="l-mockup-table-sub">3 حجوزات · جديد</div>
+                  </div>
+                  <span class="l-mockup-table-badge">جديد</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ميزة 3: التقارير -->
+          <div class="l-feature-row reveal">
+            <div class="l-feature-copy">
+              <span class="l-eyebrow"><i data-lucide="bar-chart-3"></i> تقارير مالية</span>
+              <h3>أرقامك واضحة في كل لحظة</h3>
+              <p>تقارير يومية وشهرية تُظهر الإيرادات، المبالغ المُحصَّلة، والمعلَّقة. اعرف بسرعة أكثر أوقاتك ربحية وأي أرضية تحقق أعلى دخل — وخطط لرفع الأسعار بثقة.</p>
+              <ul class="l-feature-list">
+                <li><i data-lucide="check-circle-2"></i> ملخص يومي وأسبوعي وشهري</li>
+                <li><i data-lucide="check-circle-2"></i> تتبّع المدفوعات والمتأخرات</li>
+                <li><i data-lucide="check-circle-2"></i> تحليل أوقات الذروة</li>
+              </ul>
+            </div>
+            <div class="l-feature-visual" aria-hidden="true">
+              <div class="l-mockup-report">
+                <div class="l-mockup-report-label">الإيرادات هذا الأسبوع</div>
+                <div class="l-mockup-report-amount">8,450 <span style="font-size: 0.5em; font-weight: 500; color: var(--text-tertiary);">ر.س</span></div>
+                <div class="l-mockup-report-delta">
+                  <i data-lucide="trending-up"></i>
+                  <span>+18% مقارنة بالأسبوع السابق</span>
+                </div>
+                <div class="l-mockup-bars">
+                  <div class="l-mockup-bar" style="height: 40%"></div>
+                  <div class="l-mockup-bar" style="height: 65%"></div>
+                  <div class="l-mockup-bar" style="height: 55%"></div>
+                  <div class="l-mockup-bar" style="height: 80%"></div>
+                  <div class="l-mockup-bar" style="height: 90%"></div>
+                  <div class="l-mockup-bar" style="height: 100%"></div>
+                  <div class="l-mockup-bar" style="height: 70%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ميزة 4: الموظفين -->
+          <div class="l-feature-row is-reverse reveal">
+            <div class="l-feature-copy">
+              <span class="l-eyebrow"><i data-lucide="user-plus"></i> إدارة الطاقم</span>
+              <h3>ادعُ موظفيك بنقرة</h3>
+              <p>أعطِ موظفك رمز دعوة، يدخل به ويصبح جزءًا من فريقك. كل واحد يرى ما يخصه فقط، وأنت كمالك تتحكم بصلاحياته. بيانات ملعبك تبقى معزولة كليًا عن غيرك.</p>
+              <ul class="l-feature-list">
+                <li><i data-lucide="check-circle-2"></i> دعوة بالرمز — بدون رسائل وبريد</li>
+                <li><i data-lucide="check-circle-2"></i> صلاحيات مالك / موظف</li>
+                <li><i data-lucide="check-circle-2"></i> عزل كامل بين الملاعب</li>
+              </ul>
+            </div>
+            <div class="l-feature-visual" aria-hidden="true">
+              <div class="l-mockup-staff">
+                <div class="l-mockup-invite">
+                  <span class="l-mockup-invite-code">M-7K2P</span>
+                  <span class="l-mockup-invite-copy"><i data-lucide="copy"></i> نسخ الرمز</span>
+                </div>
+                <div class="l-mockup-table-row">
+                  <span class="l-mockup-avatar">أ</span>
+                  <div>
+                    <div class="l-mockup-table-name">أحمد الشهري</div>
+                    <div class="l-mockup-table-sub">موظف · انضم قبل شهر</div>
+                  </div>
+                  <span class="l-mockup-table-badge">نشط</span>
+                </div>
+                <div class="l-mockup-table-row">
+                  <span class="l-mockup-avatar">خ</span>
+                  <div>
+                    <div class="l-mockup-table-name">خالد العنزي</div>
+                    <div class="l-mockup-table-sub">موظف · انضم قبل أسبوع</div>
+                  </div>
+                  <span class="l-mockup-table-badge">نشط</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6) Spotlight: رابط الحجز العام ============ -->
+    <section class="l-section l-spotlight" id="public-booking">
+      <div class="l-container">
+        <div class="l-spotlight-head reveal">
+          <div>
+            <span class="l-eyebrow"><i data-lucide="link-2"></i> الميزة الأبرز</span>
+            <h2 class="l-section-title">عملاؤك يحجزون بأنفسهم</h2>
+            <p class="l-section-lead">لكل ملعب رابط خاص. ضعه في بايو إنستغرام أو حالة واتساب — وعملاؤك يحجزون مباشرة بدون مكالمات وبدون انتظار. أنت تستقبل الطلب وتوافق.</p>
+          </div>
+          <div class="l-spotlight-cta-side">
+            <a href="/book.html" class="btn btn--secondary" target="_blank" rel="noopener">
+              <i data-lucide="external-link"></i>
+              جرّب صفحة الحجز كزائر
+            </a>
+            <a href="/auth/signup" class="btn btn--primary" data-cta="anon">احصل على رابطك</a>
+            <a href="#" class="btn btn--primary hidden" data-cta="auth" data-action="open-app">افتح لوحة التحكم</a>
+          </div>
+        </div>
+
+        <div class="l-spotlight-flow">
+          <div class="l-spotlight-step reveal">
+            <div class="l-spotlight-step-num">1</div>
+            <div class="l-spotlight-step-icon"><i data-lucide="smartphone"></i></div>
+            <h4>يفتح الرابط</h4>
+            <p>العميل يضغط على رابطك من أي مكان — لا يحتاج تطبيقًا ولا حسابًا.</p>
+          </div>
+          <div class="l-spotlight-step reveal">
+            <div class="l-spotlight-step-num">2</div>
+            <div class="l-spotlight-step-icon"><i data-lucide="layout-grid"></i></div>
+            <h4>يختار الأرضية والموعد</h4>
+            <p>يرى المواعيد المتاحة والمحجوزة فورًا، والسعر معروض بوضوح.</p>
+          </div>
+          <div class="l-spotlight-step reveal">
+            <div class="l-spotlight-step-num">3</div>
+            <div class="l-spotlight-step-icon"><i data-lucide="user"></i></div>
+            <h4>يدخل اسمه ورقمه</h4>
+            <p>معلومات بسيطة فقط — اسم، جوال، وملاحظة اختيارية. لا تسجيل دخول.</p>
+          </div>
+          <div class="l-spotlight-step reveal">
+            <div class="l-spotlight-step-num">4</div>
+            <div class="l-spotlight-step-icon"><i data-lucide="bell"></i></div>
+            <h4>يصلك للتأكيد</h4>
+            <p>تستقبل الطلب في لوحتك، تتواصل وتؤكد. أنت تتحكم بكل حجز.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7) كيف يعمل ============ -->
+    <section class="l-section l-howit" id="howit">
+      <div class="l-container">
+        <div class="l-section-head is-centered reveal">
+          <span class="l-eyebrow"><i data-lucide="route"></i> البدء</span>
+          <h2 class="l-section-title">من الصفر إلى أول حجز في 5 دقائق</h2>
+          <p class="l-section-lead">لا تحتاج خبرة تقنية. سجّل وابدأ — والباقي بسيط.</p>
+        </div>
+
+        <div class="l-howit-steps">
+          <div class="l-howit-step reveal">
+            <div class="l-howit-step-circle">
+              <span class="l-howit-step-num">1</span>
+              <i data-lucide="user-plus"></i>
+            </div>
+            <h4>أنشئ حسابك</h4>
+            <p>تسجيل بسيط باسم ملعبك ورقم جوالك. تجربة فورية لـ 3 أيام.</p>
+          </div>
+          <div class="l-howit-step reveal">
+            <div class="l-howit-step-circle">
+              <span class="l-howit-step-num">2</span>
+              <i data-lucide="goal"></i>
+            </div>
+            <h4>أضف أرضياتك</h4>
+            <p>أضف كل أرضية باسمها، حدد أسعار الساعة وأوقات العمل.</p>
+          </div>
+          <div class="l-howit-step reveal">
+            <div class="l-howit-step-circle">
+              <span class="l-howit-step-num">3</span>
+              <i data-lucide="share-2"></i>
+            </div>
+            <h4>شارك رابطك</h4>
+            <p>انسخ رابط الحجز العام، وضعه في بايو إنستغرام أو واتساب.</p>
+          </div>
+          <div class="l-howit-step reveal">
+            <div class="l-howit-step-circle">
+              <span class="l-howit-step-num">4</span>
+              <i data-lucide="check-circle-2"></i>
+            </div>
+            <h4>أدر حجوزاتك</h4>
+            <p>استقبل الطلبات، أكّدها، وراقب إيراداتك من لوحة واحدة.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8) نموذج الأسعار ============ -->
+    <section class="l-section l-pricing" id="pricing">
+      <div class="l-container">
+        <div class="l-section-head is-centered reveal">
+          <span class="l-eyebrow"><i data-lucide="tag"></i> نموذج بسيط</span>
+          <h2 class="l-section-title">جرّب أولًا، ثم اختر الخطة المناسبة</h2>
+          <p class="l-section-lead">نبدأ معك بتجربة مجانية كاملة، ثم نتفق على الخطة التي تناسب حجم ملعبك. بدون عقود مُلزِمة.</p>
+        </div>
+
+        <div class="l-pricing-grid l-pricing-grid--two">
+
+          <div class="l-pricing-card reveal">
+            <div class="l-pricing-name">تجريبي</div>
+            <div class="l-pricing-price">مجاناً <span class="l-pricing-price-sub">/ 3 أيام</span></div>
+            <p class="l-pricing-desc">جرّب النظام بأرضية واحدة قبل الاشتراك. بدون بطاقة ائتمانية.</p>
+            <ul class="l-pricing-list">
+              <li><i data-lucide="check"></i> كل مميزات النظام مفتوحة</li>
+              <li><i data-lucide="check"></i> رابط حجز عام يعمل فورًا</li>
+              <li><i data-lucide="check"></i> أرضية واحدة فقط</li>
+              <li><i data-lucide="check"></i> بدون موظفين خلال التجربة</li>
+            </ul>
+            <a href="/auth/signup" class="btn btn--secondary" data-cta="anon">ابدأ التجربة</a>
+            <a href="#" class="btn btn--secondary hidden" data-cta="auth" data-action="open-app">افتح لوحة التحكم</a>
+          </div>
+
+          <div class="l-pricing-card is-featured reveal">
+            <div class="l-pricing-name">الباقة الأساسية</div>
+            <div class="l-pricing-price">200 <span class="l-pricing-price-sub">ر.س / شهرياً</span></div>
+            <p class="l-pricing-desc">تشمل أرضية واحدة وموظفاً واحداً. أضف ما تحتاج بسعر بسيط.</p>
+            <ul class="l-pricing-list">
+              <li><i data-lucide="check"></i> كل مميزات النظام</li>
+              <li><i data-lucide="check"></i> أرضية واحدة + موظف واحد</li>
+              <li><i data-lucide="plus"></i> +50 ر.س لكل أرضية إضافية</li>
+              <li><i data-lucide="plus"></i> +50 ر.س لكل موظف إضافي</li>
+            </ul>
+            <a href="/auth/signup" class="btn btn--primary" data-cta="anon">سجّل وابدأ</a>
+            <a href="#" class="btn btn--primary hidden" data-cta="auth" data-action="open-app">إدارة الاشتراك</a>
+          </div>
+
+        </div>
+
+        <div class="l-pricing-calc reveal">
+          <div class="l-pricing-calc-head">
+            <h3>احسب اشتراكك الشهري</h3>
+            <p class="text-muted">حرّك الأعداد لترى تكلفتك الفعلية.</p>
+          </div>
+
+          <div class="l-pricing-calc-row">
+            <div class="unit-counter" data-counter="fields">
+              <label>عدد الأرضيات</label>
+              <div class="unit-counter-controls">
+                <button type="button" data-action="dec" aria-label="إنقاص">−</button>
+                <input type="text" name="fields" value="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-min="1" data-max="50">
+                <button type="button" data-action="inc" aria-label="زيادة">+</button>
+              </div>
+            </div>
+            <div class="unit-counter" data-counter="staff">
+              <label>عدد الموظفين</label>
+              <div class="unit-counter-controls">
+                <button type="button" data-action="dec" aria-label="إنقاص">−</button>
+                <input type="text" name="staff" value="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-min="1" data-max="50">
+                <button type="button" data-action="inc" aria-label="زيادة">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="l-pricing-calc-total">
+            <div class="l-pricing-calc-amount">
+              <span class="amount tabular-nums" id="calc-amount">200</span>
+              <span class="currency">ر.س <small>/ شهرياً</small></span>
+            </div>
+            <div class="l-pricing-calc-breakdown" id="calc-breakdown">1 أرضية + 1 موظف</div>
+          </div>
+
+          <div class="l-pricing-calc-cta">
+            <a href="/auth/signup" class="btn btn--primary btn--lg" data-cta="anon">ابدأ تجربتك المجانية</a>
+            <a href="#" class="btn btn--primary btn--lg hidden" data-cta="auth" data-action="open-app">افتح لوحة التحكم</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9) الأسئلة الشائعة ============ -->
+    <section class="l-section l-faq" id="faq">
+      <div class="l-container">
+        <div class="l-section-head is-centered reveal">
+          <span class="l-eyebrow"><i data-lucide="help-circle"></i> الأسئلة الشائعة</span>
+          <h2 class="l-section-title">إجابات سريعة قبل أن تبدأ</h2>
+        </div>
+
+        <div class="l-faq-list">
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">هل أحتاج لإدخال بيانات بطاقة ائتمانية للتجربة؟</summary>
+            <div class="l-faq-body">لا. التجربة المجانية لـ 3 أيام مفتوحة بالكامل بدون أي بيانات دفع. بعدها فقط، إذا قررت الاستمرار، نتفق على خطة الاشتراك المناسبة.</div>
+          </details>
+
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">هل يحتاج عميلي حسابًا في النظام ليحجز؟</summary>
+            <div class="l-faq-body">إطلاقًا. عملاؤك يفتحون رابط الحجز الخاص بملعبك، يختارون الموعد، ويُدخلون اسمهم ورقمهم فقط. لا تسجيل ولا تطبيق. أنت من يستقبل الطلب ويؤكده من لوحتك.</div>
+          </details>
+
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">كيف يتم استلام مبالغ الحجوزات؟</summary>
+            <div class="l-faq-body">مَرمى نظام إدارة وليس بوابة دفع. أنت تتفق مع عملائك على طريقة الدفع كما اعتدت (تحويل بنكي، STC Pay، نقدًا في الملعب)، والنظام يساعدك في تتبع المدفوعات والمتأخرات.</div>
+          </details>
+
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">هل يمكنني إدارة أكثر من ملعب أو أرضية؟</summary>
+            <div class="l-faq-body">نعم. الباقة الأساسية تشمل أرضية واحدة، وكل أرضية إضافية بـ 50 ر.س/شهر. لكل أرضية مواعيدها وأسعارها مستقلة، والتقارير تظهر أداء كل واحدة على حدة.</div>
+          </details>
+
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">ماذا يحدث إذا انتهت التجربة ولم أشترك بعد؟</summary>
+            <div class="l-faq-body">نمنحك فترة سماح 5 أيام للتفكير وإكمال الاشتراك. بياناتك تبقى محفوظة، ويمكنك الرجوع لها في أي وقت تشترك فيه. لا حذف تلقائي.</div>
+          </details>
+
+          <details class="l-faq-item reveal">
+            <summary class="l-faq-summary">هل بياناتي وبيانات عملائي آمنة؟</summary>
+            <div class="l-faq-body">نعم. كل ملعب له فضاء بيانات معزول عبر Row Level Security من Supabase. لا أحد يرى بياناتك إلا أنت وموظفوك المُصرَّح لهم. يمكنك تصدير بياناتك في أي لحظة.</div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10) CTA النهائي ============ -->
+    <section class="l-finalcta">
+      <div class="l-container l-section">
+        <div class="reveal">
+          <h2>جاهز تخلّي ملعبك يدار بنفسه؟</h2>
+          <p>ابدأ تجربتك المجانية الآن. 5 دقائق وأنت جاهز لاستقبال أول حجز عبر النظام.</p>
+          <div class="l-finalcta-cta" data-cta="anon">
+            <a href="/auth/signup" class="btn btn--primary btn--lg">
+              <i data-lucide="rocket"></i>
+              ابدأ تجربتك المجانية
+            </a>
+            <a href="/auth/login" class="btn btn--ghost btn--lg">لدي حساب</a>
+          </div>
+          <div class="l-finalcta-cta hidden" data-cta="auth">
+            <a href="#" class="btn btn--primary btn--lg" data-action="open-app">افتح لوحة التحكم ←</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11) Footer ============ -->
+    <footer class="l-footer">
+      <div class="l-container">
+        <div class="l-footer-grid">
+          <div class="l-footer-about">
+            <a href="#" class="l-brand" aria-label="مَرمى — الصفحة الرئيسية">
+              <img src="assets/logo.svg" alt="مَرمى" class="l-brand-logo" width="48" height="48">
+            </a>
+            <p>نظام عربي متكامل لإدارة حجوزات ملاعب كرة القدم. نساعد أصحاب الملاعب على تنظيم العمل ورفع الإيرادات.</p>
+          </div>
+
+          <div class="l-footer-col">
+            <h5>المنتج</h5>
+            <ul>
+              <li><a href="#pillars">المميزات</a></li>
+              <li><a href="#howit">كيف يعمل</a></li>
+              <li><a href="#pricing">الأسعار</a></li>
+              <li><a href="/book.html" target="_blank" rel="noopener">صفحة الحجز</a></li>
+            </ul>
+          </div>
+
+          <div class="l-footer-col">
+            <h5>الحساب</h5>
+            <ul>
+              <li><a href="/auth/signup">إنشاء حساب</a></li>
+              <li><a href="/auth/login">تسجيل الدخول</a></li>
+              <li><a href="#faq">الأسئلة الشائعة</a></li>
+            </ul>
+          </div>
+
+          <div class="l-footer-col">
+            <h5>تواصل</h5>
+            <ul>
+              <li><a href="mailto:support@marma.app">البريد الإلكتروني</a></li>
+              <li><a href="#" aria-disabled="true">واتساب الدعم</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="l-footer-bottom">
+          <span>© <span id="l-year">2026</span> مَرمى. جميع الحقوق محفوظة.</span>
+          <span>صُنع بحب في الجزيرة العربية</span>
+        </div>
+      </div>
+    </footer>
+
   </div>
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -67,29 +638,111 @@
   <script src="src/core/supabase-client.js"></script>
   <script src="src/core/utils.js"></script>
   <script src="src/core/auth.js"></script>
+  <script src="src/features/subscriptions/pricing.js"></script>
+  <script src="src/shared/components/theme-toggle.js"></script>
   <script>
+    // أيقونات Lucide
     window.utils.renderIcons();
 
-    // الـ landing تبقى مرئية للجميع. نكيّف الـ CTAs فقط حسب حالة المصادقة:
-    //   - مسجّل دخوله → "افتح لوحة التحكم" (الوجهة حسب نوع الحساب)
-    //   - زائر       → "تسجيل الدخول" + "إنشاء حساب"
+    // زر تبديل الوضع في الهيدر
+    try {
+      const host = document.getElementById('l-theme-host');
+      if (host && window.themeToggle && typeof window.themeToggle.render === 'function') {
+        window.themeToggle.render(host);
+      }
+    } catch (_) {}
+
+    // سنة الفوتر
+    try {
+      const yearEl = document.getElementById('l-year');
+      if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+    } catch (_) {}
+
+    // ظل الهيدر عند التمرير
+    (function () {
+      const header = document.getElementById('l-header');
+      if (!header) return;
+      const onScroll = () => {
+        if (window.scrollY > 24) header.classList.add('is-scrolled');
+        else header.classList.remove('is-scrolled');
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+
+    // كشف الأقسام عند التمرير
+    (function () {
+      const items = document.querySelectorAll('.reveal');
+      if (!items.length) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !('IntersectionObserver' in window)) {
+        items.forEach((el) => el.classList.add('is-visible'));
+        return;
+      }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+      items.forEach((el) => io.observe(el));
+    })();
+
+    // حاسبة التسعير
+    (function () {
+      const calc = document.querySelector('.l-pricing-calc');
+      if (!calc || !window.pricing) return;
+      const fieldsInput = calc.querySelector('input[name="fields"]');
+      const staffInput  = calc.querySelector('input[name="staff"]');
+      const amountEl    = calc.querySelector('#calc-amount');
+      const breakdownEl = calc.querySelector('#calc-breakdown');
+      const fmt = new Intl.NumberFormat('ar-EG', { numberingSystem: 'latn' });
+
+      function clamp(input) {
+        const min = parseInt(input.dataset.min, 10) || 1;
+        const max = parseInt(input.dataset.max, 10) || 50;
+        // قبول الأرقام العربية-الهندية إذا كتبها المستخدم
+        const raw = String(input.value).replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+        let v = parseInt(raw, 10);
+        if (isNaN(v) || v < min) v = min;
+        if (v > max) v = max;
+        input.value = v;
+      }
+      function recompute() {
+        clamp(fieldsInput); clamp(staffInput);
+        const f = +fieldsInput.value, s = +staffInput.value;
+        amountEl.textContent = fmt.format(window.pricing.calcPrice(f, s));
+        breakdownEl.textContent = `${fmt.format(f)} أرضية + ${fmt.format(s)} موظف`;
+      }
+      calc.querySelectorAll('[data-action="dec"]').forEach((b) => b.addEventListener('click', () => {
+        const inp = b.parentElement.querySelector('input');
+        inp.value = (parseInt(inp.value, 10) || 1) - 1;
+        recompute();
+      }));
+      calc.querySelectorAll('[data-action="inc"]').forEach((b) => b.addEventListener('click', () => {
+        const inp = b.parentElement.querySelector('input');
+        inp.value = (parseInt(inp.value, 10) || 1) + 1;
+        recompute();
+      }));
+      [fieldsInput, staffInput].forEach((i) => i.addEventListener('input', recompute));
+      recompute();
+    })();
+
+    // تكييف CTAs حسب حالة المصادقة
     (async () => {
       try {
         const session = await window.auth.getSession();
-        if (!session) return; // اترك الـ DOM كما هو (anon CTAs مرئية)
-
+        if (!session) return;
         const dest = await window.auth.getPostLoginDestination();
-        if (!dest) return; // حساب بلا profile - اتركه كزائر
-
-        // اقلب الـ CTAs
+        if (!dest) return;
         document.querySelectorAll('[data-cta="anon"]').forEach((el) => el.classList.add('hidden'));
         document.querySelectorAll('[data-cta="auth"]').forEach((el) => el.classList.remove('hidden'));
         document.querySelectorAll('[data-action="open-app"]').forEach((el) => {
           el.setAttribute('href', dest);
         });
-      } catch (_) {
-        // فشل التحقق - اترك الـ CTAs كزائر
-      }
+      } catch (_) {}
     })();
   </script>
 </body>

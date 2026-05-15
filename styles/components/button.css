@@ -1,68 +1,204 @@
-/* Buttons */
+/* الأزرار — 5 أنواع، 4 أحجام، حالات تركيز/تحميل/تعطيل
+   التوقيع المميز: حد رفيع + إنارة داخلية + ظل لطيف.
+*/
+
 .btn {
+  --btn-h: 36px;
+  --btn-px: 14px;
+  --btn-fs: var(--text-md);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
-  padding: 10px 18px;
-  border-radius: var(--radius);
+  gap: var(--space-2);
+  height: var(--btn-h);
+  padding: 0 var(--btn-px);
   border: 1px solid transparent;
+  border-radius: var(--radius-md);
   font: inherit;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all var(--transition);
-  text-decoration: none;
+  font-size: var(--btn-fs);
+  font-weight: var(--weight-semibold);
   line-height: 1;
   white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color    var(--duration-fast) var(--ease-out),
+    color           var(--duration-fast) var(--ease-out),
+    box-shadow      var(--duration-fast) var(--ease-out),
+    transform       var(--duration-instant) var(--ease-out);
 }
 
-.btn:disabled {
-  opacity: 0.6;
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 0;
+  box-shadow: var(--ring-focus);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
+/* الأيقونة داخل الزر */
+.btn svg.lucide,
+.btn i[data-lucide] {
+  width: 1.05em;
+  height: 1.05em;
+}
+
+/* ─── الأنواع ─── */
+
+/* primary — الفعل الأساسي */
 .btn--primary {
-  background: var(--color-primary);
-  color: #fff;
+  background: var(--accent-500);
+  color: var(--text-on-accent);
+  box-shadow: var(--ring-inset);
 }
 .btn--primary:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-  color: #fff;
+  background: var(--accent-600);
+  color: var(--text-on-accent);
 }
 
+/* secondary — الفعل البديل */
 .btn--secondary {
-  background: var(--color-card);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-1);
 }
 .btn--secondary:hover:not(:disabled) {
-  background: var(--color-bg);
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
+/* ghost — لا خلفية، للأفعال الثانوية */
 .btn--ghost {
   background: transparent;
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: var(--color-bg);
+  background: var(--surface-2);
 }
 
+/* danger — للحذف والإلغاء */
 .btn--danger {
-  background: var(--color-danger);
-  color: #fff;
+  background: var(--danger);
+  color: var(--danger-on);
+  box-shadow: var(--ring-inset);
 }
 .btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
-  color: #fff;
+  filter: brightness(0.92);
+  color: var(--danger-on);
+}
+.btn--danger:focus-visible {
+  box-shadow: var(--ring-danger);
+}
+
+/* accent-quiet — لـ inline actions داخل الجداول
+   لون العلامة لكن مكتوم — أهدأ من primary */
+.btn--accent-quiet {
+  background: var(--accent-50);
+  color: var(--accent-700);
+}
+.btn--accent-quiet:hover:not(:disabled) {
+  background: var(--accent-100);
+  color: var(--accent-700);
+}
+
+/* danger-quiet — رفض/إلغاء داخل الجداول */
+.btn--danger-quiet {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+.btn--danger-quiet:hover:not(:disabled) {
+  filter: brightness(0.96);
+  color: var(--danger);
+}
+
+/* ─── الأحجام ─── */
+
+.btn--xs {
+  --btn-h: 24px;
+  --btn-px: 8px;
+  --btn-fs: var(--text-xs);
+  gap: var(--space-1);
+  border-radius: var(--radius-sm);
 }
 
 .btn--sm {
-  padding: 6px 12px;
-  font-size: 0.85rem;
+  --btn-h: 32px;
+  --btn-px: 10px;
+  --btn-fs: var(--text-sm);
+  border-radius: var(--radius-sm);
 }
+
+.btn--lg {
+  --btn-h: 44px;
+  --btn-px: 20px;
+  --btn-fs: var(--text-lg);
+}
+
+/* ─── التعديلات ─── */
 
 .btn--block {
   display: flex;
   width: 100%;
+}
+
+/* زر أيقونة فقط — مربّع */
+.btn--icon {
+  --btn-px: 0;
+  width: var(--btn-h);
+  padding: 0;
+}
+
+/* حالة التحميل — تحلّ spinner محل المحتوى دون تغيير حجم الزر */
+.btn[data-loading="true"] {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn[data-loading="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  color: var(--text-on-accent);
+}
+.btn--secondary[data-loading="true"]::after,
+.btn--ghost[data-loading="true"]::after {
+  color: var(--accent-500);
+}
+
+/* مجموعة أزرار متلاصقة */
+.btn-group {
+  display: inline-flex;
+}
+.btn-group .btn {
+  border-radius: 0;
+  border-inline-end-width: 0;
+}
+.btn-group .btn:first-child {
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
+}
+.btn-group .btn:last-child {
+  border-radius: 0;
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
+  border-inline-end-width: 1px;
 }

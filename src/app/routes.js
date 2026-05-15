@@ -25,5 +25,6 @@ window.appRoutes = [
   { name: 'schedule',         path: '/schedule',         title: 'أيام وفترات العمل', ownerOnly: true },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },
   { name: 'staff',            path: '/staff',            title: 'الموظفون',          ownerOnly: true },
-  { name: 'subscription',     path: '/subscription',     title: 'الاشتراك',          ownerOnly: true }
+  { name: 'subscription',     path: '/subscription',     title: 'الاشتراك',          ownerOnly: true },
+  { name: 'settings',         path: '/settings',         title: 'إعدادات الملعب' }
 ];

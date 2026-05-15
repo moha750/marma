@@ -1,0 +1,112 @@
+/* Bottom Navigation — للجوال فقط (< 768px)
+   4 عناصر + FAB لإجراء أساسي.
+   يحترم safe-area-inset لـ iPhone notch.
+*/
+
+.bottom-nav {
+  display: none;
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  height: var(--bottom-nav-height);
+  background: var(--surface-1);
+  border-block-start: 1px solid var(--border-subtle);
+  box-shadow: 0 -2px 12px rgba(20, 22, 18, 0.06);
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  height: var(--bottom-nav-height);
+}
+
+.bottom-nav a,
+.bottom-nav button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-3xs);
+  font-weight: var(--weight-medium);
+  position: relative;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.bottom-nav a:hover,
+.bottom-nav button:hover {
+  color: var(--text-primary);
+}
+
+.bottom-nav a.active {
+  color: var(--accent-500);
+}
+
+.bottom-nav a.active::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 25% 25%;
+  height: 2px;
+  background: var(--accent-500);
+  border-radius: 0 0 var(--radius-full) var(--radius-full);
+}
+
+.bottom-nav .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav .nav-icon svg.lucide {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+}
+
+/* FAB — زر إجراء عائم وسط الـ bottom-nav */
+.bottom-nav-fab {
+  position: absolute;
+  top: -22px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 52px;
+  background: var(--accent-500);
+  color: var(--text-on-accent);
+  border: 4px solid var(--surface-0);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+
+.bottom-nav-fab:hover {
+  background: var(--accent-600);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.bottom-nav-fab:active {
+  transform: translateX(-50%) translateY(0);
+}
+
+.bottom-nav-fab svg.lucide {
+  width: 22px;
+  height: 22px;
+}
+
+/* إظهار على الجوال فقط */
+@media (max-width: 767px) {
+  .bottom-nav { display: block; }
+}

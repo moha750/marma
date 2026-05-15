@@ -1,52 +1,56 @@
-/* Badges + Status badges */
+/* الشارات — تسميات سلبيّة فقط (عدّاد، وسم).
+   لحالات الحجز/الاشتراك استخدم .chip-status (chip.css) — نقطة + خلفية مخفّفة.
+
+   ملاحظة: نُبقي .status-badge لتوافق صفحات قائمة لم تُحدَّث بعد.
+*/
+
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
 }
 
-.badge--success {
-  background: var(--color-success-light);
-  color: var(--color-primary-dark);
-}
+.badge--success { background: var(--success-tint); color: var(--accent-700); }
+.badge--warning { background: var(--warning-tint); color: var(--warning); }
+.badge--danger  { background: var(--danger-tint);  color: var(--danger); }
+.badge--info    { background: var(--info-tint);    color: var(--info); }
+.badge--muted   { background: var(--surface-2);    color: var(--text-secondary); }
 
-.badge--warning {
-  background: var(--color-warning-light);
-  color: var(--color-warning);
-}
+/* ─── توافق إلى الخلف: status-badge ─── */
 
-.badge--danger {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-}
-
-.badge--info {
-  background: var(--color-info-light);
-  color: var(--color-info);
-}
-
-.badge--muted {
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-}
-
-/* Status badges (للاشتراك والطلبات) */
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
 }
-.status-badge--trial   { background: var(--color-info-light);    color: var(--color-info); }
-.status-badge--active  { background: var(--color-success-light); color: var(--color-success); }
-.status-badge--grace   { background: var(--color-warning-light); color: var(--color-warning); }
-.status-badge--expired { background: var(--color-danger-light);  color: var(--color-danger); }
-.status-badge--pending { background: var(--color-warning-light); color: var(--color-warning); }
-.status-badge--approved{ background: var(--color-success-light); color: var(--color-success); }
-.status-badge--rejected{ background: var(--color-danger-light);  color: var(--color-danger); }
+
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status-badge--trial    { background: var(--info-tint);    color: var(--info); }
+.status-badge--active   { background: var(--success-tint); color: var(--accent-700); }
+.status-badge--grace    { background: var(--warning-tint); color: var(--warning); }
+.status-badge--expired  { background: var(--danger-tint);  color: var(--danger); }
+.status-badge--pending  { background: var(--warning-tint); color: var(--warning); }
+.status-badge--approved { background: var(--success-tint); color: var(--accent-700); }
+.status-badge--rejected { background: var(--danger-tint);  color: var(--danger); }

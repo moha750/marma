@@ -1,0 +1,123 @@
+/* الوضع الداكن — overrides للـ tokens
+   يُطبَّق عبر [data-theme="dark"] على عنصر <html>.
+   يجب أن يُحمَّل بعد tokens.css.
+
+   كل override يستهدف نفس متغيرات الوضع الفاتح؛ المكونات لا تحتاج تغييراً —
+   تلتقط القيم تلقائياً عبر CSS Variables.
+*/
+
+[data-theme="dark"] {
+  /* الأسطح — رمادي عميق بمسحة خضراء خفيفة */
+  --surface-0: #0E1112;
+  --surface-1: #161A1B;
+  --surface-2: #1E2324;
+  --surface-3: #272D2E;
+  --surface-overlay: rgba(0, 0, 0, 0.7);
+
+  /* الحدود */
+  --border-subtle:  #232829;
+  --border-default: #2E3536;
+  --border-strong:  #424A4B;
+  --border-focus:   #33C77A;
+
+  /* النصوص */
+  --text-primary:   #ECEDE8;
+  --text-secondary: #A8AAA3;
+  --text-tertiary:  #6E7068;
+  --text-disabled:  #4C504A;
+  --text-on-accent: #0E1112;
+
+  /* العلامة — أخضر مُضاء قليلاً للقراءة على أسطح داكنة */
+  --accent-50:  #0F2A1C;    /* صار "tint" داكناً */
+  --accent-100: #16442E;
+  --accent-300: #2EA56D;
+  --accent-500: #33C77A;    /* الفعل الأساسي */
+  --accent-600: #4ED88E;
+  --accent-700: #74E7A8;
+
+  /* دلالي — درجة أفتح للتباين على الداكن */
+  --success: #33C77A;
+  --success-tint: #16442E;
+
+  --warning: #E8A04B;
+  --warning-tint: #4A2E0E;
+
+  --danger: #E26056;
+  --danger-tint: #4A1E1A;
+
+  --info: #5A95D8;
+  --info-tint: #1A2C42;
+
+  /* محايد داكن */
+  --neutral-500: #757A6E;
+  --neutral-600: #565A50;
+
+  /* لوحة فئويّة — درجات أفتح للقراءة على أسطح داكنة */
+  --cat-1: #4ED88E;
+  --cat-2: #5A95D8;
+  --cat-3: #E26056;
+  --cat-4: #E8A04B;
+  --cat-5: #A88DE8;
+  --cat-6: #5BB8CE;
+  --cat-7: #E879B5;
+  --cat-8: #B0CF6A;
+
+  /* الارتفاع — ظلال أعمق + إنارة داخلية أخفت */
+  --shadow-1:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--border-subtle);
+  --shadow-2:
+    0 4px 12px -2px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--border-subtle);
+  --shadow-3:
+    0 16px 32px -8px rgba(0, 0, 0, 0.6),
+    0 0 0 1px var(--border-default);
+
+  --ring-inset:  inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --ring-focus:  0 0 0 3px rgba(51, 199, 122, 0.28);
+  --ring-danger: 0 0 0 3px rgba(226, 96, 86, 0.28);
+
+  /* ─── جسر الأسماء القديمة ─── */
+  --color-primary:       var(--accent-500);
+  --color-primary-dark:  var(--accent-600);
+  --color-primary-light: var(--accent-50);
+
+  --color-bg:   var(--surface-0);
+  --color-card: var(--surface-1);
+
+  --color-border:        var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-text:       var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  --color-text-light: var(--text-tertiary);
+
+  --color-danger:        var(--danger);
+  --color-danger-light:  var(--danger-tint);
+  --color-warning:       var(--warning);
+  --color-warning-light: var(--warning-tint);
+  --color-success:       var(--success);
+  --color-success-light: var(--success-tint);
+  --color-info:          var(--info);
+  --color-info-light:    var(--info-tint);
+}
+
+/* تحسينات خاصة بالداكن للحقول والـ scrollbars */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--surface-1);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}

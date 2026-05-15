@@ -1,49 +1,269 @@
-/* Tables */
+/* الجداول — المكوّن الأكثر استخداماً
+   ميزات: 3 كثافات، رأس لاصق، حدود حالة على الصفوف، أفعال تظهر على hover،
+   صفوف هيكلية للتحميل، عمود أول لاصق على الجوال.
+*/
+
 .table-wrapper {
+  position: relative;
   overflow-x: auto;
-  background: var(--color-card);
-  border-radius: var(--radius);
-  border: 1px solid var(--color-border);
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   text-align: start;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
+/* الخلايا — الافتراضي: كثافة متوسطة (40px) */
 .table th,
 .table td {
-  padding: 12px 16px;
+  --cell-py: 10px;
+  padding: var(--cell-py) var(--space-4);
   text-align: start;
-  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+  line-height: var(--leading-snug);
 }
 
-.table th {
-  background: var(--color-bg);
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
+/* الرأس */
+.table thead th {
+  background: var(--surface-1);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* رأس لاصق opt-in — استخدمه فقط حين يكون الجدول في scroll-context حقيقي
+   (ليس داخل .card الذي يضبط overflow: hidden).
+   الصفحة تستطيع ضبط --table-sticky-top إذا كان فوقها هيدر ثابت. */
+.table--sticky-thead thead th {
   position: sticky;
-  top: 0;
+  top: var(--table-sticky-top, 0);
+  z-index: 2;
+}
+
+/* خط فاصل أسفل الرأس */
+.table thead th::after {
+  content: '';
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline: 0;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.table thead th.sortable:hover {
+  color: var(--text-primary);
+}
+
+.table thead th .sort-arrow {
+  display: inline-block;
+  margin-inline-start: var(--space-1);
+  opacity: 0.5;
+  font-size: 0.8em;
+}
+
+.table thead th[aria-sort="ascending"]  .sort-arrow,
+.table thead th[aria-sort="descending"] .sort-arrow {
+  opacity: 1;
+  color: var(--accent-500);
+}
+
+/* الجسم */
+.table tbody td {
+  color: var(--text-primary);
+}
+
+.table tbody tr {
+  transition: background var(--duration-instant) var(--ease-out);
 }
 
 .table tbody tr:hover {
-  background: var(--color-bg);
+  background: var(--surface-2);
 }
 
 .table tbody tr:last-child td {
   border-bottom: 0;
 }
 
-.table .actions-cell {
-  white-space: nowrap;
-  display: flex;
-  gap: var(--space-xs);
+/* الذيل */
+.table tfoot td {
+  background: var(--surface-2);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border-default);
+  border-bottom: 0;
 }
 
-.table tfoot td {
-  background: var(--color-bg);
-  font-weight: 600;
-  border-top: 2px solid var(--color-border-strong);
+/* خلية الأفعال — تظهر بكامل وضوحها على hover */
+.table .actions-cell {
+  white-space: nowrap;
+  text-align: end;
+}
+
+.table .actions-cell .actions-inline {
+  display: inline-flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.table tbody tr:hover .actions-inline,
+.table tbody tr:focus-within .actions-inline {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  /* الجوال — اظهر دائماً (لا hover) */
+  .table .actions-cell .actions-inline { opacity: 1; }
+}
+
+/* ─── حدود حالة على الصفوف ─── */
+
+.table tr[data-status="pending"]   > td:first-child {
+  border-inline-start: 3px solid var(--warning);
+}
+.table tr[data-status="cancelled"] > td:first-child {
+  border-inline-start: 3px solid var(--danger);
+}
+.table tr[data-status="completed"] > td:first-child {
+  border-inline-start: 3px solid var(--border-strong);
+}
+.table tr[data-status="confirmed"] > td:first-child {
+  border-inline-start: 3px solid var(--success);
+}
+
+/* ─── الكثافة ─── */
+
+.table--compact th,
+.table--compact td {
+  --cell-py: 6px;
+  font-size: var(--text-xs);
+}
+
+.table--cozy th,
+.table--cozy td {
+  --cell-py: 14px;
+}
+
+/* ─── حالات بصرية إضافية ─── */
+
+/* zebra اختياري */
+.table--zebra tbody tr:nth-child(even) {
+  background: var(--surface-2);
+}
+.table--zebra tbody tr:nth-child(even):hover {
+  background: var(--surface-3);
+}
+
+/* صف قابل للنقر */
+.table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+/* صف مُحدَّد */
+.table tbody tr.is-selected,
+.table tbody tr.is-selected:hover {
+  background: var(--accent-50);
+}
+
+/* العمود الأول لاصق (للجوال) */
+@media (max-width: 768px) {
+  .table--sticky-first th:first-child,
+  .table--sticky-first td:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    background: inherit;
+    z-index: 1;
+  }
+  .table--sticky-first thead th:first-child {
+    background: var(--surface-1);
+    z-index: 3;
+  }
+  .table--sticky-first tbody tr {
+    background: var(--surface-1);
+  }
+  .table--sticky-first tbody tr:hover {
+    background: var(--surface-2);
+  }
+}
+
+/* ─── حالة فارغة / تحميل داخل الجدول ─── */
+
+.table .empty-row td {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-tertiary);
+}
+
+/* صف هيكلي للتحميل */
+.table .skeleton-row td {
+  padding: var(--cell-py, 10px) var(--space-4);
+}
+.table .skeleton-row .skeleton-line {
+  height: 12px;
+  border-radius: var(--radius-xs);
+}
+
+/* ─── شريط فلاتر/أدوات أعلى الجدول ─── */
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-shadow: var(--shadow-1);
+  margin-bottom: -1px;
+  flex-wrap: wrap;
+}
+
+.table-toolbar + .table-wrapper {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.density-toggle {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.density-toggle button {
+  background: transparent;
+  border: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.density-toggle button:hover {
+  color: var(--text-primary);
+}
+
+.density-toggle button[aria-pressed="true"] {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-1);
 }
