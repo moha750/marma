@@ -93,18 +93,20 @@ export default defineConfig(({ mode }) => {
 
             // أعد كتابة <a ... href="/X"> و <form ... action="/X"> فقط (وليس <link> أو <script>)
             // Vite يتولّى script src و link href تلقائياً عند ضبط base
+            // ملاحظة: النمط `(?:[^>]*?\s)?` اختياري ليتعامل مع
+            // `<a href="...">` (بدون attributes أخرى) و `<a class="x" href="...">` معاً.
             html = html.replace(
-              /(<a\s[^>]*?)\shref=(["'])\/(?!\/)([^"']*)\2/gi,
+              /(<a\s+(?:[^>]*?\s)?)href=(["'])\/(?!\/)([^"']*)\2/gi,
               (match, prefix, quote, path) => {
                 if (path === baseNoSlash.slice(1) || path.startsWith(baseNoSlash.slice(1) + '/')) return match;
-                return `${prefix} href=${quote}${baseNoSlash}/${path}${quote}`;
+                return `${prefix}href=${quote}${baseNoSlash}/${path}${quote}`;
               }
             );
             html = html.replace(
-              /(<form\s[^>]*?)\saction=(["'])\/(?!\/)([^"']*)\2/gi,
+              /(<form\s+(?:[^>]*?\s)?)action=(["'])\/(?!\/)([^"']*)\2/gi,
               (match, prefix, quote, path) => {
                 if (path === baseNoSlash.slice(1) || path.startsWith(baseNoSlash.slice(1) + '/')) return match;
-                return `${prefix} action=${quote}${baseNoSlash}/${path}${quote}`;
+                return `${prefix}action=${quote}${baseNoSlash}/${path}${quote}`;
               }
             );
 
