@@ -802,7 +802,7 @@
    ───────────────────────────────────────────── */
 
 /* بين 1024 و 1279 — اطوِ الشريط الجانبي تلقائياً */
-@media (max-width: 1279px) {
+@media (min-width: 1024px) and (max-width: 1279px) {
   .app-shell:not([data-sidebar="expanded"]) .sidebar {
     width: var(--sidebar-width-collapsed);
   }
@@ -909,5 +909,8 @@
   }
   .app-header {
     padding: 0 var(--space-3);
+  }
+  .sidebar {
+    inset-block-end: var(--bottom-nav-height);
   }
 }

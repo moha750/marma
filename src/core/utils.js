@@ -122,6 +122,24 @@ window.utils = {
     return new URLSearchParams(window.location.search).get(name);
   },
 
+  // التحقق من صيغة رقم الجوال السعودي (يبدأ بـ 05 و10 أرقام)
+  isValidSaudiPhone(phone) {
+    return /^05\d{8}$/.test(String(phone || '').trim());
+  },
+
+  // يقيّد input ليقبل أرقام فقط بحد أقصى 10. استدعِه بعد إنشاء العنصر.
+  bindPhoneInput(inputEl) {
+    if (!inputEl) return;
+    inputEl.setAttribute('inputmode', 'numeric');
+    inputEl.setAttribute('maxlength', '10');
+    inputEl.setAttribute('pattern', '05[0-9]{8}');
+    if (!inputEl.getAttribute('placeholder')) inputEl.setAttribute('placeholder', '05XXXXXXXX');
+    inputEl.setAttribute('title', 'يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام');
+    inputEl.addEventListener('input', () => {
+      inputEl.value = inputEl.value.replace(/\D/g, '').slice(0, 10);
+    });
+  },
+
   // ====== Toast notifications ======
   toast(message, type = 'info') {
     let container = document.querySelector('.toast-container');

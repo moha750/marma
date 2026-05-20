@@ -30,7 +30,7 @@
               <thead>
                 <tr>
                   <th>الاسم</th>
-                  <th>المدينة</th>
+                  <th>المدن</th>
                   <th>الحالة</th>
                   <th>نهاية التجربة</th>
                   <th>نهاية الاشتراك</th>
@@ -43,8 +43,8 @@
                   const s = statusInfo(t);
                   return `
                     <tr>
-                      <td><strong>${window.utils.escapeHtml(t.name)}</strong>${t.phone ? `<div class="text-muted" style="font-size:0.8rem">${window.utils.escapeHtml(t.phone)}</div>` : ''}</td>
-                      <td>${window.utils.escapeHtml(t.city || '—')}</td>
+                      <td><strong>${window.utils.escapeHtml(t.name)}</strong></td>
+                      <td>${window.utils.escapeHtml(t.cities || '—')}</td>
                       <td><span class="status-badge status-badge--${s.cls}">${s.label}</span></td>
                       <td>${t.trial_ends_at ? window.utils.formatDateTime(t.trial_ends_at) : '—'}</td>
                       <td>${t.subscription_ends_at ? window.utils.formatDateTime(t.subscription_ends_at) : '—'}</td>

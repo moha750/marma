@@ -31,7 +31,7 @@ window.auth = (function () {
     }
     const { data, error } = await window.sb
       .from('profiles')
-      .select('id, tenant_id, full_name, role, tenants(id, name, city, phone, trial_ends_at, subscription_ends_at, subscription_status)')
+      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status)')
       .eq('id', user.id)
       .single();
     if (error) {
@@ -132,8 +132,21 @@ window.auth = (function () {
     const { data: { user } } = await window.sb.auth.getUser();
     if (!user) return null;
     const { data: profile } = await window.sb
-      .from('profiles').select('id').eq('id', user.id).maybeSingle();
-    if (profile) return withBase('/dashboard');
+      .from('profiles').select('id, tenant_id, role').eq('id', user.id).maybeSingle();
+    if (profile) {
+      // مالك بدون أرضيات → onboarding لإضافة الملعب الأول
+      if (profile.role === 'owner' && profile.tenant_id) {
+        const { count } = await window.sb
+          .from('fields')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', profile.tenant_id);
+        if (!count) {
+          try { sessionStorage.setItem('marma:onboarding:pending', '1'); } catch (_) {}
+          return withBase('/fields?onboarding=1');
+        }
+      }
+      return withBase('/dashboard');
+    }
     const isAdmin = await checkIsSuperAdmin({ force: true });
     if (isAdmin) return withBase('/admin/subscriptions');
     return null;

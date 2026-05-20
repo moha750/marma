@@ -334,39 +334,17 @@
           e.preventDefault();
           const fd = new FormData(e.target);
           try {
-            const invitation = await window.api.createInvitation({
+            await window.api.createInvitation({
               full_name: fd.get('full_name').trim(),
               email:     fd.get('email').trim()
             });
             ctrl.close();
-            showInviteLinkModal(invitation);
+            window.utils.toast('تم إرسال الدعوة على البريد الإلكتروني', 'success');
             refresh();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
           }
         });
-      }
-
-      function showInviteLinkModal(invitation) {
-        const url = buildInviteUrl(invitation.code);
-        const body = `
-          <p>تم إنشاء الدعوة. أرسل الرابط التالي للموظف ليكمل التسجيل:</p>
-          <div class="invite-link-box">
-            <code>${window.utils.escapeHtml(url)}</code>
-            <button class="btn btn--primary btn--sm" id="copy-link-btn">
-              <i data-lucide="copy"></i> نسخ
-            </button>
-          </div>
-          <p class="text-muted text-xs mt-md">صلاحية الدعوة 7 أيام. يمكنك حذفها في أي وقت من قائمة الدعوات.</p>
-        `;
-        const footer = `<button type="button" class="btn btn--primary" data-action="ok">تم</button>`;
-        const ctrl = window.utils.openModal({ title: 'رابط الدعوة', body, footer });
-        ctrl.modal.querySelector('[data-action="ok"]').addEventListener('click', ctrl.close);
-        ctrl.modal.querySelector('#copy-link-btn').addEventListener('click', () => {
-          copyToClipboard(url);
-          window.utils.toast('تم نسخ الرابط', 'success');
-        });
-        window.utils.renderIcons(ctrl.modal);
       }
 
       inviteBtn.addEventListener('click', openInviteModal);

@@ -150,7 +150,6 @@ select.form-control {
 
 .search-box {
   position: relative;
-  max-width: 360px;
 }
 
 .search-box::before {

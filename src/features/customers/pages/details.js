@@ -100,13 +100,21 @@
     `;
     const ctrl = window.utils.openModal({ title: 'تعديل العميل', body: formHtml, footer });
     ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+    const phoneInput = ctrl.modal.querySelector('input[name="phone"]');
+    window.utils.bindPhoneInput(phoneInput);
     ctrl.modal.querySelector('#customer-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const phone = fd.get('phone').trim();
+      if (!window.utils.isValidSaudiPhone(phone)) {
+        window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+        phoneInput.focus();
+        return;
+      }
       try {
         await window.api.updateCustomer(customer.id, {
           full_name: fd.get('full_name').trim(),
-          phone:     fd.get('phone').trim(),
+          phone,
           notes:     fd.get('notes').trim() || null
         });
         window.utils.toast('تم تحديث العميل', 'success');

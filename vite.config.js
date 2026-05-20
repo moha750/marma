@@ -16,13 +16,9 @@ const APP_ROUTES = [
   'settings'
 ];
 
-// عند نشر المشروع على GitHub Pages تحت مستودع projectName:
-// - الموقع يعيش على https://USERNAME.github.io/marma/
-// - لذلك base = '/marma/'
-// عند ربط دومين مخصّص (CNAME):
-// - الموقع يعيش على https://your-domain.com/
-// - بدّل السطر التالي إلى: const PROD_BASE = '/';
-const PROD_BASE = '/marma/';
+// النطاق المخصّص https://marma.help → base = '/'
+// (سابقاً كان '/marma/' للنشر على github.io/marma قبل ربط النطاق)
+const PROD_BASE = '/';
 
 function spaFallbackMiddleware(req, _res, next) {
   // في dev: base = '/'، لذا نتحقق من أول segment بعد '/'
@@ -132,6 +128,7 @@ export default defineConfig(({ mode }) => {
           await copyIfExists('src');
           await copyIfExists('config.js');
           await copyIfExists('assets');
+          await copyIfExists('CNAME');
 
           // 404.html = نفس app.html (يلتقط كل المسارات غير الموجودة على GitHub Pages)
           try {

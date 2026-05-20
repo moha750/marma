@@ -16,7 +16,6 @@
     return ({
       trial: 'تجربة مجانية',
       active: 'اشتراك نشط',
-      grace_trial: 'انتهت التجربة (فترة سماح)',
       grace_active: 'انتهى الاشتراك (فترة سماح)',
       expired: 'منتهي',
       none: 'غير معرّف'
@@ -26,7 +25,7 @@
   function phaseChip(phase) {
     const cls = ({
       trial: 'info', active: 'success',
-      grace_trial: 'warning', grace_active: 'warning',
+      grace_active: 'warning',
       expired: 'danger'
     })[phase] || 'muted';
     return `<span class="chip-status chip-status--${cls}">${window.utils.escapeHtml(phaseLabel(phase))}</span>`;
@@ -113,7 +112,7 @@
 
       function renderStatusCard(status) {
         const phase  = status ? status.phase : 'none';
-        const days   = status ? Math.max(0, Number(status.days_remaining) || 0) : 0;
+        const days   = status ? Math.max(0, Number(status.days_until_expiry) || 0) : 0;
         const effEnd = status && status.effective_end ? window.utils.formatDateTime(status.effective_end) : '—';
         const allowedFields = status ? (status.allowed_fields || 1) : 1;
         const allowedStaff  = status ? (status.allowed_staff  || 0) : 0;

@@ -57,13 +57,6 @@
         </div>
         <div class="stat-value">${newThisMonth}</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-head">
-          <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="phone"></i></span>
-          <span class="stat-label">يحملون أرقام جوال</span>
-        </div>
-        <div class="stat-value">${customers.filter((c) => c.phone).length}</div>
-      </div>
     `;
   }
 
@@ -93,7 +86,7 @@
           </thead>
           <tbody>
             ${customers.map((c) => `
-              <tr data-id="${c.id}">
+              <tr data-id="${c.id}" class="is-clickable" data-href="${detailsHref(c.id)}">
                 <td>
                   <a href="${detailsHref(c.id)}" class="fw-semibold">${window.utils.escapeHtml(c.full_name)}</a>
                 </td>
@@ -102,9 +95,6 @@
                 <td class="text-tertiary text-xs">${window.utils.formatDate(c.created_at)}</td>
                 <td class="actions-cell">
                   <div class="actions-inline">
-                    <a href="${detailsHref(c.id)}" class="btn btn--xs btn--ghost" title="تفاصيل">
-                      <i data-lucide="external-link"></i>
-                    </a>
                     <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${c.id}" title="تعديل">
                       <i data-lucide="pencil"></i>
                     </button>
@@ -165,12 +155,20 @@
     });
 
     ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+    const phoneInput = ctrl.modal.querySelector('input[name="phone"]');
+    window.utils.bindPhoneInput(phoneInput);
     ctrl.modal.querySelector('#customer-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const phone = fd.get('phone').trim();
+      if (!window.utils.isValidSaudiPhone(phone)) {
+        window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+        phoneInput.focus();
+        return;
+      }
       const payload = {
         full_name: fd.get('full_name').trim(),
-        phone:     fd.get('phone').trim(),
+        phone,
         notes:     fd.get('notes').trim() || null
       };
       try {
@@ -229,6 +227,13 @@
               e.stopPropagation();
               const customer = customers.find((c) => c.id === btn.dataset.id);
               openCustomerForm({ customer, onSaved: refresh });
+            });
+          });
+
+          listContainer.querySelectorAll('tr.is-clickable[data-href]').forEach((row) => {
+            row.addEventListener('click', (e) => {
+              if (e.target.closest('a, button, input, textarea, select, label')) return;
+              window.location.href = row.dataset.href;
             });
           });
 

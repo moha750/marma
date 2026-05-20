@@ -79,13 +79,14 @@
   border-color: var(--border-strong);
 }
 
-/* ghost — لا خلفية، للأفعال الثانوية */
+/* ghost — تعبئة رمادية ناعمة + نفس اللمعة الداخلية للـ primary، توحيدًا للهوية */
 .btn--ghost {
-  background: transparent;
+  background: var(--surface-3);
   color: var(--text-primary);
+  box-shadow: var(--ring-inset);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-3), var(--text-primary) 8%);
 }
 
 /* danger — للحذف والإلغاء */

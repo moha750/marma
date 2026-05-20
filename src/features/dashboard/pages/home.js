@@ -1,47 +1,102 @@
-// لوحة التحكم — تخطيط Bento، إجراءات معلّقة inline، sparkline اختياري للإيرادات،
-// donut لمزيج حالات اليوم، جدول حجوزات حديث.
+// لوحة التحكم — تصميم Time-forward:
+// شريط طلبات معلّقة (يظهر فقط عند الحاجة) → KPIs (إيراد/إشغال/حجوزات) →
+// Timeline اليوم → Tomorrow preview → Quick links (مالك).
 
 (function () {
-  function buildTemplate(isOwner) {
-    return `
-      <div class="page-header">
-        <div>
-          <h2>لوحة التحكم</h2>
-          <div class="page-subtitle">نظرة عامة على عمل اليوم</div>
-        </div>
-        <div class="actions">
-          <a href="${window.utils.path('/calendar')}" class="btn btn--secondary">
-            <i data-lucide="calendar"></i> التقويم
-          </a>
-          <button class="btn btn--primary" id="quick-booking-btn">
-            <i data-lucide="plus"></i> حجز جديد
-          </button>
-        </div>
-      </div>
+  // ─── أدوات تواريخ ─────────────────────────────────────
 
-      <div id="bento-area">
-        <div class="stats-grid stats-grid--bento">
-          ${renderSkeletonStatCard()}
-          ${renderSkeletonStatCard()}
-          ${renderSkeletonStatCard()}
-        </div>
-      </div>
-
-      ${isOwner ? '<div id="secondary-stats"></div>' : ''}
-
-      <div id="status-mix-area"></div>
-
-      <div class="card mt-md">
-        <div class="card-header">
-          <h3>آخر الحجوزات</h3>
-          <a href="${window.utils.path('/bookings')}" class="text-muted text-sm">عرض الكل ←</a>
-        </div>
-        <div id="recent-bookings">
-          <div class="loader-center" style="padding: var(--space-8); min-height: auto"><div class="loader"></div></div>
-        </div>
-      </div>
-    `;
+  function startOfDay(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
   }
+
+  function endOfDay(d) {
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+  }
+
+  function addDays(d, n) {
+    const x = new Date(d);
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+
+  function isoLocalDate(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  const longDateFormatter = new Intl.DateTimeFormat('ar-EG', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const weekdayFormatter = new Intl.DateTimeFormat('ar-EG', { weekday: 'long' });
+
+  // ─── أدوات صغيرة ──────────────────────────────────────
+
+  function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
+
+  function statusChip(status) {
+    if (status === 'pending')   return '<span class="chip-status chip-status--pending">معلّق</span>';
+    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">مؤكد</span>';
+    if (status === 'completed') return '<span class="chip-status chip-status--completed">مكتمل</span>';
+    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">ملغي</span>';
+    return '';
+  }
+
+  function escapeName(v) { return window.utils.escapeHtml(v || '—'); }
+
+  // ─── جلب البيانات ─────────────────────────────────────
+
+  // اتجاه 14 يوماً لإيرادات
+  async function fetchRevenueTrend() {
+    try {
+      const now = new Date();
+      const from = addDays(startOfDay(now), -13);
+      const bookings = await window.api.listBookings({
+        from: from.toISOString(),
+        to:   endOfDay(now).toISOString(),
+        limit: 500
+      });
+      const byDay = {};
+      for (let i = 0; i < 14; i++) {
+        byDay[isoLocalDate(addDays(from, i))] = 0;
+      }
+      bookings.forEach((b) => {
+        if (b.status === 'cancelled') return;
+        const key = isoLocalDate(new Date(b.start_time));
+        if (byDay[key] != null) byDay[key] += Number(b.total_price) || 0;
+      });
+      return Object.values(byDay);
+    } catch (_) { return null; }
+  }
+
+  // الإشغال: مجموع slots محجوزة / مجموع slots متاحة عبر كل الأرضيات اليوم
+  async function fetchUtilization(today) {
+    try {
+      const fields = window.store
+        ? await window.store.get('fields:active')
+        : await window.api.listFields(false);
+      if (!fields.length) return null;
+
+      const dateStr = isoLocalDate(today);
+      const slotArrays = await Promise.all(
+        fields.map((f) => window.api.getAvailableSlots(f.id, dateStr).catch(() => []))
+      );
+      let total = 0, booked = 0;
+      slotArrays.forEach((slots) => {
+        slots.forEach((s) => {
+          total++;
+          if (!s.is_available) booked++;
+        });
+      });
+      if (total === 0) return null;
+      return { total, booked, percent: Math.round((booked / total) * 100) };
+    } catch (_) { return null; }
+  }
+
+  // ─── العرض ────────────────────────────────────────────
 
   function renderSkeletonStatCard() {
     return `
@@ -56,245 +111,298 @@
     `;
   }
 
-  function statusChip(status) {
-    if (status === 'pending')   return '<span class="chip-status chip-status--pending">معلّق</span>';
-    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">مؤكد</span>';
-    if (status === 'completed') return '<span class="chip-status chip-status--completed">مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">ملغي</span>';
-    return `<span class="chip-status chip-status--muted">${window.utils.escapeHtml(status)}</span>`;
-  }
-
-  function fmtMoney(v) {
-    return window.utils.formatCurrency(v || 0);
-  }
-
-  // ─── سحب تاريخ ١٤ يوماً لـ sparkline (إذا أمكن) ───────
-  async function fetchRevenueTrend() {
-    try {
-      const now = new Date();
-      const from = new Date(now);
-      from.setDate(from.getDate() - 13);
-      from.setHours(0, 0, 0, 0);
-
-      const bookings = await window.api.listBookings({
-        from: from.toISOString(),
-        to:   new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString(),
-        limit: 500
-      });
-
-      // جمّع حسب اليوم
-      const byDay = {};
-      for (let i = 0; i < 14; i++) {
-        const d = new Date(from);
-        d.setDate(from.getDate() + i);
-        const key = d.toISOString().slice(0, 10);
-        byDay[key] = 0;
-      }
-      bookings.forEach((b) => {
-        if (b.status === 'cancelled') return;
-        const key = new Date(b.start_time).toISOString().slice(0, 10);
-        if (byDay[key] != null) byDay[key] += Number(b.total_price) || 0;
-      });
-
-      return Object.values(byDay);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function todayBookingsStatusMix(latest) {
-    // مزيج حالات حجوزات اليوم — يُحسب من قائمة latest المحدودة (آخر 5).
-    // ليس مثالياً لكنه يعكس الواقع القريب.
-    const today = new Date().toISOString().slice(0, 10);
-    const byStatus = { confirmed: 0, pending: 0, cancelled: 0, completed: 0 };
-    latest.forEach((b) => {
-      const day = new Date(b.start_time).toISOString().slice(0, 10);
-      if (day === today && byStatus[b.status] != null) byStatus[b.status]++;
-    });
-    return byStatus;
-  }
-
-  // ─── البطاقات ─────────────────────────────────────────
-
-  function renderHeroRevenueCard(stats, hasSpark) {
+  function buildTemplate(isOwner, todayLabel) {
     return `
-      <div class="stat-card">
+      <div class="page-header">
+        <div>
+          <h2>لوحة التحكم</h2>
+          <div class="page-subtitle">${todayLabel}</div>
+        </div>
+        <div class="actions">
+          <a href="${window.utils.path('/calendar')}" class="btn btn--secondary">
+            <i data-lucide="calendar"></i> التقويم
+          </a>
+          <button class="btn btn--primary" id="quick-booking-btn">
+            <i data-lucide="plus"></i> حجز جديد
+          </button>
+        </div>
+      </div>
+
+      <div id="pending-banner-area"></div>
+
+      <div id="kpi-area">
+        <div class="stats-grid stats-grid--bento">
+          ${renderSkeletonStatCard()}
+          ${renderSkeletonStatCard()}
+          ${renderSkeletonStatCard()}
+        </div>
+      </div>
+
+      <div id="sparkline-area"></div>
+
+      <div id="timeline-area"></div>
+
+      <div id="tomorrow-area"></div>
+    `;
+  }
+
+  // شريط الطلبات المعلّقة — لا يُعرض إن كانت القائمة فارغة
+  function renderPendingBanner(pending) {
+    if (!pending.length) return '';
+    const top3 = pending.slice(0, 3);
+    const rest = pending.length - top3.length;
+    return `
+      <div class="stat-card stat-card--warning" style="margin-bottom:var(--space-4)">
         <div class="stat-card-head">
-          <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="trending-up"></i></span>
-          <span class="stat-label">إيرادات اليوم</span>
+          <span class="stat-icon-chip stat-icon-chip--warning"><i data-lucide="hourglass"></i></span>
+          <span class="stat-label">${pending.length} طلب${pending.length > 1 ? 'ات' : ''} بانتظار موافقتك</span>
         </div>
-        <div class="stat-value stat-value--lg">${fmtMoney(stats.today_revenue || 0)}</div>
-        <div class="stat-sub">
-          مدفوع <span class="text-success fw-semibold">${fmtMoney(stats.today_paid || 0)}</span>
-          · غير مدفوع ${fmtMoney((stats.today_revenue || 0) - (stats.today_paid || 0))}
+        <div class="pending-inline-list">
+          ${top3.map((b) => `
+            <div class="pending-inline-item is-clickable" data-id="${b.id}">
+              <div class="pending-inline-text">
+                <div class="pending-inline-title">${escapeName(b.customers && b.customers.full_name)}</div>
+                <div class="pending-inline-sub">${window.utils.formatDateTime(b.start_time)} · ${escapeName(b.fields && b.fields.name)}</div>
+              </div>
+            </div>
+          `).join('')}
         </div>
-        ${hasSpark ? '<div class="stat-spark" id="rev-spark"></div>' : ''}
+        ${rest > 0 ? `<a class="pending-inline-more" href="${window.utils.path('/bookings')}?status=pending">+ ${rest} طلب${rest > 1 ? 'اً آخر' : ' آخر'} ←</a>` : ''}
       </div>
     `;
   }
 
-  function renderTodayBookingsCard(stats, mix) {
-    const total = stats.today_bookings || 0;
-    const segs = [];
-    if (mix.confirmed) segs.push(`<span class="stat-bar-seg stat-bar-seg--success" style="width:${(mix.confirmed/Math.max(total,1))*100}%"></span>`);
-    if (mix.pending)   segs.push(`<span class="stat-bar-seg stat-bar-seg--warning" style="width:${(mix.pending/Math.max(total,1))*100}%"></span>`);
-    if (mix.cancelled) segs.push(`<span class="stat-bar-seg stat-bar-seg--danger"  style="width:${(mix.cancelled/Math.max(total,1))*100}%"></span>`);
+  // KPI #1 — يُختلف بحسب الدور
+  function renderHeroCard({ isOwner, stats }) {
+    if (isOwner) {
+      const unpaid = (stats.today_revenue || 0) - (stats.today_paid || 0);
+      return `
+        <div class="stat-card">
+          <div class="stat-card-head">
+            <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="trending-up"></i></span>
+            <span class="stat-label">إيرادات اليوم</span>
+          </div>
+          <div class="stat-value stat-value--lg">${fmtMoney(stats.today_revenue)}</div>
+          <div class="stat-sub">
+            مدفوع <span class="text-success fw-semibold">${fmtMoney(stats.today_paid)}</span>
+            · غير مدفوع ${fmtMoney(unpaid)}
+          </div>
+        </div>
+      `;
+    }
+    const count = stats.today_bookings || 0;
     return `
       <div class="stat-card">
         <div class="stat-card-head">
           <span class="stat-icon-chip stat-icon-chip--info"><i data-lucide="calendar-check"></i></span>
           <span class="stat-label">حجوزات اليوم</span>
         </div>
-        <div class="stat-value">${total}</div>
-        <div class="stat-bar">${segs.join('')}</div>
-        <div class="stat-legend">
-          <span><span class="dot" style="background:var(--success)"></span>مؤكد ${mix.confirmed || 0}</span>
-          <span><span class="dot" style="background:var(--warning)"></span>معلّق ${mix.pending || 0}</span>
-          ${mix.cancelled ? `<span><span class="dot" style="background:var(--danger)"></span>ملغي ${mix.cancelled}</span>` : ''}
-        </div>
+        <div class="stat-value stat-value--lg">${count}</div>
+        <div class="stat-sub">${count === 0 ? 'لا توجد حجوزات اليوم بعد' : 'حجزاً مسجّلاً'}</div>
       </div>
     `;
   }
 
-  function renderPendingCard(pending) {
-    if (!pending.length) {
+  // KPI #2 — الإشغال (مشترك للدورين)
+  function renderUtilizationCard(util) {
+    if (!util) {
       return `
         <div class="stat-card">
           <div class="stat-card-head">
-            <span class="stat-icon-chip"><i data-lucide="check"></i></span>
-            <span class="stat-label">بانتظار الموافقة</span>
+            <span class="stat-icon-chip"><i data-lucide="gauge"></i></span>
+            <span class="stat-label">الإشغال اليوم</span>
           </div>
-          <div class="stat-value">0</div>
-          <div class="stat-sub">لا توجد طلبات معلّقة</div>
+          <div class="stat-value text-tertiary">—</div>
+          <div class="stat-sub">لا توجد جداول عمل لليوم</div>
         </div>
       `;
     }
-    const top3 = pending.slice(0, 3);
-    const rest = pending.length - top3.length;
+    const segs = `<span class="stat-bar-seg stat-bar-seg--success" style="width:${util.percent}%"></span>`;
     return `
-      <div class="stat-card stat-card--warning">
+      <div class="stat-card">
         <div class="stat-card-head">
-          <span class="stat-icon-chip stat-icon-chip--warning"><i data-lucide="hourglass"></i></span>
-          <span class="stat-label">بانتظار موافقتك</span>
+          <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="gauge"></i></span>
+          <span class="stat-label">الإشغال اليوم</span>
         </div>
-        <div class="stat-value">${pending.length}</div>
-        <div class="pending-inline-list">
-          ${top3.map((b) => `
-            <div class="pending-inline-item" data-id="${b.id}">
-              <div class="pending-inline-text">
-                <div class="pending-inline-title">${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</div>
-                <div class="pending-inline-sub">${window.utils.formatDateTime(b.start_time)} · ${window.utils.escapeHtml(b.fields ? b.fields.name : '')}</div>
+        <div class="stat-value">${util.percent}<span style="font-size:0.55em;color:var(--text-secondary)">%</span></div>
+        <div class="stat-sub">${util.booked} من ${util.total} موعداً محجوز</div>
+        <div class="stat-bar">${segs}</div>
+      </div>
+    `;
+  }
+
+  // KPI #3 — حجوزات اليوم مع مزيج الحالات (للمالك)، أو نظرة الأسبوع (للموظف)
+  function renderThirdCard({ isOwner, stats, todayMix, weekCount }) {
+    if (isOwner) {
+      const total = stats.today_bookings || 0;
+      const segs = [];
+      const ratio = total > 0 ? 100 / total : 0;
+      if (todayMix.confirmed) segs.push(`<span class="stat-bar-seg stat-bar-seg--success" style="width:${todayMix.confirmed * ratio}%"></span>`);
+      if (todayMix.pending)   segs.push(`<span class="stat-bar-seg stat-bar-seg--warning" style="width:${todayMix.pending * ratio}%"></span>`);
+      if (todayMix.completed) segs.push(`<span class="stat-bar-seg stat-bar-seg--muted"   style="width:${todayMix.completed * ratio}%"></span>`);
+      if (todayMix.cancelled) segs.push(`<span class="stat-bar-seg stat-bar-seg--danger"  style="width:${todayMix.cancelled * ratio}%"></span>`);
+      return `
+        <div class="stat-card">
+          <div class="stat-card-head">
+            <span class="stat-icon-chip stat-icon-chip--info"><i data-lucide="calendar-check"></i></span>
+            <span class="stat-label">حجوزات اليوم</span>
+          </div>
+          <div class="stat-value">${total}</div>
+          ${total > 0 ? `
+            <div class="stat-bar">${segs.join('')}</div>
+            <div class="stat-legend">
+              ${todayMix.confirmed ? `<span><span class="dot" style="background:var(--success)"></span>مؤكد ${todayMix.confirmed}</span>` : ''}
+              ${todayMix.pending   ? `<span><span class="dot" style="background:var(--warning)"></span>معلّق ${todayMix.pending}</span>` : ''}
+              ${todayMix.completed ? `<span><span class="dot" style="background:var(--border-strong)"></span>مكتمل ${todayMix.completed}</span>` : ''}
+              ${todayMix.cancelled ? `<span><span class="dot" style="background:var(--danger)"></span>ملغي ${todayMix.cancelled}</span>` : ''}
+            </div>
+          ` : `<div class="stat-sub">لا حجوزات اليوم بعد</div>`}
+        </div>
+      `;
+    }
+    return `
+      <div class="stat-card">
+        <div class="stat-card-head">
+          <span class="stat-icon-chip"><i data-lucide="calendar-range"></i></span>
+          <span class="stat-label">هذا الأسبوع</span>
+        </div>
+        <div class="stat-value">${weekCount}</div>
+        <div class="stat-sub">حجزاً خلال 7 أيام</div>
+      </div>
+    `;
+  }
+
+  function renderSparklineRow(spark) {
+    if (!spark || !spark.length) return '';
+    const total = spark.reduce((a, b) => a + b, 0);
+    const peak = Math.max(...spark);
+    return `
+      <div class="card mb-md" style="padding:var(--space-4)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+          <div>
+            <div class="text-xs text-tertiary fw-medium">آخر 14 يوماً</div>
+            <div class="fw-semibold" style="font-size:var(--text-md)">${fmtMoney(total)}</div>
+          </div>
+          <div class="text-xs text-tertiary">ذروة يومية ${fmtMoney(peak)}</div>
+        </div>
+        <div id="rev-spark-big" style="height:48px"></div>
+      </div>
+    `;
+  }
+
+  // Timeline اليوم — قائمة الحجوزات بترتيب الوقت
+  function renderTodayTimeline(todayBookings) {
+    if (!todayBookings.length) {
+      return `
+        <div class="card mb-md">
+          <div class="card-header">
+            <h3>جدول اليوم</h3>
+          </div>
+          <div class="empty-state" style="padding:var(--space-6)">
+            <div class="empty-icon"><i data-lucide="clock"></i></div>
+            <p>لا توجد حجوزات لليوم بعد. شارك رابط الحجز أو أنشئ حجزاً يدوياً.</p>
+          </div>
+        </div>
+      `;
+    }
+    const sorted = [...todayBookings].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    return `
+      <div class="card mb-md">
+        <div class="card-header">
+          <h3>جدول اليوم</h3>
+          <span class="card-header-meta">${sorted.length} موعداً</span>
+        </div>
+        <div class="timeline-list">
+          ${sorted.map((b) => `
+            <div class="timeline-row is-clickable" data-id="${b.id}" data-status="${b.status}">
+              <div class="timeline-time">
+                <span class="timeline-time-from">${window.utils.formatTime(b.start_time)}</span>
+                <span class="timeline-time-sep">→</span>
+                <span class="timeline-time-to">${window.utils.formatTime(b.end_time)}</span>
               </div>
-              <div class="pending-inline-actions">
-                <button class="btn btn--xs btn--accent-quiet" data-action="approve" data-id="${b.id}" title="موافقة">
-                  <i data-lucide="check"></i>
-                </button>
-                <button class="btn btn--xs btn--danger-quiet" data-action="reject" data-id="${b.id}" title="رفض">
-                  <i data-lucide="x"></i>
-                </button>
+              <div class="timeline-main">
+                <div class="timeline-customer">${escapeName(b.customers && b.customers.full_name)}</div>
+                <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
+              </div>
+              <div class="timeline-side">
+                ${statusChip(b.status)}
+                <span class="timeline-price">${fmtMoney(b.total_price)}</span>
               </div>
             </div>
           `).join('')}
         </div>
-        ${rest > 0 ? `<a class="pending-inline-more" href="${window.utils.path('/bookings')}?status=pending">+ ${rest} طلب آخر ←</a>` : ''}
       </div>
     `;
   }
 
-  function renderSecondaryStats(stats, isOwner) {
-    if (!isOwner) return '';
-    return `
-      <div class="stats-grid mt-md">
-        <div class="stat-card">
-          <div class="stat-card-head">
-            <span class="stat-icon-chip"><i data-lucide="banknote"></i></span>
-            <span class="stat-label">إيرادات الشهر</span>
-          </div>
-          <div class="stat-value">${fmtMoney(stats.month_revenue || 0)}</div>
-          <div class="stat-sub">مدفوع ${fmtMoney(stats.month_paid || 0)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-head">
-            <span class="stat-icon-chip"><i data-lucide="users"></i></span>
-            <span class="stat-label">إجمالي العملاء</span>
-          </div>
-          <div class="stat-value">${stats.customers_count || 0}</div>
-          <div class="stat-sub"><a href="${window.utils.path('/customers')}">إدارة العملاء →</a></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-head">
-            <span class="stat-icon-chip"><i data-lucide="goal"></i></span>
-            <span class="stat-label">الأرضيات</span>
-          </div>
-          <div class="stat-value">${stats.fields_count || 0}</div>
-          <div class="stat-sub"><a href="${window.utils.path('/fields')}">إدارة الأرضيات →</a></div>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderRecentBookingsTable(latest, onRowClick) {
-    if (!latest.length) {
+  // Tomorrow preview — قائمة مضغوطة لحجوزات الغد
+  function renderTomorrow(tomorrowBookings, tomorrowDate) {
+    const dayLabel = weekdayFormatter.format(tomorrowDate);
+    if (!tomorrowBookings.length) {
       return `
-        <div class="empty-state">
-          <div class="empty-icon"><i data-lucide="calendar-x"></i></div>
-          <h3>لا توجد حجوزات حتى الآن</h3>
-          <p>ابدأ بإنشاء أول حجز يدوي أو شارك رابط الحجز العام مع عملائك.</p>
-          <button class="btn btn--primary" id="empty-add-btn"><i data-lucide="plus"></i> إنشاء أول حجز</button>
+        <div class="card mb-md">
+          <div class="card-header">
+            <h3>غداً (${dayLabel})</h3>
+          </div>
+          <div class="empty-state" style="padding:var(--space-5)">
+            <p class="text-muted">لا حجوزات مجدولة لـ${dayLabel}.</p>
+          </div>
         </div>
       `;
     }
+    const sorted = [...tomorrowBookings].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const top = sorted.slice(0, 5);
+    const rest = sorted.length - top.length;
     return `
-      <div class="table-wrapper" style="box-shadow:none;border-radius:0">
-        <table class="table table--sticky-first">
-          <thead>
-            <tr>
-              <th>التاريخ والوقت</th>
-              <th>الأرضية</th>
-              <th>العميل</th>
-              <th>السعر</th>
-              <th>الحالة</th>
-              <th class="actions-cell"></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${latest.map((b) => `
-              <tr class="is-clickable" data-id="${b.id}" data-status="${window.utils.escapeHtml(b.status)}">
-                <td>${window.utils.formatDateTime(b.start_time)}</td>
-                <td>${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                <td>
-                  <div>${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</div>
-                  ${b.customers && b.customers.phone ? `<div class="text-xs text-tertiary">${window.utils.escapeHtml(b.customers.phone)}</div>` : ''}
-                </td>
-                <td>${fmtMoney(b.total_price)}</td>
-                <td>${statusChip(b.status)}</td>
-                <td class="actions-cell">
-                  <div class="actions-inline">
-                    <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="تعديل">
-                      <i data-lucide="pencil"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+      <div class="card mb-md">
+        <div class="card-header">
+          <h3>غداً (${dayLabel})</h3>
+          <span class="card-header-meta">${sorted.length} حجزاً</span>
+        </div>
+        <div class="timeline-list">
+          ${top.map((b) => `
+            <div class="timeline-row is-clickable timeline-row--compact" data-id="${b.id}">
+              <div class="timeline-time">
+                <span class="timeline-time-from">${window.utils.formatTime(b.start_time)}</span>
+              </div>
+              <div class="timeline-main">
+                <div class="timeline-customer">${escapeName(b.customers && b.customers.full_name)}</div>
+                <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
+              </div>
+              <div class="timeline-side">
+                ${statusChip(b.status)}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ${rest > 0 ? `<a class="pending-inline-more" href="${window.utils.path('/bookings')}" style="padding:var(--space-2) var(--space-4)">+ ${rest} حجزاً آخر ←</a>` : ''}
       </div>
     `;
   }
 
-  // ─── الصفحة ───────────────────────────────────────────
+  // ─── منطق الصفحة ──────────────────────────────────────
+
+  function todayBookingsMix(todayBookings) {
+    const mix = { confirmed: 0, pending: 0, completed: 0, cancelled: 0 };
+    todayBookings.forEach((b) => {
+      if (mix[b.status] != null) mix[b.status]++;
+    });
+    return mix;
+  }
 
   const page = {
     async mount(container, ctx) {
       const isOwner = ctx.profile.role === 'owner';
-      container.innerHTML = buildTemplate(isOwner);
+      const today = new Date();
+      const todayLabel = longDateFormatter.format(today);
+      container.innerHTML = buildTemplate(isOwner, todayLabel);
 
-      const bento         = container.querySelector('#bento-area');
-      const secondary     = container.querySelector('#secondary-stats');
-      const statusMix     = container.querySelector('#status-mix-area');
-      const recentArea    = container.querySelector('#recent-bookings');
-      const quickBtn      = container.querySelector('#quick-booking-btn');
+      const pendingArea  = container.querySelector('#pending-banner-area');
+      const kpiArea      = container.querySelector('#kpi-area');
+      const sparkArea    = container.querySelector('#sparkline-area');
+      const timelineArea = container.querySelector('#timeline-area');
+      const tomorrowArea = container.querySelector('#tomorrow-area');
+      const quickBtn     = container.querySelector('#quick-booking-btn');
 
       const cleanup = [];
       let alive = true;
@@ -303,94 +411,83 @@
       async function refresh() {
         if (!alive) return;
         try {
-          const [stats, latest, pending, spark] = await Promise.all([
+          const todayStart = startOfDay(today).toISOString();
+          const todayEnd   = endOfDay(today).toISOString();
+          const tomorrow = addDays(today, 1);
+          const tomorrowStart = startOfDay(tomorrow).toISOString();
+          const tomorrowEnd   = endOfDay(tomorrow).toISOString();
+          const weekStart = todayStart;
+          const weekEnd   = endOfDay(addDays(today, 6)).toISOString();
+
+          const [stats, todayBookings, tomorrowBookings, weekBookings, pending, spark, util] = await Promise.all([
             window.api.getDashboardStats(),
-            window.api.listBookings({ limit: 10 }),
+            window.api.listBookings({ from: todayStart, to: todayEnd, limit: 200 }),
+            window.api.listBookings({ from: tomorrowStart, to: tomorrowEnd, limit: 200 }),
+            isOwner ? Promise.resolve([]) : window.api.listBookings({ from: weekStart, to: weekEnd, limit: 200 }),
             window.api.listPendingBookings(),
-            isOwner ? fetchRevenueTrend() : Promise.resolve(null)
+            isOwner ? fetchRevenueTrend() : Promise.resolve(null),
+            fetchUtilization(today)
           ]);
           if (!alive) return;
 
-          const mix = todayBookingsStatusMix(latest);
+          const mix = todayBookingsMix(todayBookings);
           const hasSpark = spark && spark.length >= 2 && spark.some((v) => v > 0);
 
-          const heroCard = isOwner
-            ? renderHeroRevenueCard(stats, hasSpark)
-            : renderTodayBookingsCard(stats, mix);
+          // ── 1) شريط الطلبات المعلّقة (يختفي عند صفر)
+          pendingArea.innerHTML = renderPendingBanner(pending);
 
-          bento.innerHTML = `
+          // ── 2) KPIs الرئيسية
+          kpiArea.innerHTML = `
             <div class="stats-grid stats-grid--bento">
-              ${heroCard}
-              ${isOwner ? renderTodayBookingsCard(stats, mix) : ''}
-              ${renderPendingCard(pending)}
+              ${renderHeroCard({ isOwner, stats })}
+              ${renderUtilizationCard(util)}
+              ${renderThirdCard({ isOwner, stats, todayMix: mix, weekCount: weekBookings.length })}
             </div>
           `;
 
+          // ── 3) Sparkline كبير (مالك فقط، يُخفى عند انعدام البيانات)
+          sparkArea.innerHTML = (isOwner && hasSpark) ? renderSparklineRow(spark) : '';
           if (isOwner && hasSpark) {
-            const sparkEl = bento.querySelector('#rev-spark');
-            if (sparkEl) window.charts.sparkline({ container: sparkEl, data: spark, fill: true });
+            const big = sparkArea.querySelector('#rev-spark-big');
+            if (big) window.charts.sparkline({ container: big, data: spark, fill: true, height: 48, strokeWidth: 2 });
           }
 
-          if (secondary) {
-            secondary.innerHTML = renderSecondaryStats(stats, isOwner);
-          }
+          // ── 4) Timeline اليوم
+          timelineArea.innerHTML = renderTodayTimeline(todayBookings);
 
-          recentArea.innerHTML = renderRecentBookingsTable(latest.slice(0, 5));
+          // ── 5) غداً
+          tomorrowArea.innerHTML = renderTomorrow(tomorrowBookings, tomorrow);
 
-          // ربط الأفعال
-          recentArea.querySelectorAll('tr[data-id]').forEach((tr) => {
-            tr.addEventListener('click', () => {
-              const booking = latest.find((b) => b.id === tr.dataset.id);
-              window.bookingModal.open({ booking, onSaved: refresh });
+          // ── ربط الأفعال ──────────────────────────────
+
+          // Pending: نقر الصف يفتح المودال (الموافقة/الرفض من footer المودال)
+          pendingArea.querySelectorAll('.pending-inline-item').forEach((row) => {
+            row.addEventListener('click', () => {
+              const b = pending.find((x) => x.id === row.dataset.id);
+              if (b) window.bookingModal.open({ booking: b, onSaved: refresh });
             });
           });
 
-          bento.querySelectorAll('.pending-inline-item').forEach((row) => {
-            const reviewBtn = row.querySelector('[data-action]');
-            row.querySelector('.pending-inline-text').addEventListener('click', () => {
-              const booking = pending.find((b) => b.id === row.dataset.id);
-              if (booking) window.bookingModal.open({ booking, onSaved: refresh });
+          // Timeline اليوم — نقر على الصف يفتح مودال التعديل
+          timelineArea.querySelectorAll('.timeline-row[data-id]').forEach((row) => {
+            row.addEventListener('click', () => {
+              const b = todayBookings.find((x) => x.id === row.dataset.id);
+              if (b) window.bookingModal.open({ booking: b, onSaved: refresh });
             });
           });
 
-          bento.querySelectorAll('[data-action="approve"]').forEach((btn) => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              btn.disabled = true;
-              try {
-                await window.api.approveBooking(btn.dataset.id);
-                window.utils.toast('تم تأكيد الحجز', 'success');
-                refresh();
-              } catch (err) {
-                btn.disabled = false;
-                window.utils.toast(window.utils.formatError(err), 'error');
-              }
+          // Tomorrow — نقر على الصف يفتح مودال التعديل
+          tomorrowArea.querySelectorAll('.timeline-row[data-id]').forEach((row) => {
+            row.addEventListener('click', () => {
+              const b = tomorrowBookings.find((x) => x.id === row.dataset.id);
+              if (b) window.bookingModal.open({ booking: b, onSaved: refresh });
             });
           });
-
-          bento.querySelectorAll('[data-action="reject"]').forEach((btn) => {
-            btn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              if (!confirm('تأكيد رفض الحجز؟')) return;
-              btn.disabled = true;
-              try {
-                await window.api.rejectBooking(btn.dataset.id);
-                window.utils.toast('تم رفض الحجز', 'success');
-                refresh();
-              } catch (err) {
-                btn.disabled = false;
-                window.utils.toast(window.utils.formatError(err), 'error');
-              }
-            });
-          });
-
-          const emptyBtn = recentArea.querySelector('#empty-add-btn');
-          if (emptyBtn) emptyBtn.addEventListener('click', () => window.bookingModal.open({ onSaved: refresh }));
 
           window.utils.renderIcons(container);
         } catch (err) {
           if (!alive) return;
-          bento.innerHTML = `
+          kpiArea.innerHTML = `
             <div class="card">
               <div class="empty-state">
                 <div class="empty-icon"><i data-lucide="triangle-alert"></i></div>
@@ -400,7 +497,7 @@
               </div>
             </div>
           `;
-          const r = bento.querySelector('#retry-btn');
+          const r = kpiArea.querySelector('#retry-btn');
           if (r) r.addEventListener('click', refresh);
           window.utils.renderIcons(container);
         }

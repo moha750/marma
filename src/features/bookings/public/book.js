@@ -55,7 +55,7 @@
           <div class="public-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></div>
           <div class="public-brand-text">
             <h1>${window.utils.escapeHtml(tenantInfo.name)}</h1>
-            ${tenantInfo.city ? `<div class="public-meta"><i data-lucide="map-pin"></i> ${window.utils.escapeHtml(tenantInfo.city)}</div>` : ''}
+            <div class="public-meta" id="public-meta-slot"></div>
           </div>
         </div>
         <p class="public-tagline">احجز موعدك بسهولة — سيتواصل معك الملعب لتأكيد الحجز.</p>
@@ -73,6 +73,7 @@
               <button type="button" class="action-card field-tile" data-id="${f.id}">
                 <div class="field-tile-icon"><i data-lucide="goal"></i></div>
                 <div class="field-tile-name">${window.utils.escapeHtml(f.name)}</div>
+                ${f.city ? `<div class="field-tile-meta">${window.utils.escapeHtml(f.city)}</div>` : ''}
               </button>
             `).join('')}
           </div>
@@ -140,6 +141,26 @@
     const slotsArea = document.getElementById('slots-area');
     const priceSlot = document.getElementById('price-summary-slot');
     const submitBtn = document.getElementById('submit-btn');
+    const metaSlot = document.getElementById('public-meta-slot');
+    window.utils.bindPhoneInput(form.customer_phone);
+
+    function renderMeta() {
+      if (!metaSlot) return;
+      if (selectedField) {
+        const parts = [];
+        if (selectedField.city)  parts.push(`<span><i data-lucide="map-pin"></i> ${window.utils.escapeHtml(selectedField.city)}</span>`);
+        if (selectedField.phone) parts.push(`<a href="tel:${window.utils.escapeHtml(selectedField.phone)}"><i data-lucide="phone"></i> ${window.utils.escapeHtml(selectedField.phone)}</a>`);
+        if (selectedField.location_url) parts.push(`<a href="${window.utils.escapeHtml(selectedField.location_url)}" target="_blank" rel="noopener noreferrer"><i data-lucide="navigation"></i> افتح في الخرائط</a>`);
+        metaSlot.innerHTML = parts.join('<span class="public-meta-sep">·</span>');
+      } else {
+        const cities = Array.from(new Set(tenantInfo.fields.map((f) => f.city).filter(Boolean)));
+        metaSlot.innerHTML = cities.length
+          ? `<span><i data-lucide="map-pin"></i> ${window.utils.escapeHtml(cities.join(' · '))}</span>`
+          : '';
+      }
+      window.utils.renderIcons(metaSlot);
+    }
+    renderMeta();
 
     tilesContainer.querySelectorAll('.field-tile').forEach((tile) => {
       tile.addEventListener('click', () => {
@@ -147,6 +168,7 @@
         tile.classList.add('is-selected');
         selectedField = tenantInfo.fields.find((f) => f.id === tile.dataset.id);
         selectedSlot = null;
+        renderMeta();
         refreshSlots();
         refreshPriceSummary();
       });
@@ -259,6 +281,12 @@
       const customerPhone = fd.get('customer_phone').trim();
       const notes = (fd.get('notes') || '').trim() || null;
 
+      if (!window.utils.isValidSaudiPhone(customerPhone)) {
+        window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+        form.customer_phone.focus();
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.dataset.loading = 'true';
 
@@ -334,10 +362,15 @@
     window.utils.renderIcons(root);
 
     document.getElementById('download-ics-btn').addEventListener('click', () => {
+      const fieldUrl = selectedField && selectedField.location_url;
+      const fieldCity = selectedField && selectedField.city;
+      const location = fieldUrl
+        ? fieldUrl
+        : (fieldCity ? `${tenantInfo.name} - ${fieldCity}` : tenantInfo.name);
       downloadICS({
         title: `حجز ${tenantInfo.name} — ${fieldName}`,
         description: `حجز رقم ${String(bookingId).slice(0, 8)} لـ ${customerName}`,
-        location: tenantInfo.city || tenantInfo.name,
+        location,
         start, end
       });
     });

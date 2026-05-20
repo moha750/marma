@@ -26,7 +26,7 @@ window.bookingModal = (function () {
     return { fields, customers };
   }
 
-  async function open({ booking = null, defaultStart = null, defaultEnd = null, defaultFieldId = null, onSaved } = {}) {
+  async function open({ booking = null, defaultStart = null, defaultEnd = null, defaultFieldId = null, prefillCustomer = null, onSaved } = {}) {
     let deps;
     try {
       deps = await loadDependencies();
@@ -83,6 +83,7 @@ window.bookingModal = (function () {
       ${pendingBanner}
       ${nameMismatchBanner}
       <form id="booking-form" autocomplete="off">
+        ${editing ? `
         <div class="form-row cols-2">
           <div class="form-group">
             <label class="form-label">الأرضية <span class="required">*</span></label>
@@ -93,13 +94,21 @@ window.bookingModal = (function () {
           <div class="form-group">
             <label class="form-label">الحالة</label>
             <select class="form-control" name="status">
-              ${editing && booking.status === 'pending' ? '<option value="pending" selected>بانتظار الموافقة</option>' : ''}
-              <option value="confirmed" ${editing && booking.status === 'confirmed' ? 'selected' : ''}>مؤكد</option>
-              <option value="completed" ${editing && booking.status === 'completed' ? 'selected' : ''}>مكتمل</option>
-              <option value="cancelled" ${editing && booking.status === 'cancelled' ? 'selected' : ''}>ملغي</option>
+              ${booking.status === 'pending' ? '<option value="pending" selected>بانتظار الموافقة</option>' : ''}
+              <option value="confirmed" ${booking.status === 'confirmed' ? 'selected' : ''}>مؤكد</option>
+              <option value="completed" ${booking.status === 'completed' ? 'selected' : ''}>مكتمل</option>
+              <option value="cancelled" ${booking.status === 'cancelled' ? 'selected' : ''}>ملغي</option>
             </select>
           </div>
         </div>
+        ` : `
+        <div class="form-group">
+          <label class="form-label">الأرضية <span class="required">*</span></label>
+          <select class="form-control" name="field_id" required>
+            ${fields.map((f) => `<option value="${f.id}" ${f.id === fieldIdValue ? 'selected' : ''}>${window.utils.escapeHtml(f.name)}</option>`).join('')}
+          </select>
+        </div>
+        `}
 
         <div class="form-group">
           <label class="form-label">التاريخ <span class="required">*</span></label>
@@ -115,23 +124,32 @@ window.bookingModal = (function () {
 
         <div class="form-group">
           <label class="form-label">العميل <span class="required">*</span></label>
-          <div class="combobox" id="customer-combobox">
-            <input type="text" class="form-control" id="customer-search" placeholder="ابحث عن عميل أو اكتب لإضافة جديد..." autocomplete="off">
-            <input type="hidden" name="customer_id" id="customer-id">
-            <div class="combobox-list" id="customer-list"></div>
-          </div>
-          <div id="new-customer-fields" class="hidden mt-md" style="background:var(--surface-2);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
-            <div class="form-row cols-2">
-              <div class="form-group" style="margin:0">
-                <label class="form-label">اسم العميل الجديد <span class="required">*</span></label>
-                <input type="text" class="form-control" name="new_customer_name">
-              </div>
-              <div class="form-group" style="margin:0">
-                <label class="form-label">رقم الجوال <span class="required">*</span></label>
-                <input type="tel" class="form-control" name="new_customer_phone">
+          ${prefillCustomer ? `
+            <div class="form-control" style="display:flex;align-items:center;gap:var(--space-2);background:var(--surface-2);cursor:default">
+              <i data-lucide="user" style="width:16px;height:16px;color:var(--text-secondary)"></i>
+              <span class="fw-semibold">${window.utils.escapeHtml(prefillCustomer.full_name)}</span>
+              <span class="text-muted text-sm">(${window.utils.escapeHtml(prefillCustomer.phone || '')})</span>
+            </div>
+            <input type="hidden" name="customer_id" id="customer-id" value="${prefillCustomer.id}">
+          ` : `
+            <div class="combobox" id="customer-combobox">
+              <input type="text" class="form-control" id="customer-search" placeholder="ابحث عن عميل أو اكتب لإضافة جديد..." autocomplete="off">
+              <input type="hidden" name="customer_id" id="customer-id">
+              <div class="combobox-list" id="customer-list"></div>
+            </div>
+            <div id="new-customer-fields" class="hidden mt-md" style="background:var(--surface-2);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
+              <div class="form-row cols-2">
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">اسم العميل الجديد <span class="required">*</span></label>
+                  <input type="text" class="form-control" name="new_customer_name">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">رقم الجوال <span class="required">*</span></label>
+                  <input type="tel" class="form-control" name="new_customer_phone">
+                </div>
               </div>
             </div>
-          </div>
+          `}
         </div>
 
         <div class="form-row cols-2">
@@ -193,9 +211,12 @@ window.bookingModal = (function () {
     const customerList = ctrl.modal.querySelector('#customer-list');
     const combobox = ctrl.modal.querySelector('#customer-combobox');
     const newCustomerFields = ctrl.modal.querySelector('#new-customer-fields');
+    if (newCustomerFields) {
+      window.utils.bindPhoneInput(newCustomerFields.querySelector('[name="new_customer_phone"]'));
+    }
 
     // تعبئة العميل عند التعديل
-    if (editing && booking.customers) {
+    if (editing && booking.customers && customerSearch) {
       customerSearch.value = `${booking.customers.full_name} (${booking.customers.phone})`;
       customerIdInput.value = booking.customers.id;
     }
@@ -313,74 +334,76 @@ window.bookingModal = (function () {
     // تحميل أولي
     refreshSlots();
 
-    // combobox العملاء
+    // combobox العملاء — يُتجاوَز عند prefillCustomer (العميل ثابت)
     let selectedNewCustomer = false;
 
-    function renderCustomerList(query) {
-      const q = query.trim().toLowerCase();
-      const matches = q
-        ? customers.filter(
-            (c) =>
-              c.full_name.toLowerCase().includes(q) || c.phone.includes(q)
-          )
-        : customers.slice(0, 50);
+    if (customerSearch) {
+      const renderCustomerList = (query) => {
+        const q = query.trim().toLowerCase();
+        const matches = q
+          ? customers.filter(
+              (c) =>
+                c.full_name.toLowerCase().includes(q) || c.phone.includes(q)
+            )
+          : customers.slice(0, 50);
 
-      let html = matches
-        .map(
-          (c) => `
-        <div class="combobox-item" data-id="${c.id}" data-name="${window.utils.escapeHtml(c.full_name)}" data-phone="${window.utils.escapeHtml(c.phone)}">
-          <div><strong>${window.utils.escapeHtml(c.full_name)}</strong></div>
-          <div class="item-sub">${window.utils.escapeHtml(c.phone)}</div>
-        </div>
-      `
-        )
-        .join('');
-
-      if (q) {
-        html += `
-          <div class="combobox-item create-new" data-action="create">
-            + إضافة عميل جديد باسم "${window.utils.escapeHtml(query)}"
+        let html = matches
+          .map(
+            (c) => `
+          <div class="combobox-item" data-id="${c.id}" data-name="${window.utils.escapeHtml(c.full_name)}" data-phone="${window.utils.escapeHtml(c.phone)}">
+            <div><strong>${window.utils.escapeHtml(c.full_name)}</strong></div>
+            <div class="item-sub">${window.utils.escapeHtml(c.phone)}</div>
           </div>
-        `;
-      }
-      customerList.innerHTML = html;
+        `
+          )
+          .join('');
 
-      customerList.querySelectorAll('.combobox-item').forEach((el) => {
-        el.addEventListener('click', () => {
-          if (el.dataset.action === 'create') {
-            selectedNewCustomer = true;
-            customerIdInput.value = '';
-            customerSearch.value = query;
-            newCustomerFields.classList.remove('hidden');
-            const nameInput = newCustomerFields.querySelector('[name="new_customer_name"]');
-            nameInput.value = query;
-            nameInput.required = true;
-            newCustomerFields.querySelector('[name="new_customer_phone"]').required = true;
-          } else {
-            selectedNewCustomer = false;
-            customerIdInput.value = el.dataset.id;
-            customerSearch.value = `${el.dataset.name} (${el.dataset.phone})`;
-            newCustomerFields.classList.add('hidden');
-          }
-          combobox.classList.remove('open');
+        if (q) {
+          html += `
+            <div class="combobox-item create-new" data-action="create">
+              + إضافة عميل جديد باسم "${window.utils.escapeHtml(query)}"
+            </div>
+          `;
+        }
+        customerList.innerHTML = html;
+
+        customerList.querySelectorAll('.combobox-item').forEach((el) => {
+          el.addEventListener('click', () => {
+            if (el.dataset.action === 'create') {
+              selectedNewCustomer = true;
+              customerIdInput.value = '';
+              customerSearch.value = query;
+              newCustomerFields.classList.remove('hidden');
+              const nameInput = newCustomerFields.querySelector('[name="new_customer_name"]');
+              nameInput.value = query;
+              nameInput.required = true;
+              newCustomerFields.querySelector('[name="new_customer_phone"]').required = true;
+            } else {
+              selectedNewCustomer = false;
+              customerIdInput.value = el.dataset.id;
+              customerSearch.value = `${el.dataset.name} (${el.dataset.phone})`;
+              newCustomerFields.classList.add('hidden');
+            }
+            combobox.classList.remove('open');
+          });
         });
+      };
+
+      customerSearch.addEventListener('focus', () => {
+        combobox.classList.add('open');
+        renderCustomerList(customerSearch.value);
+      });
+      customerSearch.addEventListener('input', () => {
+        customerIdInput.value = '';
+        selectedNewCustomer = false;
+        newCustomerFields.classList.add('hidden');
+        combobox.classList.add('open');
+        renderCustomerList(customerSearch.value);
+      });
+      document.addEventListener('click', (e) => {
+        if (!combobox.contains(e.target)) combobox.classList.remove('open');
       });
     }
-
-    customerSearch.addEventListener('focus', () => {
-      combobox.classList.add('open');
-      renderCustomerList(customerSearch.value);
-    });
-    customerSearch.addEventListener('input', () => {
-      customerIdInput.value = '';
-      selectedNewCustomer = false;
-      newCustomerFields.classList.add('hidden');
-      combobox.classList.add('open');
-      renderCustomerList(customerSearch.value);
-    });
-    document.addEventListener('click', (e) => {
-      if (!combobox.contains(e.target)) combobox.classList.remove('open');
-    });
 
     // تقديم النموذج
     form.addEventListener('submit', async (e) => {
@@ -414,6 +437,11 @@ window.bookingModal = (function () {
         const newPhone = fd.get('new_customer_phone').trim();
         if (!newName || !newPhone) {
           window.utils.toast('أكمل بيانات العميل الجديد', 'error');
+          return;
+        }
+        if (!window.utils.isValidSaudiPhone(newPhone)) {
+          window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+          newCustomerFields.querySelector('[name="new_customer_phone"]').focus();
           return;
         }
         try {

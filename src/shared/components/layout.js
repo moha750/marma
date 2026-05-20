@@ -24,7 +24,7 @@ window.layout = (function () {
     { key: 'settings',     group: 'حساب',   label: 'إعدادات الملعب',       icon: 'settings',         path: '/settings' }
   ];
 
-  // عناصر الـ bottom-nav للجوال (الـ FAB ينشئ حجزاً جديداً)
+  // عناصر الـ bottom-nav للجوال
   const BOTTOM_NAV = [
     { key: 'dashboard', label: 'لوحة',     icon: 'layout-dashboard', path: '/dashboard' },
     { key: 'calendar',  label: 'التقويم',  icon: 'calendar-days',    path: '/calendar' },
@@ -39,20 +39,20 @@ window.layout = (function () {
   function renderTrialBanner(status, activePage) {
     if (!status || activePage === 'subscription') return '';
     const phase = status.phase;
-    const days = Math.max(0, Number(status.days_remaining) || 0);
+    // days_until_expiry = أيام حتى نهاية التجربة/الاشتراك (بدون فترة سماح)
+    // days_remaining    = أيام حتى القفل الكامل (مع فترة السماح للاشتراك المدفوع)
+    const daysToExpiry = Math.max(0, Number(status.days_until_expiry) || 0);
+    const daysToLock   = Math.max(0, Number(status.days_remaining) || 0);
     let kind = '', text = '';
     if (phase === 'trial') {
       kind = 'trial';
-      text = `تجربة مجانية — متبقي ${days} ${pluralDays(days)}`;
-    } else if (phase === 'grace_trial') {
-      kind = 'grace';
-      text = `انتهت التجربة — فترة سماح ${days} ${pluralDays(days)}، يرجى الاشتراك`;
+      text = `تجربة مجانية — متبقي ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
     } else if (phase === 'grace_active') {
       kind = 'grace';
-      text = `انتهى الاشتراك — فترة سماح ${days} ${pluralDays(days)}، يرجى التجديد`;
-    } else if (phase === 'active' && days <= 7) {
+      text = `انتهى الاشتراك — فترة سماح ${daysToLock} ${pluralDays(daysToLock)}، يرجى التجديد`;
+    } else if (phase === 'active' && daysToExpiry <= 7) {
       kind = 'soon';
-      text = `الاشتراك ينتهي خلال ${days} ${pluralDays(days)}`;
+      text = `الاشتراك ينتهي خلال ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
     } else {
       return '';
     }
@@ -106,22 +106,13 @@ window.layout = (function () {
     return `
       <nav class="bottom-nav" id="bottom-nav" aria-label="التنقل السفلي">
         <div class="bottom-nav-list">
-          ${BOTTOM_NAV.slice(0, 2).map((it) => `
-            <a href="${window.utils.path(it.path)}" data-bottom-key="${it.key}">
-              <span class="nav-icon"><i data-lucide="${it.icon}"></i></span>
-              <span>${window.utils.escapeHtml(it.label)}</span>
-            </a>
-          `).join('')}
-          ${BOTTOM_NAV.slice(2).map((it) => `
+          ${BOTTOM_NAV.map((it) => `
             <a href="${window.utils.path(it.path)}" data-bottom-key="${it.key}">
               <span class="nav-icon"><i data-lucide="${it.icon}"></i></span>
               <span>${window.utils.escapeHtml(it.label)}</span>
             </a>
           `).join('')}
         </div>
-        <button type="button" class="bottom-nav-fab" id="bottom-nav-fab" aria-label="حجز جديد">
-          <i data-lucide="plus"></i>
-        </button>
       </nav>
     `;
   }
@@ -305,20 +296,6 @@ window.layout = (function () {
       window.themeToggle.render(themeSlot);
     }
 
-    // FAB — حجز جديد
-    const fab = document.getElementById('bottom-nav-fab');
-    if (fab) {
-      fab.addEventListener('click', () => {
-        if (window.bookingModal && window.bookingModal.open) {
-          window.bookingModal.open();
-        } else {
-          const navigate = window.utils.path('/calendar');
-          if (window.router && window.router.navigate) window.router.navigate(navigate);
-          else window.location.href = navigate;
-        }
-      });
-    }
-
     window.utils.renderIcons(root);
     return ctx;
   }
@@ -336,9 +313,11 @@ window.layout = (function () {
       a.classList.toggle('active', a.dataset.bottomKey === routeKey);
     });
 
-    // breadcrumb — العنصر الورقي
-    const leaf = document.getElementById('page-title-leaf');
-    if (leaf) leaf.textContent = pageTitle || '';
+    // breadcrumb — يُعاد بناؤه دائماً لأن setBreadcrumbs() قد يكون مسح الـ id
+    const wrap = document.getElementById('breadcrumb');
+    if (wrap) {
+      wrap.innerHTML = `<span class="breadcrumb-item is-current" id="page-title-leaf">${window.utils.escapeHtml(pageTitle || '')}</span>`;
+    }
 
     // عنوان الصفحة في تبويب المتصفح
     if (pageTitle) document.title = `${pageTitle} - مَرمى`;

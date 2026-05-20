@@ -1,0 +1,13 @@
+# Supabase CLI configuration for مَرمى
+# Project ref: vwzseueqfghirhyhwbva
+
+project_id = "vwzseueqfghirhyhwbva"
+
+[functions.send-signup-email]
+verify_jwt = false
+
+[functions.send-booking-notification]
+verify_jwt = false
+
+[functions.send-staff-invitation]
+verify_jwt = false

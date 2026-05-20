@@ -21,12 +21,10 @@ window.tenantApi = (function () {
     return cachedTenantId;
   }
 
-  async function updateTenant({ name, city, phone }) {
+  async function updateTenant({ name }) {
     const tenantId = await getMyTenantId();
     const patch = {};
     if (name !== undefined) patch.name = name;
-    if (city !== undefined) patch.city = city;
-    if (phone !== undefined) patch.phone = phone;
     const { data, error } = await sb()
       .from('tenants')
       .update(patch)

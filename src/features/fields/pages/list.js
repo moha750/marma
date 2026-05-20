@@ -75,20 +75,37 @@
           ` : '';
 
           if (!fields.length) {
+            let isOnboardingPending = false;
+            try { isOnboardingPending = sessionStorage.getItem('marma:onboarding:pending') === '1'; } catch (_) {}
+            const isOnboarding = isOwner && (window.utils.getQueryParam('onboarding') === '1' || isOnboardingPending);
             listContainer.innerHTML = `
               ${limitBanner}
               <div class="card">
                 <div class="empty-state">
                   <div class="empty-icon"><i data-lucide="goal"></i></div>
-                  <h3>لا توجد أرضيات بعد</h3>
-                  <p>${isOwner ? 'ابدأ بإضافة أول أرضية لملعبك. ستظهر فوراً في صفحة الحجز العامة.' : 'لم يقم المالك بإضافة أرضيات بعد.'}</p>
-                  ${isOwner ? '<button class="btn btn--primary" id="empty-add">+ إضافة أرضية</button>' : ''}
+                  <h3>${isOnboarding ? 'مرحباً! خطوة أخيرة لتفعيل الحجز' : 'لا توجد أرضيات بعد'}</h3>
+                  <p>${isOwner
+                      ? (isOnboarding
+                          ? 'أضف ملعبك الأول مع مدينته ورقم جواله. بعدها ستحصل على رابط حجز عام جاهز للمشاركة.'
+                          : 'ابدأ بإضافة أول أرضية لملعبك. ستظهر فوراً في صفحة الحجز العامة.')
+                      : 'لم يقم المالك بإضافة أرضيات بعد.'}</p>
+                  ${isOwner ? `<button class="btn btn--primary" id="empty-add">+ ${isOnboarding ? 'أضف الملعب الأول' : 'إضافة أرضية'}</button>` : ''}
                 </div>
               </div>
             `;
             window.utils.renderIcons(listContainer);
             const ea = listContainer.querySelector('#empty-add');
             if (ea) ea.addEventListener('click', () => openFieldModal(null));
+            if (isOnboarding) {
+              // افتح المودال تلقائياً للمالك الذي بدأ للتو
+              openFieldModal(null);
+              // نظّف الـ flag من URL حتى لا يتكرر عند التحديث
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('onboarding');
+                history.replaceState(null, '', url.toString());
+              } catch (_) {}
+            }
             return;
           }
 
@@ -110,6 +127,8 @@
                 <thead>
                   <tr>
                     <th>اسم الأرضية</th>
+                    <th>المدينة</th>
+                    <th>الجوال</th>
                     <th>الحالة</th>
                     ${isOwner ? '<th class="actions-cell"></th>' : ''}
                   </tr>
@@ -118,6 +137,8 @@
                   ${fields.map((f) => `
                     <tr data-status="${f.is_active ? 'confirmed' : 'completed'}" data-id="${f.id}">
                       <td class="fw-semibold">${window.utils.escapeHtml(f.name)}</td>
+                      <td>${window.utils.escapeHtml(f.city || '—')}</td>
+                      <td class="tabular-nums">${window.utils.escapeHtml(f.phone || '—')}</td>
                       <td>${statusChip(f.is_active)}</td>
                       ${isOwner ? `
                         <td class="actions-cell">
@@ -207,8 +228,29 @@
               <input type="text" class="form-control" id="name" name="name" required
                      value="${editing ? window.utils.escapeHtml(field.name) : ''}"
                      placeholder="مثلاً: الملعب رقم 1">
-              <span class="form-help">مدة الموعد والسعر يُضبطان من <a href="${window.utils.path('/schedule')}">صفحة أيام وفترات العمل</a>.</span>
             </div>
+            <div class="form-row cols-2">
+              <div class="form-group">
+                <label class="form-label" for="city">المدينة <span class="required">*</span></label>
+                <input type="text" class="form-control" id="city" name="city" required
+                       value="${editing ? window.utils.escapeHtml(field.city || '') : ''}"
+                       placeholder="مثلاً: الأحساء، الهفوف">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone">رقم الجوال <span class="required">*</span></label>
+                <input type="tel" class="form-control" id="phone" name="phone" required
+                       value="${editing ? window.utils.escapeHtml(field.phone || '') : ''}"
+                       placeholder="05XXXXXXXX">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="location_url">رابط الموقع على الخرائط</label>
+              <input type="url" class="form-control" id="location_url" name="location_url"
+                     value="${editing ? window.utils.escapeHtml(field.location_url || '') : ''}"
+                     placeholder="https://maps.app.goo.gl/...">
+              <span class="form-help">افتح Google Maps → مشاركة → انسخ الرابط هنا. سيظهر للعملاء كزر "افتح في الخرائط".</span>
+            </div>
+            <span class="form-help">مدة الموعد والسعر يُضبطان من <a href="${window.utils.path('/schedule')}">صفحة أيام وفترات العمل</a>.</span>
           </form>
         `;
         const footer = `
@@ -220,11 +262,36 @@
           body: formHtml,
           footer
         });
+        const form = ctrl.modal.querySelector('#field-form');
+        window.utils.bindPhoneInput(form.phone);
         ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
-        ctrl.modal.querySelector('#field-form').addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
-          const payload = { name: fd.get('name') };
+          const cityValue = (fd.get('city') || '').trim();
+          const phoneValue = (fd.get('phone') || '').trim();
+          if (!cityValue) {
+            window.utils.toast('المدينة مطلوبة', 'error');
+            form.city.focus();
+            return;
+          }
+          if (!window.utils.isValidSaudiPhone(phoneValue)) {
+            window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+            form.phone.focus();
+            return;
+          }
+          const locationUrl = (fd.get('location_url') || '').trim();
+          if (locationUrl && !/^https?:\/\//i.test(locationUrl)) {
+            window.utils.toast('رابط الموقع يجب أن يبدأ بـ https://', 'error');
+            ctrl.modal.querySelector('#location_url').focus();
+            return;
+          }
+          const payload = {
+            name: fd.get('name'),
+            city: cityValue,
+            phone: phoneValue,
+            location_url: locationUrl
+          };
           try {
             if (editing) {
               await window.api.updateField(field.id, payload);
@@ -232,6 +299,7 @@
             } else {
               await window.api.createField(payload);
               window.utils.toast('تمت إضافة الأرضية', 'success');
+              try { sessionStorage.removeItem('marma:onboarding:pending'); } catch (_) {}
             }
             invalidateFieldsCache();
             ctrl.close();

@@ -23,19 +23,9 @@
         <!-- حقول مالك جديد -->
         <div id="owner-fields">
           <div class="form-group">
-            <label class="form-label" for="tenant_name">اسم الملعب <span class="required">*</span></label>
+            <label class="form-label" for="tenant_name">اسم النشاط <span class="required">*</span></label>
             <input type="text" class="form-control" id="tenant_name" name="tenant_name" required>
-            <span class="form-help">سيكون هذا اسم ملعبك في النظام</span>
-          </div>
-          <div class="form-row cols-2">
-            <div class="form-group">
-              <label class="form-label" for="city">المدينة</label>
-              <input type="text" class="form-control" id="city" name="city">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="phone">رقم جوال الملعب</label>
-              <input type="tel" class="form-control" id="phone" name="phone">
-            </div>
+            <span class="form-help">الاسم التجاري للملاعب التي تديرها. ستضيف تفاصيل الملعب الأول (المدينة والجوال) في الخطوة التالية.</span>
           </div>
         </div>
 
@@ -92,7 +82,6 @@
       const inviteInfo = document.getElementById('invite-info');
       const pageTitle = document.getElementById('page-title');
       const pageSubtitle = document.getElementById('page-subtitle');
-
       let inviteData = null;
 
       // إذا كان هناك رمز دعوة
@@ -151,12 +140,7 @@
         if (inviteCode && inviteData) {
           metadata.invite_code = inviteCode;
         } else {
-          const tenantName = form.tenant_name.value.trim();
-          const city = form.city.value.trim();
-          const phone = form.phone.value.trim();
-          metadata.tenant_name = tenantName;
-          if (city) metadata.city = city;
-          if (phone) metadata.phone = phone;
+          metadata.tenant_name = form.tenant_name.value.trim();
         }
 
         try {

@@ -1,0 +1,156 @@
+/* Timeline list — قائمة حجوزات مرتّبة بالوقت، تُستخدم في:
+   - "جدول اليوم" بلوحة التحكم
+   - "غداً" preview
+   صفوف قابلة للنقر، الحالة عبر شريط ملوّن على البداية.
+*/
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--duration-fast) var(--ease-out);
+  position: relative;
+}
+
+.timeline-row:last-child {
+  border-bottom: 0;
+}
+
+.timeline-row.is-clickable {
+  cursor: pointer;
+}
+
+.timeline-row.is-clickable:hover {
+  background: var(--surface-2);
+}
+
+/* النسخة المضغوطة لـ "غداً" — صف أقصر، وقت واحد فقط */
+.timeline-row--compact {
+  padding: var(--space-2) var(--space-4);
+  grid-template-columns: 80px 1fr auto;
+}
+
+/* الوقت */
+.timeline-time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.timeline-time-sep {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+}
+
+.timeline-time-to {
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-xs);
+}
+
+/* المحتوى — اسم العميل + الأرضية */
+.timeline-main {
+  min-width: 0;
+}
+
+.timeline-customer {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-field {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* الجانب — السعر والحالة */
+.timeline-side {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.timeline-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+/* شريط حالة على البداية (RTL = right) — يعكس chip-status لكن بشكل خط أيمن */
+.timeline-row[data-status="confirmed"]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--success);
+}
+.timeline-row[data-status="pending"]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--warning);
+}
+.timeline-row[data-status="cancelled"]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--danger);
+}
+.timeline-row[data-status="completed"]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--border-strong);
+}
+
+/* ─── الجوال — تخطيط أكثر إحكاماً ─── */
+@media (max-width: 640px) {
+  .timeline-row {
+    grid-template-columns: 90px 1fr;
+    grid-template-rows: auto auto;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  .timeline-side {
+    grid-column: 1 / -1;
+    justify-self: start;
+    gap: var(--space-2);
+  }
+  .timeline-row--compact {
+    grid-template-columns: 70px 1fr auto;
+    grid-template-rows: auto;
+  }
+  .timeline-row--compact .timeline-side {
+    grid-column: auto;
+    justify-self: end;
+  }
+}

@@ -92,24 +92,15 @@
 
       <div class="card mb-md">
         <div class="card-header">
-          <h3>بيانات الملعب</h3>
+          <h3>بيانات النشاط</h3>
           ${isOwner ? '' : '<span class="card-header-meta">قراءة فقط — التعديل للمالك</span>'}
         </div>
         <form id="settings-form" autocomplete="off">
           <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">اسم الملعب <span class="required">*</span></label>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">اسم النشاط <span class="required">*</span></label>
               <input type="text" class="form-control" name="name" value="${window.utils.escapeHtml(tenant.name || '')}" required ${isOwner ? '' : 'disabled'}>
-            </div>
-            <div class="form-row cols-2">
-              <div class="form-group">
-                <label class="form-label">المدينة</label>
-                <input type="text" class="form-control" name="city" value="${window.utils.escapeHtml(tenant.city || '')}" ${isOwner ? '' : 'disabled'}>
-              </div>
-              <div class="form-group" style="margin-bottom:0">
-                <label class="form-label">رقم الجوال</label>
-                <input type="tel" class="form-control" name="phone" value="${window.utils.escapeHtml(tenant.phone || '')}" ${isOwner ? '' : 'disabled'}>
-              </div>
+              <span class="form-help">المدينة ورقم الجوال خاصة بكل أرضية. عدّلهما من <a href="${window.utils.path('/fields')}">صفحة الأرضيات</a>.</span>
             </div>
           </div>
           ${isOwner ? `
@@ -192,17 +183,11 @@
           submit.disabled = true;
           const fd = new FormData(form);
           try {
-            await window.api.updateTenant({
-              name: fd.get('name'),
-              city: fd.get('city') || null,
-              phone: fd.get('phone') || null
-            });
-            window.utils.toast('تم حفظ إعدادات الملعب', 'success');
+            await window.api.updateTenant({ name: fd.get('name') });
+            window.utils.toast('تم حفظ الإعدادات', 'success');
             const el = document.querySelector('.sidebar-brand .tenant-name');
             if (el) el.textContent = fd.get('name');
             ctx.tenant.name = fd.get('name');
-            ctx.tenant.city = fd.get('city') || null;
-            ctx.tenant.phone = fd.get('phone') || null;
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
           } finally {
