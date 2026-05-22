@@ -1,0 +1,44 @@
+# Cloudflare Pages — Cache-Control headers
+# الهدف: HTML و service-worker دائماً طازجة، الأصول المُهَشَّمة كاش طويل.
+
+# Service Worker: يجب يُفحَص في كل زيارة (وإلا النسخة القديمة تبقى للأبد)
+/service-worker.js
+  Cache-Control: public, max-age=0, must-revalidate
+  Service-Worker-Allowed: /
+
+# صفحات HTML الجذر: دائماً طازجة
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/404.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/app.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/book.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# صفحات الـ auth و admin
+/auth/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/admin/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# ملفات JS غير المُهَشَّمة (vanilla JS مكتوبة كـ window globals)
+/src/*
+  Cache-Control: public, max-age=300
+
+# Manifest و config — كاش قصير
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+
+/config.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# ملاحظة: ملفات /assets/* المُهَشَّمة بواسطة Vite (مثل main-XXXXX.css)
+# تحصل تلقائياً على max-age=31536000 من Cloudflare Pages — لا حاجة لتعديل.

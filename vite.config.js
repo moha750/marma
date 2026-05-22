@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { cp, copyFile } from 'fs/promises';
+import { cp, copyFile, readFile, writeFile } from 'fs/promises';
 
 // المسارات التي يخدمها الـ SPA shell (app.html) — تُعاد كتابتها في dev و production.
 const APP_ROUTES = [
@@ -132,12 +132,41 @@ export default defineConfig(({ mode }) => {
           // PWA: manifest + service worker يجب أن يصلا dist/ بأسمائهما الأصلية
           await copyIfExists('manifest.webmanifest');
           await copyIfExists('service-worker.js');
+          // Cloudflare Pages: ملف الـ headers للتحكم في الكاش
+          await copyIfExists('_headers');
 
           // 404.html = نفس app.html (يلتقط كل المسارات غير الموجودة على GitHub Pages)
           try {
             await copyFile(resolve(dist, 'app.html'), resolve(dist, '404.html'));
           } catch (err) {
             console.warn('فشل نسخ app.html إلى 404.html:', err.message);
+          }
+
+          // ─── حقن CACHE_VERSION الديناميكي في service-worker.js ───
+          // كل deploy → CACHE_VERSION فريد → SW جديد → الكاش القديم يُحذف تلقائياً
+          // المصدر: Cloudflare Pages env (CF_PAGES_COMMIT_SHA) أو GH Actions أو timestamp محلي.
+          const buildHash =
+            (process.env.CF_PAGES_COMMIT_SHA && process.env.CF_PAGES_COMMIT_SHA.slice(0, 8)) ||
+            (process.env.GITHUB_SHA && process.env.GITHUB_SHA.slice(0, 8)) ||
+            Date.now().toString(36);
+
+          try {
+            const swPath = resolve(dist, 'service-worker.js');
+            const sw = await readFile(swPath, 'utf8');
+            const updated = sw.replace(
+              /const CACHE_VERSION = '[^']*';/,
+              `const CACHE_VERSION = 'marma-${buildHash}';`
+            );
+            if (updated !== sw) {
+              await writeFile(swPath, updated, 'utf8');
+              console.log(`[marma] CACHE_VERSION = marma-${buildHash}`);
+            } else {
+              console.warn('[marma] لم يُعثر على نمط CACHE_VERSION في service-worker.js');
+            }
+          } catch (err) {
+            if (err.code !== 'ENOENT') {
+              console.warn('[marma] فشل حقن CACHE_VERSION:', err.message);
+            }
           }
         }
       }
