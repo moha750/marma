@@ -5,31 +5,9 @@
 (async function () {
   const root = document.getElementById('root');
   const tenantId = window.utils.getQueryParam('t');
-  const manageBookingId = window.utils.getQueryParam('b');
 
   if (!tenantId) {
     showError('الرابط غير صالح', 'لم يتم تحديد ملعب. تأكد من فتح الرابط الصحيح.');
-    return;
-  }
-
-  // وضع إدارة الحجز — يتجاوز تحقق نشاط الملعب لأن الحجز موجود مسبقاً.
-  if (manageBookingId) {
-    try {
-      const { data, error } = await window.sb.rpc('get_booking_for_customer', {
-        p_tenant_id: tenantId,
-        p_booking_id: manageBookingId
-      });
-      if (error) throw error;
-      renderManageView(data);
-    } catch (err) {
-      console.error(err);
-      const msg = err && err.message ? err.message : '';
-      if (msg.includes('BOOKING_NOT_FOUND')) {
-        showError('الحجز غير موجود', 'تأكد من صحة الرابط أو تواصل مع إدارة الملعب.');
-      } else {
-        showError('تعذّر تحميل بيانات الحجز', window.utils.formatError(err));
-      }
-    }
     return;
   }
 
@@ -81,6 +59,11 @@
           </div>
         </div>
         <p class="public-tagline">احجز موعدك بسهولة — سيتواصل معك الملعب لتأكيد الحجز.</p>
+        <div style="text-align:center;margin-top:var(--space-2)">
+          <button type="button" class="btn btn--ghost btn--sm" id="manage-entry-btn">
+            <i data-lucide="ticket"></i> إدارة حجوزاتي
+          </button>
+        </div>
       </header>
 
       <form id="book-form" autocomplete="on">
@@ -183,6 +166,10 @@
       window.utils.renderIcons(metaSlot);
     }
     renderMeta();
+
+    document.getElementById('manage-entry-btn').addEventListener('click', () => {
+      renderManageEntry();
+    });
 
     tilesContainer.querySelectorAll('.field-tile').forEach((tile) => {
       tile.addEventListener('click', () => {
@@ -371,25 +358,9 @@
           </div>
         </div>
 
-        <div class="card" style="margin: var(--space-4) auto 0; max-width: 480px; text-align: start; background: var(--surface-2); border-style: dashed">
-          <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3)">
-            <div style="display:flex;align-items:flex-start;gap:var(--space-2)">
-              <i data-lucide="link" style="color:var(--accent-700);margin-top:2px"></i>
-              <div>
-                <strong>رابط إدارة حجزك</strong>
-                <p class="text-muted text-sm" style="margin-top:var(--space-1)">احفظ هذا الرابط — تستطيع إلغاء حجزك منه قبل وقت البدء.</p>
-              </div>
-            </div>
-            <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
-              <a class="btn btn--secondary" id="open-manage-btn" target="_blank" rel="noopener">
-                <i data-lucide="external-link"></i> فتح صفحة الحجز
-              </a>
-              <button type="button" class="btn btn--ghost" id="copy-manage-btn">
-                <i data-lucide="copy"></i> نسخ الرابط
-              </button>
-            </div>
-          </div>
-        </div>
+        <p class="text-muted text-sm" style="margin-top:var(--space-4)">
+          تستطيع إلغاء حجزك قبل وقت البدء من زر "إدارة حجوزاتي" في صفحة الحجز.
+        </p>
 
         <div class="success-actions">
           <button class="btn btn--secondary" id="download-ics-btn">
@@ -402,22 +373,6 @@
       </div>
     `;
     window.utils.renderIcons(root);
-
-    const manageUrl = new URL(window.location.href);
-    manageUrl.search = '';
-    manageUrl.searchParams.set('t', tenantId);
-    manageUrl.searchParams.set('b', bookingId);
-    const manageUrlStr = manageUrl.toString();
-    const openManageBtn = document.getElementById('open-manage-btn');
-    openManageBtn.href = manageUrlStr;
-    document.getElementById('copy-manage-btn').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(manageUrlStr);
-        window.utils.toast('تم نسخ الرابط', 'success');
-      } catch (_) {
-        window.prompt('انسخ الرابط:', manageUrlStr);
-      }
-    });
 
     document.getElementById('download-ics-btn').addEventListener('click', () => {
       const fieldUrl = selectedField && selectedField.location_url;
@@ -464,66 +419,123 @@
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
-  function renderManageView(details) {
-    const start = new Date(details.start_time);
-    const end = new Date(details.end_time);
+  // ─── شاشة إدخال رقم الجوال لإدارة الحجوزات ───────────────
+  function renderManageEntry() {
+    root.innerHTML = `
+      <div class="public-hero-strip" aria-hidden="true"></div>
+      <header class="public-header">
+        <div class="public-brand">
+          <div class="public-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></div>
+          <div class="public-brand-text">
+            <h1>${window.utils.escapeHtml(tenantInfo.name)}</h1>
+            <div class="public-meta"><span><i data-lucide="ticket"></i> إدارة حجوزاتي</span></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="card" style="max-width:420px;margin:0 auto">
+        <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3)">
+          <div>
+            <strong>أدخل رقم جوالك</strong>
+            <p class="text-muted text-sm" style="margin-top:var(--space-1)">سنعرض حجوزاتك القادمة في هذا الملعب.</p>
+          </div>
+          <input type="tel" class="form-control" id="manage-phone" placeholder="05XXXXXXXX" autocomplete="tel">
+          <button type="button" class="btn btn--primary btn--lg" id="manage-lookup-btn">
+            <i data-lucide="search"></i> عرض حجوزاتي
+          </button>
+          <button type="button" class="btn btn--ghost" id="manage-back-btn">
+            <i data-lucide="arrow-right"></i> رجوع لصفحة الحجز
+          </button>
+        </div>
+      </div>
+    `;
+    window.utils.renderIcons(root);
+
+    const phoneInput = document.getElementById('manage-phone');
+    const lookupBtn = document.getElementById('manage-lookup-btn');
+    window.utils.bindPhoneInput(phoneInput);
+
+    document.getElementById('manage-back-btn').addEventListener('click', () => {
+      renderForm();
+    });
+
+    const doLookup = async () => {
+      const phone = phoneInput.value.trim();
+      if (!window.utils.isValidSaudiPhone(phone)) {
+        window.utils.toast('رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام', 'error');
+        phoneInput.focus();
+        return;
+      }
+      lookupBtn.disabled = true;
+      lookupBtn.dataset.loading = 'true';
+      try {
+        const { data, error } = await window.sb.rpc('list_customer_bookings', {
+          p_tenant_id: tenantId,
+          p_phone: phone
+        });
+        if (error) throw error;
+        renderManageList(phone, data);
+      } catch (err) {
+        window.utils.toast(window.utils.formatError(err), 'error');
+        lookupBtn.disabled = false;
+        delete lookupBtn.dataset.loading;
+      }
+    };
+
+    lookupBtn.addEventListener('click', doLookup);
+    phoneInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); doLookup(); }
+    });
+  }
+
+  // ─── شاشة قائمة حجوزات العميل ──────────────────────────────
+  function renderManageList(phone, data) {
+    const bookings = (data && data.bookings) || [];
 
     const statusLabels = {
       pending:   { text: 'بانتظار الموافقة', cls: 'badge--warning' },
-      confirmed: { text: 'مؤكد',             cls: 'badge--success' },
-      completed: { text: 'مكتمل',           cls: 'badge--info' },
-      cancelled: { text: 'ملغى',             cls: 'badge--danger' }
+      confirmed: { text: 'مؤكد',             cls: 'badge--success' }
     };
-    const statusInfo = statusLabels[details.status] || { text: details.status, cls: 'badge--neutral' };
 
-    let actionHtml = '';
-    if (details.is_cancellable) {
-      actionHtml = `
-        <div class="card" style="margin:var(--space-4) auto 0;max-width:480px;text-align:start">
+    const listHtml = bookings.length ? bookings.map((b) => {
+      const start = new Date(b.start_time);
+      const end = new Date(b.end_time);
+      const s = statusLabels[b.status] || { text: b.status, cls: 'badge--neutral' };
+      const cityLine = b.field_city ? ` · ${window.utils.escapeHtml(b.field_city)}` : '';
+      return `
+        <div class="card" style="margin-bottom:var(--space-3)">
           <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3)">
-            <div>
-              <strong>إلغاء الحجز</strong>
-              <p class="text-muted text-sm" style="margin-top:var(--space-1)">
-                لتأكيد الإلغاء، أدخل آخر ٤ أرقام من رقم جوالك المسجّل في الحجز.
-              </p>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-2)">
+              <div>
+                <strong>${window.utils.escapeHtml(b.field_name || '')}</strong>
+                <div class="text-muted text-sm" style="margin-top:2px">${window.utils.formatDate(start)}${cityLine}</div>
+              </div>
+              <span class="badge ${s.cls}">${s.text}</span>
             </div>
-            <input type="tel" class="form-control" id="cancel-last4" inputmode="numeric" maxlength="4" placeholder="٤ أرقام" autocomplete="off">
-            <button type="button" class="btn btn--danger btn--lg" id="cancel-btn">
-              <i data-lucide="x-circle"></i> تأكيد إلغاء الحجز
-            </button>
+            <div class="success-row">
+              <span class="text-muted">الوقت</span>
+              <strong class="tabular-nums">${window.utils.formatTime(start)} → ${window.utils.formatTime(end)}</strong>
+            </div>
+            <div class="success-row">
+              <span class="text-muted">السعر</span>
+              <strong>${window.utils.formatCurrency(b.total_price)}</strong>
+            </div>
+            ${b.is_cancellable ? `
+              <button type="button" class="btn btn--danger" data-cancel-id="${b.id}">
+                <i data-lucide="x-circle"></i> إلغاء الحجز
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
-    } else if (details.status === 'cancelled') {
-      const whenStr = details.cancelled_at ? window.utils.formatDateTime(details.cancelled_at) : '';
-      const byStr = details.cancelled_by === 'customer'
-        ? 'تم الإلغاء بواسطتك'
-        : (details.cancelled_by === 'staff' ? 'تم الإلغاء من قبل إدارة الملعب' : 'تم إلغاء الحجز');
-      actionHtml = `
-        <div class="card" style="margin:var(--space-4) auto 0;max-width:480px;text-align:center">
-          <div class="card-body">
-            <i data-lucide="x-circle" style="color:var(--danger-600,#dc2626);width:32px;height:32px"></i>
-            <h3 class="text-danger" style="margin:var(--space-2) 0 var(--space-1)">${byStr}</h3>
-            ${whenStr ? `<div class="text-muted text-sm">${window.utils.escapeHtml(whenStr)}</div>` : ''}
-          </div>
+    }).join('') : `
+      <div class="card" style="text-align:center">
+        <div class="card-body">
+          <i data-lucide="calendar-x" style="color:var(--text-secondary);width:32px;height:32px"></i>
+          <p class="text-muted" style="margin-top:var(--space-2)">لا توجد حجوزات قادمة لهذا الرقم.</p>
         </div>
-      `;
-    } else if (details.status === 'completed') {
-      actionHtml = `
-        <div class="card" style="margin:var(--space-4) auto 0;max-width:480px;text-align:center">
-          <div class="card-body">
-            <i data-lucide="check-circle-2" style="color:var(--accent-700,#16a34a);width:32px;height:32px"></i>
-            <h3 style="margin:var(--space-2) 0">الحجز مكتمل</h3>
-          </div>
-        </div>
-      `;
-    } else {
-      actionHtml = `
-        <div class="card" style="margin:var(--space-4) auto 0;max-width:480px;text-align:center">
-          <div class="card-body"><p class="text-muted">لا يمكن إلغاء هذا الحجز.</p></div>
-        </div>
-      `;
-    }
+      </div>
+    `;
 
     root.innerHTML = `
       <div class="public-hero-strip" aria-hidden="true"></div>
@@ -531,69 +543,32 @@
         <div class="public-brand">
           <div class="public-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></div>
           <div class="public-brand-text">
-            <h1>${window.utils.escapeHtml(details.tenant_name || '')}</h1>
-            <div class="public-meta"><span><i data-lucide="ticket"></i> تفاصيل حجزك</span></div>
+            <h1>${window.utils.escapeHtml((data && data.tenant_name) || tenantInfo.name)}</h1>
+            <div class="public-meta"><span><i data-lucide="ticket"></i> حجوزاتي · ${window.utils.escapeHtml(phone)}</span></div>
           </div>
         </div>
       </header>
 
-      <div class="card" style="max-width:480px;margin:0 auto;text-align:start">
-        <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-3)">
-          <div class="success-row">
-            <span class="text-muted">الحالة</span>
-            <span class="badge ${statusInfo.cls}">${statusInfo.text}</span>
-          </div>
-          <div class="success-row">
-            <span class="text-muted">الأرضية</span>
-            <strong>${window.utils.escapeHtml(details.field_name || '')}</strong>
-          </div>
-          ${details.field_city ? `
-          <div class="success-row">
-            <span class="text-muted">المدينة</span>
-            <strong>${window.utils.escapeHtml(details.field_city)}</strong>
-          </div>` : ''}
-          <div class="success-row">
-            <span class="text-muted">التاريخ</span>
-            <strong>${window.utils.formatDate(start)}</strong>
-          </div>
-          <div class="success-row">
-            <span class="text-muted">الوقت</span>
-            <strong class="tabular-nums">${window.utils.formatTime(start)} → ${window.utils.formatTime(end)}</strong>
-          </div>
-          <div class="success-row" style="padding-top:var(--space-3);border-top:1px solid var(--border-subtle)">
-            <span class="text-muted">السعر</span>
-            <strong style="color:var(--accent-700);font-size:var(--text-lg)">${window.utils.formatCurrency(details.total_price)}</strong>
-          </div>
-          <div class="success-row">
-            <span class="text-muted">رقم الطلب</span>
-            <span class="tabular-nums">${window.utils.escapeHtml(String(details.id).slice(0, 8))}</span>
-          </div>
-        </div>
+      <div style="max-width:480px;margin:0 auto">
+        ${listHtml}
       </div>
 
-      ${actionHtml}
-
-      <div style="text-align:center;margin-top:var(--space-6)">
-        <a href="${window.utils.path('/book.html')}?t=${encodeURIComponent(tenantId)}" class="btn btn--ghost">
+      <div style="text-align:center;margin-top:var(--space-4);display:flex;justify-content:center;gap:var(--space-2);flex-wrap:wrap">
+        <button type="button" class="btn btn--ghost" id="manage-change-phone">
+          <i data-lucide="user"></i> رقم آخر
+        </button>
+        <button type="button" class="btn btn--ghost" id="manage-back-to-form">
           <i data-lucide="plus"></i> حجز موعد آخر
-        </a>
+        </button>
       </div>
     `;
     window.utils.renderIcons(root);
 
-    if (details.is_cancellable) {
-      const last4Input = document.getElementById('cancel-last4');
-      const cancelBtn = document.getElementById('cancel-btn');
-      last4Input.addEventListener('input', () => {
-        last4Input.value = last4Input.value.replace(/[^0-9]/g, '').slice(0, 4);
-      });
-      cancelBtn.addEventListener('click', async () => {
-        const last4 = last4Input.value.trim();
-        if (!/^\d{4}$/.test(last4)) {
-          window.utils.toast('أدخل آخر ٤ أرقام من جوالك', 'error');
-          last4Input.focus();
-          return;
-        }
+    document.getElementById('manage-change-phone').addEventListener('click', () => renderManageEntry());
+    document.getElementById('manage-back-to-form').addEventListener('click', () => renderForm());
+
+    root.querySelectorAll('[data-cancel-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
         const ok = await window.utils.confirm({
           title: 'تأكيد الإلغاء',
           message: 'هل أنت متأكد من إلغاء هذا الحجز؟',
@@ -602,28 +577,27 @@
           danger: true
         });
         if (!ok) return;
-
-        cancelBtn.disabled = true;
-        cancelBtn.dataset.loading = 'true';
+        btn.disabled = true;
+        btn.dataset.loading = 'true';
         try {
-          const { error } = await window.sb.rpc('cancel_booking_by_customer', {
+          const { error } = await window.sb.rpc('cancel_booking_by_phone', {
             p_tenant_id: tenantId,
-            p_booking_id: manageBookingId,
-            p_phone_last4: last4
+            p_booking_id: btn.dataset.cancelId,
+            p_phone: phone
           });
           if (error) throw error;
-          const { data: updated, error: refetchErr } = await window.sb.rpc('get_booking_for_customer', {
-            p_tenant_id: tenantId,
-            p_booking_id: manageBookingId
-          });
-          if (refetchErr) throw refetchErr;
           window.utils.toast('تم إلغاء الحجز', 'success');
-          renderManageView(updated);
+          // أعد جلب القائمة لتعكس التحديث
+          const { data: refreshed, error: refErr } = await window.sb.rpc('list_customer_bookings', {
+            p_tenant_id: tenantId,
+            p_phone: phone
+          });
+          if (refErr) throw refErr;
+          renderManageList(phone, refreshed);
         } catch (err) {
           const msg = err && err.message ? err.message : String(err);
           if (msg.includes('PHONE_MISMATCH')) {
-            window.utils.toast('الأرقام لا تطابق رقم الجوال المسجّل', 'error');
-            last4Input.focus();
+            window.utils.toast('الرقم لا يطابق صاحب الحجز', 'error');
           } else if (msg.includes('NOT_CANCELLABLE_STATUS')) {
             window.utils.toast('لا يمكن إلغاء هذا الحجز في وضعه الحالي', 'error');
           } else if (msg.includes('BOOKING_ALREADY_STARTED')) {
@@ -631,11 +605,11 @@
           } else {
             window.utils.toast(window.utils.formatError(err), 'error');
           }
-          cancelBtn.disabled = false;
-          delete cancelBtn.dataset.loading;
+          btn.disabled = false;
+          delete btn.dataset.loading;
         }
       });
-    }
+    });
   }
 
   function showError(title, message) {
