@@ -14,7 +14,16 @@ import webpush from "npm:web-push@3.6.7";
 
 interface RequestBody {
   booking_id: string;
+  type?: "new" | "reminder";
+  reminder_count?: number;
 }
+
+const REMINDER_ELAPSED: Record<number, string> = {
+  1: "منذ ساعة",
+  2: "منذ ٦ ساعات",
+  3: "منذ ١٢ ساعة",
+  4: "منذ يوم",
+};
 
 interface PushSubscriptionRow {
   id: string;
@@ -52,7 +61,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { booking_id } = (await req.json()) as RequestBody;
+    const body = (await req.json()) as RequestBody;
+    const { booking_id, type = "new", reminder_count = 1 } = body;
     if (!booking_id) {
       return new Response(JSON.stringify({ error: "booking_id required" }), {
         status: 400,
@@ -109,16 +119,27 @@ Deno.serve(async (req) => {
 
     const customerName = customer?.full_name || booking.customer_input_name || "عميل جديد";
     const fieldName = field?.name || "ملعب";
-    const timeLabel = formatArabicDateTime(booking.start_time);
 
     // ملاحظة: iOS يضيف "from <اسم التطبيق>" تلقائياً قبل title.
-    // لذا لا نُكرّر tenantName في title — اسم التطبيق يكفي للسياق.
-    const payload = JSON.stringify({
-      title: "حجز جديد",
-      body: `${customerName} · ${fieldName} · ${timeLabel}`,
-      url: "/bookings",
-      tag: `booking-${booking.id}`,
-    });
+    // tag موحّد لكل حجز → التذكير يستبدل الإشعار السابق (حالة واحدة في مركز الإشعارات).
+    let payload: string;
+    if (type === "reminder") {
+      const elapsed = REMINDER_ELAPSED[Math.max(1, Math.min(4, reminder_count))] || "منذ فترة";
+      payload = JSON.stringify({
+        title: "حجز ينتظر موافقتك ⏰",
+        body: `${customerName} · ${fieldName} · معلّق ${elapsed}`,
+        url: "/bookings",
+        tag: `booking-${booking.id}`,
+      });
+    } else {
+      const timeLabel = formatArabicDateTime(booking.start_time);
+      payload = JSON.stringify({
+        title: "حجز جديد",
+        body: `${customerName} · ${fieldName} · ${timeLabel}`,
+        url: "/bookings",
+        tag: `booking-${booking.id}`,
+      });
+    }
 
     // أرسل بالتوازي، نظّف الـ subscriptions الميتة
     const results = await Promise.allSettled(
