@@ -302,19 +302,35 @@ window.layout = (function () {
       window.themeToggle.render(themeSlot);
     }
 
-    // PWA install prompt — أظهر الزر عند توفر beforeinstallprompt
+    // PWA install prompt — أظهر الزر عند توفر beforeinstallprompt (Android/Desktop)
+    // أو على iOS (مع modal تعليمات بدلاً من prompt برمجي)
     const installCta = document.getElementById('install-cta');
     const installBtn = document.getElementById('install-btn');
     if (installCta && installBtn && window.pwa) {
+      const iosManual = window.pwa.needsManualInstall && window.pwa.needsManualInstall();
+
       const showCta = () => {
-        // لا تُظهر الزر لو التطبيق مُثبَّت بالفعل (يعمل standalone)
         if (window.pwa.isStandalone()) return;
-        if (window.pwa.isInstallable()) installCta.hidden = false;
+        if (window.pwa.isInstallable() || iosManual) {
+          installCta.hidden = false;
+          // على iOS غيّر النص ليناسب التعليمات اليدوية
+          if (iosManual) {
+            const label = installBtn.querySelector('span');
+            if (label) label.textContent = 'ثبّت على iPhone';
+            installBtn.title = 'كيفية تثبيت التطبيق على iPhone';
+          }
+        }
       };
       showCta();
       window.addEventListener('pwa:installable', () => { installCta.hidden = false; });
       window.addEventListener('pwa:installed',   () => { installCta.hidden = true;  });
       installBtn.addEventListener('click', async () => {
+        // iOS: اعرض modal بالتعليمات اليدوية
+        if (iosManual) {
+          showIOSInstallHelp();
+          return;
+        }
+        // Android/Desktop: استخدم prompt البرمجي
         installBtn.disabled = true;
         try {
           const res = await window.pwa.promptInstall();
@@ -385,6 +401,58 @@ window.layout = (function () {
   }
 
   function getContext() { return spaCtx; }
+
+  // ─── Modal تعليمات تثبيت iOS ─────────────────────────────
+  // iOS Safari لا يطلق beforeinstallprompt، فالتثبيت يدوي عبر Share menu.
+  function showIOSInstallHelp() {
+    const existing = document.getElementById('ios-install-help');
+    if (existing) { existing.remove(); return; }
+
+    const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    const safariWarning = isSafari ? '' : `
+      <div style="background:var(--warning-tint);color:var(--warning);padding:var(--space-3);border-radius:var(--radius-md);margin-bottom:var(--space-4);font-size:var(--text-sm)">
+        <strong>ملاحظة:</strong> أنت في متصفح غير Safari. التثبيت على iPhone يتطلّب Safari تحديداً. افتح الرابط <code>marma.help</code> في Safari ثم اتبع الخطوات.
+      </div>
+    `;
+
+    const html = `
+      <div id="ios-install-help" style="position:fixed;inset:0;background:rgba(20,22,18,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:var(--space-4)">
+        <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:var(--space-5);max-width:420px;width:100%;box-shadow:var(--shadow-3);max-height:90vh;overflow-y:auto">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+            <h3 style="margin:0;font-size:var(--text-lg)">ثبّت مَرمى على iPhone</h3>
+            <button type="button" id="ios-help-close-x" style="background:transparent;border:0;cursor:pointer;color:var(--text-secondary);padding:var(--space-1)" aria-label="إغلاق">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          ${safariWarning}
+          <ol style="padding-inline-start:var(--space-5);margin:0 0 var(--space-4);line-height:1.7">
+            <li style="margin-bottom:var(--space-3)">
+              في Safari، اضغط زر <strong>المشاركة</strong>
+              <i data-lucide="share" style="display:inline-block;vertical-align:middle;width:16px;height:16px;margin:0 4px"></i>
+              في شريط الأدوات السفلي.
+            </li>
+            <li style="margin-bottom:var(--space-3)">
+              مرّر القائمة للأسفل واختر <strong>"إضافة إلى الشاشة الرئيسية"</strong>
+              <span style="white-space:nowrap">(Add to Home Screen)</span>.
+            </li>
+            <li style="margin-bottom:var(--space-3)">
+              اضغط <strong>"إضافة"</strong> في الأعلى.
+            </li>
+            <li>افتح التطبيق من أيقونته على الشاشة الرئيسية — سيعمل بدون شريط متصفح، وستظهر خيارات الإشعارات.</li>
+          </ol>
+          <button type="button" class="btn btn--primary btn--block" id="ios-help-close">حسناً، فهمت</button>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const root = document.getElementById('ios-install-help');
+    const close = () => root.remove();
+    root.querySelector('#ios-help-close').addEventListener('click', close);
+    root.querySelector('#ios-help-close-x').addEventListener('click', close);
+    root.addEventListener('click', (e) => { if (e.target === root) close(); });
+    window.utils.renderIcons(root);
+  }
 
   return { mountShell, setActive, setBreadcrumbs, getContext, NAV_ITEMS };
 })();

@@ -24,6 +24,20 @@
     return !!deferredPrompt;
   }
 
+  // iOS Safari لا يطلق beforeinstallprompt — التثبيت يدوي عبر Share menu.
+  // نكتشف iOS (بما في ذلك iPad في "desktop mode") لنعرض تعليمات بدلاً من الزر العادي.
+  function isIOS() {
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    // iPad في desktop mode يعرّف نفسه كـ Mac — نكتشفه عبر touch points
+    return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  }
+
+  // على iOS غير المثبّت: يحتاج المستخدم تعليمات يدوية بدل prompt
+  function needsManualInstall() {
+    return isIOS() && !isStandalone();
+  }
+
   async function promptInstall() {
     if (!deferredPrompt) return { outcome: 'unavailable' };
     try {
@@ -114,7 +128,9 @@
     promptInstall,
     applyUpdate,
     isInstallable,
-    isStandalone
+    isStandalone,
+    isIOS,
+    needsManualInstall
   };
 
   // تسجيل تلقائي بعد load (لا يحجب الأداء الأولي)
