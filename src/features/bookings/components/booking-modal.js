@@ -78,9 +78,24 @@ window.bookingModal = (function () {
          </div>`
       : '';
 
+    const isCancelled = editing && booking.status === 'cancelled';
+    const cancelledByLabel = booking && booking.cancelled_by === 'customer'
+      ? 'ألغاه العميل'
+      : (booking && booking.cancelled_by === 'staff' ? 'أُلغي من قبل الإدارة' : '');
+    const cancelledWhen = booking && booking.cancelled_at
+      ? window.utils.formatDateTime(booking.cancelled_at)
+      : '';
+    const cancelledBanner = isCancelled && cancelledByLabel
+      ? `<div class="trial-banner trial-banner--grace" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+           <span class="trial-banner-icon"><i data-lucide="x-circle"></i></span>
+           <span><strong>${cancelledByLabel}</strong>${cancelledWhen ? ` · ${window.utils.escapeHtml(cancelledWhen)}` : ''}</span>
+         </div>`
+      : '';
+
     const body = document.createElement('div');
     body.innerHTML = `
       ${pendingBanner}
+      ${cancelledBanner}
       ${nameMismatchBanner}
       <form id="booking-form" autocomplete="off">
         ${editing ? `

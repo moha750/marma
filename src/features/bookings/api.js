@@ -57,7 +57,11 @@ window.bookingsApi = (function () {
   }
 
   async function cancelBooking(id) {
-    return updateBooking(id, { status: 'cancelled' });
+    return updateBooking(id, {
+      status: 'cancelled',
+      cancelled_by: 'staff',
+      cancelled_at: new Date().toISOString()
+    });
   }
 
   // الموافقة على حجز معلّق. إذا اختار الموظف "تحديث الاسم"، نحدّث customer.full_name قبل الموافقة
@@ -76,7 +80,12 @@ window.bookingsApi = (function () {
   }
 
   async function rejectBooking(id) {
-    return updateBooking(id, { status: 'cancelled', customer_input_name: null });
+    return updateBooking(id, {
+      status: 'cancelled',
+      customer_input_name: null,
+      cancelled_by: 'staff',
+      cancelled_at: new Date().toISOString()
+    });
   }
 
   async function listPendingBookings(limit) {

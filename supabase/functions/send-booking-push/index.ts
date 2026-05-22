@@ -14,7 +14,7 @@ import webpush from "npm:web-push@3.6.7";
 
 interface RequestBody {
   booking_id: string;
-  type?: "new" | "reminder";
+  type?: "new" | "reminder" | "cancelled_by_customer";
   reminder_count?: number;
 }
 
@@ -128,6 +128,14 @@ Deno.serve(async (req) => {
       payload = JSON.stringify({
         title: "حجز ينتظر موافقتك ⏰",
         body: `${customerName} · ${fieldName} · معلّق ${elapsed}`,
+        url: "/bookings",
+        tag: `booking-${booking.id}`,
+      });
+    } else if (type === "cancelled_by_customer") {
+      const timeLabel = formatArabicDateTime(booking.start_time);
+      payload = JSON.stringify({
+        title: "ألغى العميل حجزه",
+        body: `${customerName} · ${fieldName} · ${timeLabel}`,
         url: "/bookings",
         tag: `booking-${booking.id}`,
       });
