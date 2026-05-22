@@ -208,8 +208,17 @@ window.utils = {
   },
 
   // مودال تأكيد عام
+  // ملاحظة: نستخدم settled flag لأن ctrl.close() يُشغّل onClose الذي يُحلّ
+  // الـ Promise قبل أن نحلّه بـ true في زر "تأكيد". بدون هذا الحارس،
+  // الـ Promise يُحلّ بـ false دائماً.
   confirm({ title = 'تأكيد', message, confirmText = 'تأكيد', cancelText = 'إلغاء', danger = false } = {}) {
     return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
       const footerHtml = `
         <button type="button" class="btn btn--ghost" data-action="cancel">${this.escapeHtml(cancelText)}</button>
         <button type="button" class="btn ${danger ? 'btn--danger' : 'btn--primary'}" data-action="confirm">${this.escapeHtml(confirmText)}</button>
@@ -218,15 +227,15 @@ window.utils = {
         title,
         body: `<p>${this.escapeHtml(message)}</p>`,
         footer: footerHtml,
-        onClose: () => resolve(false)
+        onClose: () => settle(false)
       });
       ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+        settle(false);
         ctrl.close();
-        resolve(false);
       });
       ctrl.modal.querySelector('[data-action="confirm"]').addEventListener('click', () => {
+        settle(true);
         ctrl.close();
-        resolve(true);
       });
     });
   },
