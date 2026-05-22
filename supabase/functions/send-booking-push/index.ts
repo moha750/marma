@@ -106,15 +106,15 @@ Deno.serve(async (req) => {
     // ابنِ الـ payload
     const customer = Array.isArray(booking.customers) ? booking.customers[0] : booking.customers;
     const field = Array.isArray(booking.fields) ? booking.fields[0] : booking.fields;
-    const tenant = Array.isArray(booking.tenants) ? booking.tenants[0] : booking.tenants;
 
     const customerName = customer?.full_name || booking.customer_input_name || "عميل جديد";
     const fieldName = field?.name || "ملعب";
-    const tenantName = tenant?.name || "ملعبك";
     const timeLabel = formatArabicDateTime(booking.start_time);
 
+    // ملاحظة: iOS يضيف "from <اسم التطبيق>" تلقائياً قبل title.
+    // لذا لا نُكرّر tenantName في title — اسم التطبيق يكفي للسياق.
     const payload = JSON.stringify({
-      title: `حجز جديد — ${tenantName}`,
+      title: "حجز جديد",
       body: `${customerName} · ${fieldName} · ${timeLabel}`,
       url: "/bookings",
       tag: `booking-${booking.id}`,
