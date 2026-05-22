@@ -1,0 +1,46 @@
+{
+  "name": "مَرمى — لوحة التحكم",
+  "short_name": "مَرمى",
+  "description": "كل حجوزاتك .. في مَرمى واحد",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#FAFAF7",
+  "theme_color": "#0F9D58",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "التقويم",
+      "short_name": "التقويم",
+      "url": "/calendar"
+    },
+    {
+      "name": "الحجوزات",
+      "short_name": "الحجوزات",
+      "url": "/bookings"
+    },
+    {
+      "name": "التقارير",
+      "short_name": "التقارير",
+      "url": "/reports"
+    }
+  ]
+}

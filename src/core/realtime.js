@@ -74,6 +74,10 @@ window.realtime = (function () {
               sub.invalidates.forEach((cell) => window.store.invalidate(cell));
             }
             emit(sub.event, payload);
+            // toast داخل التطبيق عند حجز جديد — يكمّل push (الذي يعمل في الخلفية)
+            if (sub.table === 'bookings' && payload.eventType === 'INSERT') {
+              maybeToastNewBooking(payload.new);
+            }
           }
         )
         .subscribe((status) => {
@@ -82,6 +86,15 @@ window.realtime = (function () {
           }
         });
     });
+  }
+
+  function maybeToastNewBooking(row) {
+    if (!window.utils || typeof window.utils.toast !== 'function') return;
+    if (!document.hasFocus()) return; // المتصفح غير ظاهر — يكفي الـ push
+    if (!row) return;
+    if (row.status !== 'pending') return; // pending فقط (يطابق push)
+    const name = row.customer_input_name || 'عميل جديد';
+    window.utils.toast(`حجز جديد — ${name}`, 'info');
   }
 
   async function stop() {

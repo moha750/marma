@@ -128,6 +128,8 @@
         </div>
       </div>
 
+      <div id="push-banner-area"></div>
+
       <div id="pending-banner-area"></div>
 
       <div id="kpi-area">
@@ -382,6 +384,65 @@
 
   // ─── منطق الصفحة ──────────────────────────────────────
 
+  // بانر تفعيل الإشعارات — يظهر فقط عند:
+  // - التطبيق مثبّت (standalone)
+  // - المتصفح يدعم Push API
+  // - الإذن لم يُطلب بعد (permission === 'default')
+  // - المستخدم لم يتجاهله سابقاً
+  function renderPushBanner(area) {
+    if (!area) return;
+    if (!window.push || !window.push.isSupported()) return;
+    if (!window.pwa || !window.pwa.isStandalone()) return;
+    if (window.push.permission() !== 'default') return;
+    try {
+      if (localStorage.getItem('marma:push:dismissed') === '1') return;
+    } catch (_) {}
+
+    area.innerHTML = `
+      <div class="stat-card" style="margin-bottom:var(--space-4);background:var(--accent-50);border-color:var(--accent-100)">
+        <div class="stat-card-head">
+          <span class="stat-icon-chip stat-icon-chip--accent"><i data-lucide="bell"></i></span>
+          <span class="stat-label" style="color:var(--accent-700)">فعّل إشعارات الحجوزات</span>
+        </div>
+        <p class="text-sm" style="margin-top:var(--space-2);margin-bottom:var(--space-3)">
+          استلم تنبيهاً فورياً على جوالك عند أي حجز جديد — حتى لو التطبيق مغلق.
+        </p>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+          <button type="button" class="btn btn--primary btn--sm" id="push-enable-btn">
+            <i data-lucide="bell"></i><span>تفعيل الإشعارات</span>
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" id="push-dismiss-btn">لاحقاً</button>
+        </div>
+      </div>
+    `;
+
+    area.querySelector('#push-enable-btn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const res = await window.push.subscribe();
+        if (res.ok) {
+          area.innerHTML = '';
+          if (window.utils) window.utils.toast('تم تفعيل الإشعارات', 'success');
+        } else if (res.reason === 'denied') {
+          if (window.utils) window.utils.toast('رُفض الإذن — يمكن تفعيله من إعدادات المتصفح', 'warning');
+          area.innerHTML = '';
+        } else {
+          if (window.utils) window.utils.toast('تعذّر تفعيل الإشعارات', 'error');
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    area.querySelector('#push-dismiss-btn').addEventListener('click', () => {
+      try { localStorage.setItem('marma:push:dismissed', '1'); } catch (_) {}
+      area.innerHTML = '';
+    });
+
+    if (window.utils) window.utils.renderIcons(area);
+  }
+
   function todayBookingsMix(todayBookings) {
     const mix = { confirmed: 0, pending: 0, completed: 0, cancelled: 0 };
     todayBookings.forEach((b) => {
@@ -397,7 +458,11 @@
       const todayLabel = longDateFormatter.format(today);
       container.innerHTML = buildTemplate(isOwner, todayLabel);
 
+      const pushBannerArea = container.querySelector('#push-banner-area');
       const pendingArea  = container.querySelector('#pending-banner-area');
+
+      // ─── بانر تفعيل الإشعارات ─────────────────────────
+      renderPushBanner(pushBannerArea);
       const kpiArea      = container.querySelector('#kpi-area');
       const sparkArea    = container.querySelector('#sparkline-area');
       const timelineArea = container.querySelector('#timeline-area');

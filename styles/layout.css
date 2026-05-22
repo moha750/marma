@@ -197,6 +197,52 @@
   flex-shrink: 0;
 }
 
+/* زر تثبيت التطبيق — يظهر فقط عند توفّر beforeinstallprompt */
+.install-cta {
+  margin-bottom: var(--space-2);
+}
+
+.install-cta-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-50);
+  color: var(--accent-700);
+  border: 1px solid var(--accent-100);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: start;
+  transition: background var(--duration-fast) var(--ease-out), transform var(--duration-instant) var(--ease-out);
+}
+
+.install-cta-btn:hover {
+  background: var(--accent-100);
+}
+
+.install-cta-btn:active {
+  transform: scale(0.98);
+}
+
+.install-cta-btn svg.lucide {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* في الوضع المطوي: اخفِ النص واترك الأيقونة فقط */
+.app-shell[data-sidebar="collapsed"] .install-cta-btn > span {
+  display: none;
+}
+.app-shell[data-sidebar="collapsed"] .install-cta-btn {
+  justify-content: center;
+  padding: var(--space-2);
+}
+
 .sidebar-user {
   width: 100%;
   display: flex;

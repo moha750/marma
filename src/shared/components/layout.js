@@ -180,6 +180,12 @@ window.layout = (function () {
             <button type="button" class="sidebar-edge-toggle" id="sidebar-collapse-btn" aria-label="طيّ القائمة" aria-controls="sidebar" title="طيّ القائمة">
               <i data-lucide="chevron-right"></i>
             </button>
+            <div class="install-cta" id="install-cta" hidden>
+              <button type="button" class="install-cta-btn" id="install-btn" title="ثبّت التطبيق على جهازك">
+                <i data-lucide="download"></i>
+                <span>ثبّت التطبيق</span>
+              </button>
+            </div>
             <div class="user-menu" id="user-menu">
               <button type="button" class="sidebar-user" aria-haspopup="true" aria-expanded="false">
                 <span class="user-avatar">${window.utils.escapeHtml(getInitial(profile.full_name))}</span>
@@ -294,6 +300,31 @@ window.layout = (function () {
     const themeSlot = document.getElementById('theme-toggle-slot');
     if (window.themeToggle && themeSlot) {
       window.themeToggle.render(themeSlot);
+    }
+
+    // PWA install prompt — أظهر الزر عند توفر beforeinstallprompt
+    const installCta = document.getElementById('install-cta');
+    const installBtn = document.getElementById('install-btn');
+    if (installCta && installBtn && window.pwa) {
+      const showCta = () => {
+        // لا تُظهر الزر لو التطبيق مُثبَّت بالفعل (يعمل standalone)
+        if (window.pwa.isStandalone()) return;
+        if (window.pwa.isInstallable()) installCta.hidden = false;
+      };
+      showCta();
+      window.addEventListener('pwa:installable', () => { installCta.hidden = false; });
+      window.addEventListener('pwa:installed',   () => { installCta.hidden = true;  });
+      installBtn.addEventListener('click', async () => {
+        installBtn.disabled = true;
+        try {
+          const res = await window.pwa.promptInstall();
+          if (res && res.outcome === 'accepted') {
+            installCta.hidden = true;
+          }
+        } finally {
+          installBtn.disabled = false;
+        }
+      });
     }
 
     window.utils.renderIcons(root);

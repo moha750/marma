@@ -129,6 +129,9 @@ export default defineConfig(({ mode }) => {
           await copyIfExists('config.js');
           await copyIfExists('assets');
           await copyIfExists('CNAME');
+          // PWA: manifest + service worker يجب أن يصلا dist/ بأسمائهما الأصلية
+          await copyIfExists('manifest.webmanifest');
+          await copyIfExists('service-worker.js');
 
           // 404.html = نفس app.html (يلتقط كل المسارات غير الموجودة على GitHub Pages)
           try {

@@ -111,6 +111,15 @@
         </form>
       </div>
 
+      <div class="card mb-md" id="notifications-card">
+        <div class="card-header">
+          <h3>الإشعارات</h3>
+        </div>
+        <div class="card-body" id="notifications-body">
+          <div class="loader-center" style="min-height:60px"><div class="loader"></div></div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <h3>رابط الحجز العام</h3>
@@ -196,10 +205,113 @@
           }
         });
       }
+
+      // ─── قسم الإشعارات ────────────────────────────────
+      const notifBody = container.querySelector('#notifications-body');
+      if (notifBody) renderNotificationsSection(notifBody);
     },
 
     unmount() {}
   };
+
+  async function renderNotificationsSection(body) {
+    const push = window.push;
+    if (!push || !push.isSupported()) {
+      body.innerHTML = `
+        <p class="text-muted text-sm" style="margin:0">
+          متصفحك لا يدعم الإشعارات. على iPhone: ثبّت التطبيق من خيار "إضافة إلى الشاشة الرئيسية" في Safari (iOS 16.4 أو أحدث).
+        </p>
+      `;
+      return;
+    }
+
+    const perm = push.permission();
+    const subscribed = await push.isSubscribed();
+
+    if (perm === 'denied') {
+      body.innerHTML = `
+        <div style="display:flex;gap:var(--space-3);align-items:flex-start">
+          <span class="stat-icon-chip stat-icon-chip--warning" style="flex-shrink:0"><i data-lucide="bell-off"></i></span>
+          <div>
+            <div class="fw-medium mb-xs">الإشعارات معطّلة</div>
+            <p class="text-muted text-sm" style="margin:0">
+              رفضت الإذن من قبل. لإعادة التفعيل: افتح إعدادات الموقع في المتصفح وأعد منح صلاحية الإشعارات.
+            </p>
+          </div>
+        </div>
+      `;
+      window.utils.renderIcons(body);
+      return;
+    }
+
+    if (perm === 'granted' && subscribed) {
+      body.innerHTML = `
+        <div style="display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+          <div style="display:flex;gap:var(--space-3);align-items:flex-start">
+            <span class="stat-icon-chip stat-icon-chip--accent" style="flex-shrink:0"><i data-lucide="bell"></i></span>
+            <div>
+              <div class="fw-medium mb-xs">الإشعارات مفعّلة على هذا الجهاز</div>
+              <p class="text-muted text-sm" style="margin:0">
+                ستستلم تنبيهاً عند كل حجز جديد، حتى لو التطبيق مغلق.
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn btn--secondary btn--sm" id="notif-disable">إيقاف</button>
+        </div>
+      `;
+      window.utils.renderIcons(body);
+      body.querySelector('#notif-disable').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        const res = await push.unsubscribe();
+        if (res.ok) {
+          window.utils.toast('تم إيقاف الإشعارات', 'success');
+          renderNotificationsSection(body);
+        } else {
+          window.utils.toast('تعذّر إيقاف الإشعارات', 'error');
+          btn.disabled = false;
+        }
+      });
+      return;
+    }
+
+    // default أو granted-but-not-subscribed
+    body.innerHTML = `
+      <div style="display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+        <div style="display:flex;gap:var(--space-3);align-items:flex-start">
+          <span class="stat-icon-chip" style="flex-shrink:0"><i data-lucide="bell"></i></span>
+          <div>
+            <div class="fw-medium mb-xs">الإشعارات غير مفعّلة</div>
+            <p class="text-muted text-sm" style="margin:0">
+              فعّلها لاستلام تنبيه فوري على هذا الجهاز عند أي حجز جديد.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="btn btn--primary btn--sm" id="notif-enable">
+          <i data-lucide="bell"></i><span>تفعيل</span>
+        </button>
+      </div>
+    `;
+    window.utils.renderIcons(body);
+    body.querySelector('#notif-enable').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const res = await push.subscribe();
+      if (res.ok) {
+        window.utils.toast('تم تفعيل الإشعارات', 'success');
+        renderNotificationsSection(body);
+      } else if (res.reason === 'denied') {
+        window.utils.toast('رُفض الإذن من المتصفح', 'warning');
+        renderNotificationsSection(body);
+      } else if (res.reason === 'misconfigured') {
+        window.utils.toast('الإشعارات غير مُهيّأة على الخادم بعد', 'error');
+        btn.disabled = false;
+      } else {
+        window.utils.toast('تعذّر التفعيل', 'error');
+        btn.disabled = false;
+      }
+    });
+  }
 
   window.pages = window.pages || {};
   window.pages.settings = page;
