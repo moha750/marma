@@ -284,14 +284,13 @@
   // MAP CARD
   // ═══════════════════════════════════════════════════════════════
 
-  // Google Maps embed بدون API key — استراتيجية أولوية (الأدق أولاً):
-  // 1) CID: ?cid=<decimal>&output=embed → pin بالضبط على POI marker الرسمي
-  // 2) place_name: ?q=<name>&output=embed → pin قريب من POI (نتيجة بحث)
-  // 3) coords: ?q=<lat,lng>&output=embed → pin على إحداثيات محددة
-  // 4) text search: اسم الـ tenant + الأرضية + المدينة (آخر fallback)
-  function buildMapEmbedUrlFromCid(cid) {
-    return `https://maps.google.com/maps?cid=${cid}&output=embed`;
-  }
+  // Google Maps embed بدون API key — استراتيجية أولوية:
+  // 1) place_name: ?q=<name>&output=embed → pin قريب من POI (نتيجة بحث)
+  // 2) coords: ?q=<lat,lng>&output=embed → pin على إحداثيات محددة
+  // 3) text search: اسم الـ tenant + الأرضية + المدينة (آخر fallback)
+  //
+  // ملاحظة: ?cid=<decimal>&output=embed يرد 404 + X-Frame-Options:SAMEORIGIN —
+  // Google لا يدعم place_id في embed بدون Maps Embed API (يحتاج key).
   function buildMapEmbedUrlFromName(name) {
     return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=16&hl=ar&output=embed`;
   }
@@ -328,26 +327,19 @@
         .trim() || null;
     } catch (_) { return null; }
   }
-  function extractCid(url) {
-    if (!url) return null;
-    const m = url.match(/!1s0x[0-9a-fA-F]+:0x([0-9a-fA-F]+)/);
-    if (!m) return null;
-    try { return BigInt('0x' + m[1]).toString(); }
-    catch (_) { return null; }
-  }
   function isShortMapsUrl(url) {
     if (!url) return false;
     return /(^https?:\/\/)?(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
   }
-  // sessionStorage cache (3 ساعات). يرجع { coords, place_name, cid } أو null.
+  // sessionStorage cache (3 ساعات). يرجع { coords, place_name } أو null.
   async function resolveShortMapsUrl(url) {
-    const cacheKey = `marma:map-resolved:v3:${url}`;
+    const cacheKey = `marma:map-resolved:v4:${url}`;
     try {
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         const obj = JSON.parse(cached);
         if (Date.now() - obj.ts < 3 * 60 * 60 * 1000) {
-          return { coords: obj.coords, place_name: obj.place_name, cid: obj.cid };
+          return { coords: obj.coords, place_name: obj.place_name };
         }
       }
     } catch (_) {}
@@ -363,8 +355,7 @@
       const data = await resp.json();
       const result = {
         coords: (data && data.coords) || null,
-        place_name: (data && data.place_name) || null,
-        cid: (data && data.cid) || null
+        place_name: (data && data.place_name) || null
       };
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({ ...result, ts: Date.now() }));
@@ -374,30 +365,21 @@
       return null;
     }
   }
-  // يقرر الـ embed URL النهائي: CID > name > coords > text search
+  // أولوية: place_name > coords > text search
   async function resolveMapEmbedUrl(field, tenant) {
     if (field.location_url) {
-      // الأولوية 1: CID من URL طويل مباشر (الأدق — POI marker الرسمي)
-      const directCid = extractCid(field.location_url);
-      if (directCid) return buildMapEmbedUrlFromCid(directCid);
-
-      // الأولوية 2: اسم المكان من URL طويل مباشر
       const directName = extractPlaceName(field.location_url);
       if (directName) return buildMapEmbedUrlFromName(directName);
 
-      // الأولوية 3: إحداثيات من URL طويل مباشر
       const directCoords = extractCoords(field.location_url);
       if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
 
-      // الأولوية 4: حلّ short URL عبر edge function
       if (isShortMapsUrl(field.location_url)) {
         const resolved = await resolveShortMapsUrl(field.location_url);
-        if (resolved && resolved.cid)        return buildMapEmbedUrlFromCid(resolved.cid);
         if (resolved && resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
         if (resolved && resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
       }
     }
-    // الأولوية 5: بحث نصي بمعلومات الـ tenant
     return buildMapEmbedUrlFromSearch(field, tenant);
   }
   function buildWhatsAppUrl(phone) {
