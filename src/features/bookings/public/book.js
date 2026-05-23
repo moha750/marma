@@ -284,17 +284,37 @@
   // MAP CARD
   // ═══════════════════════════════════════════════════════════════
 
+  // Google Maps embed بدون API key:
+  // - q= يقبل: عنوان نصي، إحداثيات "lat,lng"، أو URL كامل لـ google.com/maps
+  // - لكن لا يدعم روابط maps.app.goo.gl المختصرة (يفسرها كنص → يعرض العالم كله)
+  // - الحل: استخرج إحداثيات لو الرابط يحتويها، وإلا استخدم بحث نصي (اسم الملعب + المدينة)
   function buildMapEmbedUrl(field, tenant) {
-    if (field.location_url) {
-      return `https://www.google.com/maps?q=${encodeURIComponent(field.location_url)}&output=embed`;
+    const coords = extractCoords(field.location_url);
+    if (coords) {
+      return `https://maps.google.com/maps?q=${coords}&z=16&hl=ar&output=embed`;
     }
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
-    return `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&z=14&hl=ar&output=embed`;
   }
   function buildMapOpenUrl(field, tenant) {
+    // للزر الخارجي نستخدم location_url الأصلي لأنه يفتح بدقة في تطبيق خرائط جوجل
     if (field.location_url) return field.location_url;
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(' '))}`;
+  }
+  // يستخرج "lat,lng" من URL خرائط كامل (يطابق /@lat,lng,zoom أو q=lat,lng)
+  function extractCoords(url) {
+    if (!url) return null;
+    // pattern 1: /@31.7683,35.2137,17z
+    let m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (m) return `${m[1]},${m[2]}`;
+    // pattern 2: !3d31.7683!4d35.2137
+    m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    if (m) return `${m[1]},${m[2]}`;
+    // pattern 3: ?q=31.7683,35.2137
+    m = url.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (m) return `${m[1]},${m[2]}`;
+    return null;
   }
   function buildWhatsAppUrl(phone) {
     if (!phone) return null;
