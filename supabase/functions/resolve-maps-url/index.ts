@@ -40,6 +40,22 @@ function extractCoords(url: string): string | null {
   return null;
 }
 
+// يستخرج اسم المكان من URL طويل بنمط /maps/place/<encoded_name>/...
+// مفيد جداً لـ embed: استخدامه كـ q=<name> يجعل Google يعرض POI marker
+// الرسمي بدلاً من pin جنريك على إحداثيات منفصلة.
+function extractPlaceName(url: string): string | null {
+  const m = url.match(/\/maps\/place\/([^/?]+)/);
+  if (!m) return null;
+  try {
+    let name = decodeURIComponent(m[1]).replace(/\+/g, " ");
+    // أزل علامات الاتجاه (LRM/RLM/LRE/RLE/PDF/LRO/RLO)
+    name = name.replace(/[‎‏‪-‮]/g, "").trim();
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -74,9 +90,14 @@ Deno.serve(async (req) => {
 
     // إذا الإحداثيات موجودة في الـ URL أصلاً، نرجعها فوراً (لا داعي لـ network call)
     const directCoords = extractCoords(target);
-    if (directCoords) {
+    const directName = extractPlaceName(target);
+    if (directCoords || directName) {
       return new Response(
-        JSON.stringify({ coords: directCoords, long_url: target }),
+        JSON.stringify({
+          coords: directCoords,
+          place_name: directName,
+          long_url: target,
+        }),
         {
           status: 200,
           headers: {
@@ -109,13 +130,18 @@ Deno.serve(async (req) => {
       if (location) {
         longUrl = location;
       } else if (resp.status === 200) {
-        // أحياناً Google يعيد HTML مباشرة بدون redirect — ابحث عن إحداثيات في الـ body
+        // أحياناً Google يعيد HTML مباشرة بدون redirect — ابحث عن إحداثيات/اسم في الـ body
         const text = await resp.text();
         const bodyCoords = extractCoords(text);
-        if (bodyCoords) {
+        const bodyName = extractPlaceName(text);
+        if (bodyCoords || bodyName) {
           clearTimeout(timeoutId);
           return new Response(
-            JSON.stringify({ coords: bodyCoords, long_url: target }),
+            JSON.stringify({
+              coords: bodyCoords,
+              place_name: bodyName,
+              long_url: target,
+            }),
             {
               status: 200,
               headers: {
@@ -132,8 +158,9 @@ Deno.serve(async (req) => {
     }
 
     const coords = extractCoords(longUrl);
+    const placeName = extractPlaceName(longUrl);
     return new Response(
-      JSON.stringify({ coords, long_url: longUrl }),
+      JSON.stringify({ coords, place_name: placeName, long_url: longUrl }),
       {
         status: 200,
         headers: {

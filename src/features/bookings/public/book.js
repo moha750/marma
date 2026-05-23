@@ -284,12 +284,13 @@
   // MAP CARD
   // ═══════════════════════════════════════════════════════════════
 
-  // Google Maps embed بدون API key:
-  // - q= يقبل: عنوان نصي، إحداثيات "lat,lng"، أو URL كامل لـ google.com/maps
-  // - لكن لا يدعم روابط maps.app.goo.gl المختصرة (يفسرها كنص → يعرض العالم كله)
-  // - الحل: استخرج إحداثيات لو الرابط يحتويها مباشرة. إذا كان مختصراً،
-  //         نحلّه عبر edge function resolve-maps-url ونستخرج إحداثيات النتيجة.
-  //         آخر fallback: بحث نصي بـ (اسم الملعب + الأرضية + المدينة).
+  // Google Maps embed بدون API key — استراتيجية:
+  // 1) place_name (الأدق): يستخدم اسم المكان في q= → Google يعرض POI marker الرسمي
+  // 2) coords: يستخدم lat,lng في q= → pin جنريك (قد لا يطابق POI الفعلي تماماً)
+  // 3) text search: اسم الـ tenant + الأرضية + المدينة (آخر fallback)
+  function buildMapEmbedUrlFromName(name) {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=16&hl=ar&output=embed`;
+  }
   function buildMapEmbedUrlFromCoords(coords) {
     return `https://maps.google.com/maps?q=${coords}&z=16&hl=ar&output=embed`;
   }
@@ -304,7 +305,6 @@
   }
   function extractCoords(url) {
     if (!url) return null;
-    // الترتيب مهم: !3d!4d (الـ pin الفعلي) قبل @ (view center)
     let m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
     if (m) return `${m[1]},${m[2]}`;
     m = url.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
@@ -313,18 +313,29 @@
     if (m) return `${m[1]},${m[2]}`;
     return null;
   }
+  function extractPlaceName(url) {
+    if (!url) return null;
+    const m = url.match(/\/maps\/place\/([^/?]+)/);
+    if (!m) return null;
+    try {
+      return decodeURIComponent(m[1])
+        .replace(/\+/g, ' ')
+        .replace(/[‎‏‪-‮]/g, '')
+        .trim() || null;
+    } catch (_) { return null; }
+  }
   function isShortMapsUrl(url) {
     if (!url) return false;
     return /(^https?:\/\/)?(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
   }
-  // يستخدم sessionStorage للـ cache (3 ساعات) لتجنب استدعاءات متعددة لنفس الرابط
+  // يستخدم sessionStorage للـ cache (3 ساعات). يرجع { coords, place_name } أو null.
   async function resolveShortMapsUrl(url) {
-    const cacheKey = `marma:map-coords:${url}`;
+    const cacheKey = `marma:map-resolved:v2:${url}`;
     try {
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
-        const { coords, ts } = JSON.parse(cached);
-        if (Date.now() - ts < 3 * 60 * 60 * 1000) return coords;
+        const { coords, place_name, ts } = JSON.parse(cached);
+        if (Date.now() - ts < 3 * 60 * 60 * 1000) return { coords, place_name };
       }
     } catch (_) {}
 
@@ -337,25 +348,37 @@
       );
       if (!resp.ok) return null;
       const data = await resp.json();
-      const coords = (data && data.coords) || null;
+      const result = {
+        coords: (data && data.coords) || null,
+        place_name: (data && data.place_name) || null
+      };
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify({ coords, ts: Date.now() }));
+        sessionStorage.setItem(cacheKey, JSON.stringify({ ...result, ts: Date.now() }));
       } catch (_) {}
-      return coords;
+      return result;
     } catch (_) {
       return null;
     }
   }
-  // يقرر الـ embed URL النهائي: إحداثيات إن أمكن، وإلا بحث نصي
+  // يقرر الـ embed URL النهائي حسب الأولوية: name > coords > text search
   async function resolveMapEmbedUrl(field, tenant) {
     if (field.location_url) {
-      const direct = extractCoords(field.location_url);
-      if (direct) return buildMapEmbedUrlFromCoords(direct);
+      // الأولوية 1: اسم المكان من URL طويل مباشر (يستهدف POI marker)
+      const directName = extractPlaceName(field.location_url);
+      if (directName) return buildMapEmbedUrlFromName(directName);
+
+      // الأولوية 2: إحداثيات من URL طويل مباشر
+      const directCoords = extractCoords(field.location_url);
+      if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
+
+      // الأولوية 3: حلّ short URL عبر edge function
       if (isShortMapsUrl(field.location_url)) {
         const resolved = await resolveShortMapsUrl(field.location_url);
-        if (resolved) return buildMapEmbedUrlFromCoords(resolved);
+        if (resolved && resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
+        if (resolved && resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
       }
     }
+    // الأولوية 4: بحث نصي بمعلومات الـ tenant
     return buildMapEmbedUrlFromSearch(field, tenant);
   }
   function buildWhatsAppUrl(phone) {
