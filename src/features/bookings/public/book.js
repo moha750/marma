@@ -284,134 +284,17 @@
   // MAP CARD
   // ═══════════════════════════════════════════════════════════════
 
-  // Google Maps embed — استراتيجية مزدوجة:
-  // (أ) لو GOOGLE_MAPS_API_KEY متوفر في APP_CONFIG → نستخدم Maps Embed API
-  //     (https://www.google.com/maps/embed/v1/place) — pin يتطابق 100% مع POI.
-  // (ب) بدون key → نستخدم free embed (https://maps.google.com/maps?...)
-  //     — pin قد ينحرف عن POI لأن Google لا يدعم place_id في free embed.
-  function getMapsApiKey() {
-    return (window.APP_CONFIG && window.APP_CONFIG.GOOGLE_MAPS_API_KEY) || '';
-  }
-  function buildMapEmbedUrlFromName(name) {
-    const key = getMapsApiKey();
-    if (key) {
-      return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${encodeURIComponent(name)}&language=ar&zoom=17`;
+  function buildMapEmbedUrl(field, tenant) {
+    if (field.location_url) {
+      return `https://www.google.com/maps?q=${encodeURIComponent(field.location_url)}&output=embed`;
     }
-    return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=16&hl=ar&output=embed`;
-  }
-  function buildMapEmbedUrlFromCoords(coords) {
-    const key = getMapsApiKey();
-    if (key) {
-      // mode=view لا يضع marker، نستخدم place مع q=lat,lng بدلاً
-      return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${encodeURIComponent(coords)}&language=ar&zoom=17`;
-    }
-    return `https://maps.google.com/maps?q=${coords}&z=16&hl=ar&output=embed`;
-  }
-  function buildMapEmbedUrlFromSearch(field, tenant) {
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
-    const query = parts.join(' ');
-    const key = getMapsApiKey();
-    if (key) {
-      return `https://www.google.com/maps/embed/v1/search?key=${encodeURIComponent(key)}&q=${encodeURIComponent(query)}&language=ar&zoom=14`;
-    }
-    return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=14&hl=ar&output=embed`;
+    return `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
   }
   function buildMapOpenUrl(field, tenant) {
     if (field.location_url) return field.location_url;
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(' '))}`;
-  }
-  function extractCoords(url) {
-    if (!url) return null;
-    let m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-    if (m) return `${m[1]},${m[2]}`;
-    m = url.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-    if (m) return `${m[1]},${m[2]}`;
-    m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-    if (m) return `${m[1]},${m[2]}`;
-    return null;
-  }
-  function extractPlaceName(url) {
-    if (!url) return null;
-    const m = url.match(/\/maps\/place\/([^/?]+)/);
-    if (!m) return null;
-    try {
-      return decodeURIComponent(m[1])
-        .replace(/\+/g, ' ')
-        .replace(/[‎‏‪-‮]/g, '')
-        .trim() || null;
-    } catch (_) { return null; }
-  }
-  function isShortMapsUrl(url) {
-    if (!url) return false;
-    return /(^https?:\/\/)?(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
-  }
-  // sessionStorage cache (3 ساعات). يرجع { coords, place_name } أو null.
-  async function resolveShortMapsUrl(url) {
-    const cacheKey = `marma:map-resolved:v4:${url}`;
-    try {
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        const obj = JSON.parse(cached);
-        if (Date.now() - obj.ts < 3 * 60 * 60 * 1000) {
-          return { coords: obj.coords, place_name: obj.place_name };
-        }
-      }
-    } catch (_) {}
-
-    try {
-      const base = window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL;
-      if (!base) return null;
-      const resp = await fetch(
-        `${base}/functions/v1/resolve-maps-url?url=${encodeURIComponent(url)}`,
-        { method: 'GET' }
-      );
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      const result = {
-        coords: (data && data.coords) || null,
-        place_name: (data && data.place_name) || null
-      };
-      try {
-        sessionStorage.setItem(cacheKey, JSON.stringify({ ...result, ts: Date.now() }));
-      } catch (_) {}
-      return result;
-    } catch (_) {
-      return null;
-    }
-  }
-  // الأولوية تختلف حسب توفر Embed API key:
-  // - مع key: coords أدق (pin على إحداثيات محددة بدل geocoding ambiguous)
-  // - بدون key: name يعطي POI marker visual أقرب من free embed
-  async function resolveMapEmbedUrl(field, tenant) {
-    const hasKey = !!getMapsApiKey();
-
-    if (field.location_url) {
-      const directName = extractPlaceName(field.location_url);
-      const directCoords = extractCoords(field.location_url);
-
-      if (hasKey) {
-        if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
-        if (directName)   return buildMapEmbedUrlFromName(directName);
-      } else {
-        if (directName)   return buildMapEmbedUrlFromName(directName);
-        if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
-      }
-
-      if (isShortMapsUrl(field.location_url)) {
-        const resolved = await resolveShortMapsUrl(field.location_url);
-        if (resolved) {
-          if (hasKey) {
-            if (resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
-            if (resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
-          } else {
-            if (resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
-            if (resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
-          }
-        }
-      }
-    }
-    return buildMapEmbedUrlFromSearch(field, tenant);
   }
   function buildWhatsAppUrl(phone) {
     if (!phone) return null;
@@ -420,10 +303,11 @@
     return `https://wa.me/${intl}?text=${encodeURIComponent('السلام عليكم، لدي استفسار عن الحجز')}`;
   }
 
-  async function mountMap(host) {
+  function mountMap(host) {
     const f = state.selectedField;
     if (!f) { host.innerHTML = ''; return; }
     const t = state.tenantInfo;
+    const embedUrl = buildMapEmbedUrl(f, t);
     const openUrl = buildMapOpenUrl(f, t);
     const waUrl = buildWhatsAppUrl(f.phone);
 
@@ -485,14 +369,11 @@
 
     const card = host.querySelector('.bp-map-card');
     const iframe = card.querySelector('.bp-map-iframe');
-    const failTimer = setTimeout(() => { card.dataset.state = 'error'; }, 10000);
+    const failTimer = setTimeout(() => { card.dataset.state = 'error'; }, 8000);
     iframe.addEventListener('load', () => {
       clearTimeout(failTimer);
       card.dataset.state = 'ok';
     }, { once: true });
-
-    // قد يحتاج resolveMapEmbedUrl لاستدعاء edge function للروابط المختصرة
-    const embedUrl = await resolveMapEmbedUrl(f, t);
     iframe.src = embedUrl;
   }
 

@@ -3,9 +3,8 @@
 //
 // يقرأ من process.env:
 //   SUPABASE_URL
-//   SUPABASE_KEY            (anon key)
+//   SUPABASE_KEY        (anon key)
 //   VAPID_PUBLIC_KEY
-//   GOOGLE_MAPS_API_KEY     (اختياري — لتطابق pin مع POI الفعلي)
 //
 // محلياً: لو المتغيّرات غير مضبوطة، يولّد ملفاً بقيم فارغة (الموقع يفتح
 // لكن Supabase لن يتصل — كافٍ لاختبار البناء أو CSS).
@@ -21,8 +20,7 @@ const target = resolve(root, 'config.js');
 const env = {
   SUPABASE_URL: process.env.SUPABASE_URL || '',
   SUPABASE_KEY: process.env.SUPABASE_KEY || '',
-  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || '',
-  GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || ''
+  VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || ''
 };
 
 // السكربت يطبع توقيعاً في أول سطر يميّز الملفات المُوَلَّدة.
@@ -37,9 +35,7 @@ if (existsSync(target)) {
   }
 }
 
-// GOOGLE_MAPS_API_KEY اختياري — لا نُدرجه في فحص "missing"
-const required = ['SUPABASE_URL', 'SUPABASE_KEY', 'VAPID_PUBLIC_KEY'];
-const missing = required.filter((k) => !env[k]);
+const missing = Object.entries(env).filter(([, v]) => !v).map(([k]) => k);
 if (missing.length) {
   // في CI: missing env vars خطأ صريح
   if (process.env.CI || process.env.GITHUB_ACTIONS || process.env.CF_PAGES) {
@@ -54,8 +50,7 @@ const content = `${SIGNATURE}
 window.APP_CONFIG = {
   SUPABASE_URL: ${JSON.stringify(env.SUPABASE_URL)},
   SUPABASE_KEY: ${JSON.stringify(env.SUPABASE_KEY)},
-  VAPID_PUBLIC_KEY: ${JSON.stringify(env.VAPID_PUBLIC_KEY)},
-  GOOGLE_MAPS_API_KEY: ${JSON.stringify(env.GOOGLE_MAPS_API_KEY)}
+  VAPID_PUBLIC_KEY: ${JSON.stringify(env.VAPID_PUBLIC_KEY)}
 };
 `;
 
