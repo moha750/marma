@@ -41,8 +41,6 @@ function extractCoords(url: string): string | null {
 }
 
 // يستخرج اسم المكان من URL طويل بنمط /maps/place/<encoded_name>/...
-// مفيد جداً لـ embed: استخدامه كـ q=<name> يجعل Google يعرض POI marker
-// الرسمي بدلاً من pin جنريك على إحداثيات منفصلة.
 function extractPlaceName(url: string): string | null {
   const m = url.match(/\/maps\/place\/([^/?]+)/);
   if (!m) return null;
@@ -51,6 +49,19 @@ function extractPlaceName(url: string): string | null {
     // أزل علامات الاتجاه (LRM/RLM/LRE/RLE/PDF/LRO/RLO)
     name = name.replace(/[‎‏‪-‮]/g, "").trim();
     return name || null;
+  } catch {
+    return null;
+  }
+}
+
+// يستخرج Google CID من URL طويل بنمط !1s0x<hex1>:0x<hex2>
+// hex2 هو المعرّف الداخلي للمكان عند Google. استخدامه في
+// ?cid=<decimal>&output=embed يضع pin على نفس موقع POI marker الرسمي.
+function extractCid(url: string): string | null {
+  const m = url.match(/!1s0x[0-9a-fA-F]+:0x([0-9a-fA-F]+)/);
+  if (!m) return null;
+  try {
+    return BigInt("0x" + m[1]).toString();
   } catch {
     return null;
   }
@@ -91,11 +102,13 @@ Deno.serve(async (req) => {
     // إذا الإحداثيات موجودة في الـ URL أصلاً، نرجعها فوراً (لا داعي لـ network call)
     const directCoords = extractCoords(target);
     const directName = extractPlaceName(target);
-    if (directCoords || directName) {
+    const directCid = extractCid(target);
+    if (directCoords || directName || directCid) {
       return new Response(
         JSON.stringify({
           coords: directCoords,
           place_name: directName,
+          cid: directCid,
           long_url: target,
         }),
         {
@@ -130,16 +143,18 @@ Deno.serve(async (req) => {
       if (location) {
         longUrl = location;
       } else if (resp.status === 200) {
-        // أحياناً Google يعيد HTML مباشرة بدون redirect — ابحث عن إحداثيات/اسم في الـ body
+        // أحياناً Google يعيد HTML مباشرة بدون redirect — ابحث عن البيانات في الـ body
         const text = await resp.text();
         const bodyCoords = extractCoords(text);
         const bodyName = extractPlaceName(text);
-        if (bodyCoords || bodyName) {
+        const bodyCid = extractCid(text);
+        if (bodyCoords || bodyName || bodyCid) {
           clearTimeout(timeoutId);
           return new Response(
             JSON.stringify({
               coords: bodyCoords,
               place_name: bodyName,
+              cid: bodyCid,
               long_url: target,
             }),
             {
@@ -159,8 +174,9 @@ Deno.serve(async (req) => {
 
     const coords = extractCoords(longUrl);
     const placeName = extractPlaceName(longUrl);
+    const cid = extractCid(longUrl);
     return new Response(
-      JSON.stringify({ coords, place_name: placeName, long_url: longUrl }),
+      JSON.stringify({ coords, place_name: placeName, cid, long_url: longUrl }),
       {
         status: 200,
         headers: {
