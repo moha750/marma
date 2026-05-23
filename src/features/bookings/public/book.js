@@ -284,22 +284,37 @@
   // MAP CARD
   // ═══════════════════════════════════════════════════════════════
 
-  // Google Maps embed بدون API key — استراتيجية أولوية:
-  // 1) place_name: ?q=<name>&output=embed → pin قريب من POI (نتيجة بحث)
-  // 2) coords: ?q=<lat,lng>&output=embed → pin على إحداثيات محددة
-  // 3) text search: اسم الـ tenant + الأرضية + المدينة (آخر fallback)
-  //
-  // ملاحظة: ?cid=<decimal>&output=embed يرد 404 + X-Frame-Options:SAMEORIGIN —
-  // Google لا يدعم place_id في embed بدون Maps Embed API (يحتاج key).
+  // Google Maps embed — استراتيجية مزدوجة:
+  // (أ) لو GOOGLE_MAPS_API_KEY متوفر في APP_CONFIG → نستخدم Maps Embed API
+  //     (https://www.google.com/maps/embed/v1/place) — pin يتطابق 100% مع POI.
+  // (ب) بدون key → نستخدم free embed (https://maps.google.com/maps?...)
+  //     — pin قد ينحرف عن POI لأن Google لا يدعم place_id في free embed.
+  function getMapsApiKey() {
+    return (window.APP_CONFIG && window.APP_CONFIG.GOOGLE_MAPS_API_KEY) || '';
+  }
   function buildMapEmbedUrlFromName(name) {
+    const key = getMapsApiKey();
+    if (key) {
+      return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${encodeURIComponent(name)}&language=ar&zoom=17`;
+    }
     return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=16&hl=ar&output=embed`;
   }
   function buildMapEmbedUrlFromCoords(coords) {
+    const key = getMapsApiKey();
+    if (key) {
+      // mode=view لا يضع marker، نستخدم place مع q=lat,lng بدلاً
+      return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${encodeURIComponent(coords)}&language=ar&zoom=17`;
+    }
     return `https://maps.google.com/maps?q=${coords}&z=16&hl=ar&output=embed`;
   }
   function buildMapEmbedUrlFromSearch(field, tenant) {
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
-    return `https://maps.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&z=14&hl=ar&output=embed`;
+    const query = parts.join(' ');
+    const key = getMapsApiKey();
+    if (key) {
+      return `https://www.google.com/maps/embed/v1/search?key=${encodeURIComponent(key)}&q=${encodeURIComponent(query)}&language=ar&zoom=14`;
+    }
+    return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=14&hl=ar&output=embed`;
   }
   function buildMapOpenUrl(field, tenant) {
     if (field.location_url) return field.location_url;
