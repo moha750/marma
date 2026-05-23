@@ -304,11 +304,12 @@
   }
   function extractCoords(url) {
     if (!url) return null;
-    let m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-    if (m) return `${m[1]},${m[2]}`;
-    m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    // الترتيب مهم: !3d!4d (الـ pin الفعلي) قبل @ (view center)
+    let m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
     if (m) return `${m[1]},${m[2]}`;
     m = url.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (m) return `${m[1]},${m[2]}`;
+    m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
     if (m) return `${m[1]},${m[2]}`;
     return null;
   }

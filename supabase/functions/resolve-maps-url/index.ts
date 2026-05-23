@@ -24,17 +24,18 @@ const CORS_HEADERS = {
 };
 
 function extractCoords(url: string): string | null {
-  // pattern 1: /@lat,lng,zoom
-  let m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  // الترتيب مُهم: نُفضّل إحداثيات الـ pin الفعلي على إحداثيات view center.
+  // pattern A (الأدق): !3d<lat>!4d<lng> — موقع place_id الفعلي
+  let m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
   if (m) return `${m[1]},${m[2]}`;
-  // pattern 2: !3d<lat>!4d<lng>
-  m = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-  if (m) return `${m[1]},${m[2]}`;
-  // pattern 3: ?q=lat,lng or &q=lat,lng
+  // pattern B: ?q=lat,lng — صريح من البحث
   m = url.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (m) return `${m[1]},${m[2]}`;
-  // pattern 4: ll=lat,lng
+  // pattern C: ll=lat,lng — صريح
   m = url.match(/[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if (m) return `${m[1]},${m[2]}`;
+  // pattern D (أقل دقة — view center): /@lat,lng,zoom
+  m = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (m) return `${m[1]},${m[2]}`;
   return null;
 }
