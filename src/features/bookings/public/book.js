@@ -380,19 +380,35 @@
       return null;
     }
   }
-  // أولوية: place_name > coords > text search
+  // الأولوية تختلف حسب توفر Embed API key:
+  // - مع key: coords أدق (pin على إحداثيات محددة بدل geocoding ambiguous)
+  // - بدون key: name يعطي POI marker visual أقرب من free embed
   async function resolveMapEmbedUrl(field, tenant) {
+    const hasKey = !!getMapsApiKey();
+
     if (field.location_url) {
       const directName = extractPlaceName(field.location_url);
-      if (directName) return buildMapEmbedUrlFromName(directName);
-
       const directCoords = extractCoords(field.location_url);
-      if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
+
+      if (hasKey) {
+        if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
+        if (directName)   return buildMapEmbedUrlFromName(directName);
+      } else {
+        if (directName)   return buildMapEmbedUrlFromName(directName);
+        if (directCoords) return buildMapEmbedUrlFromCoords(directCoords);
+      }
 
       if (isShortMapsUrl(field.location_url)) {
         const resolved = await resolveShortMapsUrl(field.location_url);
-        if (resolved && resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
-        if (resolved && resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
+        if (resolved) {
+          if (hasKey) {
+            if (resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
+            if (resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
+          } else {
+            if (resolved.place_name) return buildMapEmbedUrlFromName(resolved.place_name);
+            if (resolved.coords)     return buildMapEmbedUrlFromCoords(resolved.coords);
+          }
+        }
       }
     }
     return buildMapEmbedUrlFromSearch(field, tenant);
