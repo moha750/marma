@@ -101,6 +101,8 @@
     const primaryPhone = t.fields.find((f) => f.phone)?.phone;
     const hasCover = !!t.cover_image_url;
     const hasAbout = !!(t.description && t.description.trim());
+    const hasContact = !!primaryPhone || cities.length > 0;
+    const waUrl = primaryPhone ? buildWhatsAppUrl(primaryPhone) : null;
 
     root.innerHTML = `
       <header class="bp-hero bp-hero--tenant" id="bp-hero"></header>
@@ -115,6 +117,11 @@
         <section class="bp-section">
           <h2 class="bp-section-title"><i data-lucide="info"></i><span>عن الملعب</span></h2>
           <p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>
+        </section>
+      ` : ''}
+      ${hasContact ? `
+        <section class="bp-section">
+          <h2 class="bp-section-title"><i data-lucide="map-pin"></i><span>الموقع والتواصل</span></h2>
           ${cities.length ? `
             <ul class="bp-city-chips">
               ${cities.map((c) => `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(c)}</li>`).join('')}
@@ -125,8 +132,8 @@
               <a class="btn btn--secondary btn--sm" href="tel:${window.utils.escapeHtml(primaryPhone)}">
                 <i data-lucide="phone"></i><span>اتصل بالملعب</span>
               </a>
-              ${buildWhatsAppUrl(primaryPhone) ? `
-                <a class="btn btn--secondary btn--sm" href="${window.utils.escapeHtml(buildWhatsAppUrl(primaryPhone))}" target="_blank" rel="noopener">
+              ${waUrl ? `
+                <a class="btn btn--secondary btn--sm" href="${window.utils.escapeHtml(waUrl)}" target="_blank" rel="noopener">
                   <i data-lucide="message-circle"></i><span>واتساب</span>
                 </a>
               ` : ''}
@@ -139,7 +146,7 @@
       </footer>
     `;
 
-    mountTenantHero(document.getElementById('bp-hero'), { cities, primaryPhone, hasCover });
+    mountTenantHero(document.getElementById('bp-hero'), { hasCover });
     mountLandingFields(document.getElementById('bp-landing-fields'));
     window.utils.renderIcons(root);
   }
@@ -239,7 +246,7 @@
     if (btn) btn.addEventListener('click', () => renderManageEntryView());
   }
 
-  function mountTenantHero(host, { cities, primaryPhone, hasCover }) {
+  function mountTenantHero(host, { hasCover }) {
     const t = state.tenantInfo;
     const fieldsCount = t.fields.length;
     const coverHtml = hasCover
@@ -254,12 +261,7 @@
         احجز موعدك في 30 ثانية
       </span>
       <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
-      ${t.description ? `<p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>` : '<p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>'}
-      <ul class="bp-hero-meta">
-        ${cities[0] ? `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(cities[0])}${cities.length > 1 ? ` <span class="text-tertiary">+${cities.length - 1}</span>` : ''}</li>` : ''}
-        ${primaryPhone ? `<li><a href="tel:${window.utils.escapeHtml(primaryPhone)}"><i data-lucide="phone"></i>${window.utils.escapeHtml(primaryPhone)}</a></li>` : ''}
-        <li><i data-lucide="goal"></i>${fieldsCount} ${fieldsCount === 1 ? 'أرضية' : 'أرضيات'}</li>
-      </ul>
+      <p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>
     `;
     bindManageBtn();
   }
