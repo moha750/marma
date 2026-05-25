@@ -1395,14 +1395,25 @@
 .bp-hero-cover img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
-.bp-hero-cover[data-empty="1"]::before {
-  content: attr(data-label);
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: color-mix(in srgb, var(--c-fg) 22%, transparent);
+
+/* Fallback "اسم النشاط كبيراً": cover بدون صورة يصبح banner للاسم */
+.bp-hero-cover--name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--c-brand) 40%, var(--c-surface)),
+    color-mix(in srgb, var(--c-brand) 12%, var(--c-surface)));
+}
+.bp-hero-cover-name {
+  font-size: clamp(2rem, 7vw, 3.6rem);
   font-weight: var(--weight-bold);
-  font-size: clamp(2rem, 6vw, 3rem);
+  color: var(--c-fg);
+  text-align: center;
+  line-height: 1.15;
   letter-spacing: -0.02em;
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--c-bg) 70%, transparent);
 }
 
 .bp-about-text {
