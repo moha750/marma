@@ -282,3 +282,219 @@ select.form-control {
   accent-color: var(--accent-500);
   cursor: pointer;
 }
+
+/* ─── معرض صور الأرضية (admin) ─── */
+
+.form-help-inline {
+  font-weight: normal;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  margin-inline-start: var(--space-2);
+}
+
+.field-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+  margin-block: var(--space-2);
+}
+
+.field-gallery[data-busy="1"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.field-gallery__item {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.field-gallery__item--cover {
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 2px var(--accent-100, rgba(34, 197, 94, 0.18));
+}
+
+.field-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.field-gallery__cover-badge {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  background: var(--accent-500);
+  color: #fff;
+  font-size: var(--text-2xs, 10px);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.field-gallery__actions {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.field-gallery__item:hover .field-gallery__actions,
+.field-gallery__item:focus-within .field-gallery__actions {
+  opacity: 1;
+}
+
+.field-gallery__btn {
+  flex: 1;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.field-gallery__btn:hover:not(:disabled) {
+  background: #fff;
+}
+
+.field-gallery__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.field-gallery__btn--danger {
+  color: var(--danger, #dc2626);
+}
+
+.field-gallery__btn i[data-lucide],
+.field-gallery__btn svg.lucide {
+  width: 14px;
+  height: 14px;
+}
+
+.field-gallery__add {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  background: var(--surface-2);
+  border: 1.5px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.field-gallery__add:hover {
+  border-color: var(--accent-500);
+  color: var(--accent-500);
+  background: var(--accent-50, rgba(34, 197, 94, 0.06));
+}
+
+.field-gallery__add i[data-lucide],
+.field-gallery__add svg.lucide {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── غلاف المنشأة في صفحة الإعدادات ─────────────────────────── */
+.tenant-cover-slot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+}
+
+.tenant-cover-slot > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tenant-cover-slot[data-busy="1"] { opacity: 0.5; pointer-events: none; }
+
+.tenant-cover-slot__actions {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: flex;
+  gap: var(--space-2);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.tenant-cover-slot:hover .tenant-cover-slot__actions,
+.tenant-cover-slot:focus-within .tenant-cover-slot__actions {
+  opacity: 1;
+}
+
+.tenant-cover-slot__add {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1.5px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.tenant-cover-slot__add:hover {
+  border-color: var(--accent-500);
+  color: var(--accent-500);
+  background: var(--accent-50, rgba(34, 197, 94, 0.06));
+}
+
+.tenant-cover-slot__add i[data-lucide],
+.tenant-cover-slot__add svg.lucide {
+  width: 32px;
+  height: 32px;
+}
+
+.tenant-cover-slot__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.tenant-cover-slot__empty i[data-lucide],
+.tenant-cover-slot__empty svg.lucide {
+  width: 28px;
+  height: 28px;
+  opacity: 0.5;
+}
+

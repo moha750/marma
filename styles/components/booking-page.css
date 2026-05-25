@@ -395,6 +395,15 @@
 .bp-field-card-check svg.lucide,
 .bp-field-card-check i[data-lucide] { width: 16px; height: 16px; }
 
+/* صورة غلاف الأرضية في بطاقة الاختيار (تحلّ مكان bp-field-card-icon) */
+.bp-field-card-image {
+  width: 52px; height: 52px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-bdr-2);
+  display: block;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    6) MAP CARD
    ═══════════════════════════════════════════════════════════════════ */
@@ -405,6 +414,143 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-1);
+}
+/* بانر صورة الأرضية أعلى بطاقة الخريطة */
+.bp-map-card-banner {
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+  border-block-end: 1px solid var(--c-bdr);
+}
+/* عند وجود شريط thumbnails بعد البانر مباشرة، نُلغي border-end لتجنب double border */
+.bp-map-card-banner:has(+ .bp-gallery-thumbs) {
+  border-block-end: 0;
+}
+
+/* شريط thumbnails أسفل البانر (يظهر فقط إذا > 1 صورة) */
+.bp-gallery-thumbs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border-block-end: 1px solid var(--c-bdr);
+  background: var(--c-surface-2, rgba(0, 0, 0, 0.02));
+}
+.bp-gallery-thumb {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.bp-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.bp-gallery-thumb:hover {
+  transform: translateY(-2px);
+}
+.bp-gallery-thumb.is-active {
+  border-color: var(--c-accent, var(--accent-500));
+}
+
+/* ── Lightbox (overlay fullscreen) ─────────────────────────── */
+.bp-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bp-lightbox-in 0.18s ease-out;
+}
+@keyframes bp-lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.bp-lightbox__image {
+  max-width: 92vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.bp-lightbox__close,
+.bp-lightbox__nav {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background 0.15s ease;
+}
+.bp-lightbox__close:hover,
+.bp-lightbox__nav:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.bp-lightbox__close {
+  top: 16px;
+  inset-inline-start: 16px;
+}
+.bp-lightbox__nav i[data-lucide],
+.bp-lightbox__nav svg.lucide,
+.bp-lightbox__close i[data-lucide],
+.bp-lightbox__close svg.lucide {
+  width: 22px;
+  height: 22px;
+}
+/* RTL: prev = "for previous" → في اليمين (chevron-right يشير لليمين) */
+.bp-lightbox__nav--prev {
+  inset-inline-end: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.bp-lightbox__nav--next {
+  inset-inline-start: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.bp-lightbox__counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+@media (max-width: 480px) {
+  .bp-lightbox__nav { width: 38px; height: 38px; }
+  .bp-lightbox__nav--prev { inset-inline-end: 8px; }
+  .bp-lightbox__nav--next { inset-inline-start: 8px; }
+  .bp-lightbox__close { top: 12px; inset-inline-start: 12px; }
 }
 .bp-map-card-head {
   display: flex;
@@ -1226,4 +1372,297 @@
   .bp-field-card { padding: var(--space-3); }
   .bp-stepper-step .bp-stepper-label { display: none; }
   .bp-stepper-step.is-active .bp-stepper-label { display: inline; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   17) TENANT LANDING — صورة الغلاف، كروت الأرضيات الكبيرة، نبذة
+   ═══════════════════════════════════════════════════════════════════ */
+
+.bp-hero--tenant { padding-block: 0 clamp(24px, 5vw, 40px); }
+
+.bp-hero-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  margin-block: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--c-brand) 25%, var(--c-surface)),
+    color-mix(in srgb, var(--c-brand) 5%, var(--c-surface)));
+  border: 1px solid var(--c-bdr);
+}
+.bp-hero-cover img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.bp-hero-cover[data-empty="1"]::before {
+  content: attr(data-label);
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: color-mix(in srgb, var(--c-fg) 22%, transparent);
+  font-weight: var(--weight-bold);
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: -0.02em;
+}
+
+.bp-about-text {
+  font-size: var(--text-md);
+  line-height: 1.65;
+  color: var(--c-mute);
+  max-width: 60ch;
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.bp-section-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--c-fg);
+  margin: 0 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bp-landing-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+@media (min-width: 640px) {
+  .bp-landing-fields { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+}
+
+.bp-landing-field-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-bdr-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  transition: transform var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.bp-landing-field-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--c-brand) 35%, var(--c-bdr-2));
+  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--c-brand) 35%, transparent);
+}
+.bp-landing-field-card:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+.bp-landing-field-card__media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--c-brand) 18%, var(--c-soft)),
+    var(--c-soft));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--c-brand) 60%, var(--c-faint));
+}
+.bp-landing-field-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bp-landing-field-card__media svg.lucide,
+.bp-landing-field-card__media i[data-lucide] { width: 48px; height: 48px; }
+
+.bp-landing-field-card__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.bp-landing-field-card__body h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--c-fg);
+}
+.bp-landing-field-card__meta {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--c-mute);
+  font-size: var(--text-sm);
+}
+.bp-landing-field-card__meta svg.lucide,
+.bp-landing-field-card__meta i[data-lucide] { width: 14px; height: 14px; }
+.bp-landing-field-card__cta {
+  margin-top: var(--space-2);
+  color: var(--c-brand-dd, var(--c-brand));
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bp-surface-badge {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--c-fg);
+  font-size: var(--text-2xs, 11px);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.01em;
+  border: 1px solid var(--c-bdr);
+}
+
+.bp-city-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bp-city-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--c-soft);
+  color: var(--c-mute);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.bp-city-chips li svg.lucide,
+.bp-city-chips li i[data-lucide] { width: 14px; height: 14px; }
+
+.bp-landing-foot {
+  margin-top: clamp(40px, 8vw, 64px);
+  padding: var(--space-4) 0;
+  text-align: center;
+  color: var(--c-faint);
+  font-size: var(--text-sm);
+}
+.bp-landing-foot a { color: var(--c-brand-d, var(--c-brand)); text-decoration: none; font-weight: var(--weight-semibold); }
+.bp-landing-foot a:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   18) AMENITY CHIPS — للعرض (readonly) ولنموذج الإدارة (toggle)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.bp-amenity-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bp-amenity-strip li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--c-soft);
+  color: var(--c-mute);
+  font-size: var(--text-2xs, 11px);
+  font-weight: var(--weight-semibold);
+}
+.bp-amenity-strip li.bp-amenity-strip__more { color: var(--c-brand-d, var(--c-brand)); }
+
+.bp-amenity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.bp-amenity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1.5px solid var(--c-bdr-2);
+  color: var(--c-mute);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.bp-amenity-chip:hover { color: var(--c-fg); border-color: var(--c-brand); }
+.bp-amenity-chip.is-active {
+  background: var(--c-brand-50, color-mix(in srgb, var(--c-brand) 12%, transparent));
+  color: var(--c-brand-dd, var(--c-brand));
+  border-color: var(--c-brand);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   19) BREADCRUMB (في صفحة الأرضية) + وصف الأرضية
+   ═══════════════════════════════════════════════════════════════════ */
+
+.bp-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+}
+.bp-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  color: var(--c-mute);
+  text-decoration: none;
+  border-radius: 999px;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.bp-breadcrumb a:hover { background: var(--c-soft); color: var(--c-brand-d, var(--c-brand)); }
+.bp-breadcrumb a i[data-lucide],
+.bp-breadcrumb a svg.lucide { width: 14px; height: 14px; }
+
+.bp-field-description {
+  font-size: var(--text-md);
+  line-height: 1.7;
+  color: var(--c-fg);
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-soft);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--c-brand);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   20) DARK MODE + MOBILE — للأقسام الجديدة
+   ═══════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .bp-hero-cover { border-color: var(--c-bdr-2); }
+[data-theme="dark"] .bp-surface-badge {
+  background: color-mix(in srgb, var(--c-surface) 80%, transparent);
+}
+[data-theme="dark"] .bp-amenity-chip.is-active {
+  background: color-mix(in srgb, var(--c-brand) 18%, transparent);
+  color: var(--accent-300);
+}
+[data-theme="dark"] .bp-field-description {
+  background: color-mix(in srgb, var(--c-brand) 8%, var(--c-soft));
+}
+
+@media (max-width: 520px) {
+  .bp-hero-cover { aspect-ratio: 16 / 10; margin-block: var(--space-2) var(--space-3); }
+  .bp-landing-fields { gap: var(--space-3); }
+  .bp-landing-field-card__body { padding: var(--space-3); }
+  .bp-section-title { font-size: var(--text-md); }
 }

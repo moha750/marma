@@ -111,6 +111,59 @@
         </form>
       </div>
 
+      <div class="card mb-md" id="branding-card">
+        <div class="card-header">
+          <h3>هوية الملعب</h3>
+          <span class="card-header-meta">تظهر للعملاء في صفحة الحجز</span>
+        </div>
+        <form id="branding-form" autocomplete="off">
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">صورة الغلاف</label>
+              <div class="tenant-cover-slot" id="cover-slot" data-state="${tenant.cover_image_url ? 'filled' : 'empty'}">
+                ${tenant.cover_image_url ? `
+                  <img src="${window.utils.escapeHtml(tenant.cover_image_url)}" alt="غلاف الملعب">
+                  ${isOwner ? `
+                    <div class="tenant-cover-slot__actions">
+                      <label class="btn btn--secondary btn--sm">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="cover-replace">
+                        <i data-lucide="image"></i><span>تغيير</span>
+                      </label>
+                      <button type="button" class="btn btn--danger-quiet btn--sm" data-role="cover-remove">
+                        <i data-lucide="trash-2"></i><span>حذف</span>
+                      </button>
+                    </div>
+                  ` : ''}
+                ` : `
+                  ${isOwner ? `
+                    <label class="tenant-cover-slot__add">
+                      <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="cover-replace">
+                      <i data-lucide="image-plus"></i>
+                      <span>إضافة صورة غلاف</span>
+                    </label>
+                  ` : `
+                    <div class="tenant-cover-slot__empty"><i data-lucide="image"></i><span>لا توجد صورة غلاف</span></div>
+                  `}
+                `}
+              </div>
+              <span class="form-help">صورة عرضية تظهر أعلى صفحة الحجز. JPG/PNG/WebP، حد 5 ميجابايت.</span>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">وصف الملعب</label>
+              <textarea class="form-control" name="description" rows="3" maxlength="600"
+                        placeholder="اكتب نبذة قصيرة عن الملعب — موقعه، ما يميّزه، نوع الخدمة"
+                        ${isOwner ? '' : 'disabled'}>${window.utils.escapeHtml(tenant.description || '')}</textarea>
+              <span class="form-help"><span id="desc-counter">${(tenant.description || '').length}</span>/600 حرف</span>
+            </div>
+          </div>
+          ${isOwner ? `
+            <div class="card-footer">
+              <button type="submit" class="btn btn--primary" id="branding-save">حفظ الوصف</button>
+            </div>
+          ` : ''}
+        </form>
+      </div>
+
       <div class="card mb-md" id="notifications-card">
         <div class="card-header">
           <h3>الإشعارات</h3>
@@ -206,6 +259,9 @@
         });
       }
 
+      // ─── كرت هوية الملعب: غلاف + وصف ────────────────
+      mountBrandingCard(container, ctx, isOwner);
+
       // ─── قسم الإشعارات ────────────────────────────────
       const notifBody = container.querySelector('#notifications-body');
       if (notifBody) renderNotificationsSection(notifBody);
@@ -213,6 +269,115 @@
 
     unmount() {}
   };
+
+  function renderCoverSlot(slot, coverUrl, isOwner) {
+    slot.dataset.state = coverUrl ? 'filled' : 'empty';
+    if (coverUrl) {
+      slot.innerHTML = `
+        <img src="${window.utils.escapeHtml(coverUrl)}" alt="غلاف الملعب">
+        ${isOwner ? `
+          <div class="tenant-cover-slot__actions">
+            <label class="btn btn--secondary btn--sm">
+              <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="cover-replace">
+              <i data-lucide="image"></i><span>تغيير</span>
+            </label>
+            <button type="button" class="btn btn--danger-quiet btn--sm" data-role="cover-remove">
+              <i data-lucide="trash-2"></i><span>حذف</span>
+            </button>
+          </div>
+        ` : ''}
+      `;
+    } else {
+      slot.innerHTML = isOwner ? `
+        <label class="tenant-cover-slot__add">
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="cover-replace">
+          <i data-lucide="image-plus"></i>
+          <span>إضافة صورة غلاف</span>
+        </label>
+      ` : `
+        <div class="tenant-cover-slot__empty"><i data-lucide="image"></i><span>لا توجد صورة غلاف</span></div>
+      `;
+    }
+    window.utils.renderIcons(slot);
+  }
+
+  function mountBrandingCard(container, ctx, isOwner) {
+    const brandingForm = container.querySelector('#branding-form');
+    const slot = container.querySelector('#cover-slot');
+    const textarea = brandingForm ? brandingForm.querySelector('textarea[name="description"]') : null;
+    const counter = container.querySelector('#desc-counter');
+
+    if (textarea && counter) {
+      textarea.addEventListener('input', () => {
+        counter.textContent = textarea.value.length;
+      });
+    }
+
+    if (!isOwner) return;
+
+    let busy = false;
+    async function withBusy(fn) {
+      if (busy) return;
+      busy = true;
+      slot.dataset.busy = '1';
+      try { await fn(); }
+      catch (err) { window.utils.toast(window.utils.formatError(err), 'error'); }
+      finally {
+        busy = false;
+        delete slot.dataset.busy;
+      }
+    }
+
+    slot.addEventListener('change', (e) => {
+      const input = e.target.closest('input[data-role="cover-replace"]');
+      if (!input) return;
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      withBusy(async () => {
+        const newUrl = await window.api.uploadTenantCover(file);
+        ctx.tenant.cover_image_url = newUrl;
+        renderCoverSlot(slot, newUrl, isOwner);
+        window.utils.toast('تم حفظ صورة الغلاف', 'success');
+      });
+    });
+
+    slot.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('button[data-role="cover-remove"]');
+      if (!removeBtn) return;
+      withBusy(async () => {
+        const ok = await window.utils.confirm({
+          title: 'حذف الغلاف',
+          message: 'هل تريد حذف صورة الغلاف؟',
+          confirmText: 'حذف',
+          danger: true
+        });
+        if (!ok) return;
+        await window.api.removeTenantCover();
+        ctx.tenant.cover_image_url = null;
+        renderCoverSlot(slot, null, isOwner);
+        window.utils.toast('تم حذف الغلاف', 'success');
+      });
+    });
+
+    const saveBtn = container.querySelector('#branding-save');
+    brandingForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const description = (textarea?.value || '').trim();
+      saveBtn.disabled = true;
+      saveBtn.dataset.loading = 'true';
+      try {
+        await window.api.updateTenant({ description });
+        ctx.tenant.description = description || null;
+        window.utils.toast('تم حفظ الوصف', 'success');
+      } catch (err) {
+        window.utils.toast(window.utils.formatError(err), 'error');
+      } finally {
+        saveBtn.disabled = false;
+        delete saveBtn.dataset.loading;
+      }
+    });
+  }
 
   async function renderNotificationsSection(body) {
     const push = window.push;

@@ -47,41 +47,117 @@
     return;
   }
 
-  renderBookView();
+  window.addEventListener('hashchange', dispatchRoute);
+  dispatchRoute();
+
+  // ═══════════════════════════════════════════════════════════════
+  // ROUTER (hash-based: '' = landing, '#/field/<id>' = field detail)
+  // ═══════════════════════════════════════════════════════════════
+
+  function parseHash() {
+    const h = (location.hash || '').replace(/^#\/?/, '');
+    if (!h) return { view: 'landing' };
+    const segs = h.split('/').filter(Boolean);
+    if (segs[0] === 'field' && segs[1]) {
+      return { view: 'field', fieldId: decodeURIComponent(segs[1]) };
+    }
+    return { view: 'landing' };
+  }
+
+  function navigateTo(hash, replace) {
+    const url = `${location.pathname}${location.search}${hash}`;
+    if (replace) location.replace(url);
+    else         location.hash = hash;
+  }
+
+  function dispatchRoute() {
+    const route = parseHash();
+    if (route.view === 'field') {
+      const field = state.tenantInfo.fields.find((f) => f.id === route.fieldId);
+      if (!field) { navigateTo('#/', true); return; }
+      state.selectedField = field;
+      state.selectedSlot = null;
+      state.selectedDate = null;
+      renderFieldDetailView();
+      return;
+    }
+    // landing — لكن إذا أرضية واحدة فقط، redirect تلقائي
+    if (state.tenantInfo.fields.length === 1) {
+      navigateTo(`#/field/${state.tenantInfo.fields[0].id}`, true);
+      return;
+    }
+    state.selectedField = null;
+    state.selectedSlot = null;
+    renderTenantLandingView();
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // RENDERERS (shells)
   // ═══════════════════════════════════════════════════════════════
 
-  function renderBookView() {
+  function renderTenantLandingView() {
+    const t = state.tenantInfo;
+    const cities = Array.from(new Set(t.fields.map((f) => f.city).filter(Boolean)));
+    const primaryPhone = t.fields.find((f) => f.phone)?.phone;
+    const hasCover = !!t.cover_image_url;
+    const hasAbout = !!(t.description && t.description.trim());
+
     root.innerHTML = `
-      <header class="bp-hero" id="bp-hero"></header>
+      <header class="bp-hero bp-hero--tenant" id="bp-hero"></header>
+      <section class="bp-section">
+        <h2 class="bp-section-title">
+          <i data-lucide="goal"></i>
+          <span>الأرضيات المتاحة</span>
+        </h2>
+        <div class="bp-landing-fields" id="bp-landing-fields"></div>
+      </section>
+      ${hasAbout ? `
+        <section class="bp-section">
+          <h2 class="bp-section-title"><i data-lucide="info"></i><span>عن الملعب</span></h2>
+          <p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>
+          ${cities.length ? `
+            <ul class="bp-city-chips">
+              ${cities.map((c) => `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(c)}</li>`).join('')}
+            </ul>
+          ` : ''}
+          ${primaryPhone ? `
+            <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap">
+              <a class="btn btn--secondary btn--sm" href="tel:${window.utils.escapeHtml(primaryPhone)}">
+                <i data-lucide="phone"></i><span>اتصل بالملعب</span>
+              </a>
+              ${buildWhatsAppUrl(primaryPhone) ? `
+                <a class="btn btn--secondary btn--sm" href="${window.utils.escapeHtml(buildWhatsAppUrl(primaryPhone))}" target="_blank" rel="noopener">
+                  <i data-lucide="message-circle"></i><span>واتساب</span>
+                </a>
+              ` : ''}
+            </div>
+          ` : ''}
+        </section>
+      ` : ''}
+      <footer class="bp-landing-foot">
+        <small>مدعوم بـ <a href="${window.utils.path('/index.html')}">مَرمى</a></small>
+      </footer>
+    `;
+
+    mountTenantHero(document.getElementById('bp-hero'), { cities, primaryPhone, hasCover });
+    mountLandingFields(document.getElementById('bp-landing-fields'));
+    window.utils.renderIcons(root);
+  }
+
+  function renderFieldDetailView() {
+    const isSoloField = state.tenantInfo.fields.length === 1;
+    root.innerHTML = `
+      <header class="bp-hero bp-hero--field" id="bp-hero"></header>
       <nav class="bp-stepper" id="bp-stepper" aria-label="مراحل الحجز"></nav>
 
-      <section class="bp-section" id="bp-section-field" data-step="field">
-        <div class="bp-section-head">
-          <h2 class="bp-section-title">
-            <span class="bp-section-title-num">١</span>
-            <span>اختر الأرضية</span>
-          </h2>
-        </div>
-        <div id="bp-fields-host"></div>
-      </section>
-
-      <section class="bp-section" id="bp-section-map" data-step="map" hidden>
-        <div class="bp-section-head">
-          <h2 class="bp-section-title">
-            <span class="bp-section-title-num"><i data-lucide="map-pin"></i></span>
-            <span>موقع الملعب</span>
-          </h2>
-        </div>
-        <div id="bp-map-host"></div>
+      <section class="bp-section" id="bp-section-info" data-step="info">
+        <div id="bp-field-info-host"></div>
       </section>
 
       <section class="bp-section" id="bp-section-date" data-step="date">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">٢</span>
+            <span class="bp-section-title-num">١</span>
             <span>اختر التاريخ</span>
           </h2>
         </div>
@@ -91,7 +167,7 @@
       <section class="bp-section" id="bp-section-slot" data-step="slot">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">٣</span>
+            <span class="bp-section-title-num">٢</span>
             <span>اختر الموعد</span>
           </h2>
         </div>
@@ -101,7 +177,7 @@
       <section class="bp-section" id="bp-section-form" data-step="form">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">٤</span>
+            <span class="bp-section-title-num">٣</span>
             <span>بياناتك</span>
           </h2>
         </div>
@@ -111,9 +187,13 @@
       <div id="bp-action-bar-host"></div>
     `;
 
-    mountHero(document.getElementById('bp-hero'));
-    mountStepper(document.getElementById('bp-stepper'));
-    mountFields(document.getElementById('bp-fields-host'));
+    mountFieldHero(document.getElementById('bp-hero'), { showBreadcrumb: !isSoloField });
+    mountStepper(document.getElementById('bp-stepper'), [
+      { key: 'date', label: 'التاريخ', num: '١' },
+      { key: 'slot', label: 'الموعد',  num: '٢' },
+      { key: 'form', label: 'بياناتك', num: '٣' }
+    ]);
+    mountFieldInfo(document.getElementById('bp-field-info-host'));
     mountCalendar(document.getElementById('bp-calendar-host'));
     mountSlots(document.getElementById('bp-slots-host'));
     mountCustomerForm(document.getElementById('bp-form-host'));
@@ -134,16 +214,11 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // HERO
+  // HERO (نسختان: tenant landing + field detail)
   // ═══════════════════════════════════════════════════════════════
 
-  function mountHero(host) {
-    const t = state.tenantInfo;
-    const cities = Array.from(new Set(t.fields.map((f) => f.city).filter(Boolean)));
-    const primaryCity = cities[0];
-    const primaryPhone = t.fields.find((f) => f.phone)?.phone;
-
-    host.innerHTML = `
+  function renderHeroTop() {
+    return `
       <div class="bp-hero-top">
         <a class="bp-hero-brand" href="${window.utils.path('/index.html')}">
           <img class="bp-hero-mark" src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true">
@@ -156,38 +231,76 @@
           </button>
         </div>
       </div>
+    `;
+  }
 
+  function bindManageBtn() {
+    const btn = document.getElementById('bp-manage-btn');
+    if (btn) btn.addEventListener('click', () => renderManageEntryView());
+  }
+
+  function mountTenantHero(host, { cities, primaryPhone, hasCover }) {
+    const t = state.tenantInfo;
+    const fieldsCount = t.fields.length;
+    const coverHtml = hasCover
+      ? `<div class="bp-hero-cover"><img src="${window.utils.escapeHtml(t.cover_image_url)}" alt="غلاف ${window.utils.escapeHtml(t.name)}"></div>`
+      : `<div class="bp-hero-cover" data-empty="1" data-label="${fieldsCount} ${fieldsCount === 1 ? 'أرضية' : 'أرضيات'}"></div>`;
+
+    host.innerHTML = `
+      ${renderHeroTop()}
+      ${coverHtml}
       <span class="bp-hero-tag">
         <span class="bp-hero-tag-dot"></span>
         احجز موعدك في 30 ثانية
       </span>
-
       <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
-      <p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>
-
+      ${t.description ? `<p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>` : '<p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>'}
       <ul class="bp-hero-meta">
-        ${primaryCity ? `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(primaryCity)}</li>` : ''}
+        ${cities[0] ? `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(cities[0])}${cities.length > 1 ? ` <span class="text-tertiary">+${cities.length - 1}</span>` : ''}</li>` : ''}
         ${primaryPhone ? `<li><a href="tel:${window.utils.escapeHtml(primaryPhone)}"><i data-lucide="phone"></i>${window.utils.escapeHtml(primaryPhone)}</a></li>` : ''}
-        <li><i data-lucide="goal"></i>${t.fields.length} ${t.fields.length === 1 ? 'أرضية' : 'أرضيات'}</li>
+        <li><i data-lucide="goal"></i>${fieldsCount} ${fieldsCount === 1 ? 'أرضية' : 'أرضيات'}</li>
       </ul>
     `;
+    bindManageBtn();
+  }
 
-    document.getElementById('bp-manage-btn').addEventListener('click', () => {
-      renderManageEntryView();
-    });
+  function mountFieldHero(host, { showBreadcrumb }) {
+    const t = state.tenantInfo;
+    const f = state.selectedField;
+    const surfaceLabel = f.surface_type ? (window.utils.SURFACE_LABELS[f.surface_type] || f.surface_type) : null;
+
+    host.innerHTML = `
+      ${renderHeroTop()}
+      ${showBreadcrumb ? `
+        <nav class="bp-breadcrumb">
+          <a data-back href="#/">
+            <i data-lucide="arrow-right"></i>
+            <span>رجوع لـ ${window.utils.escapeHtml(t.name)}</span>
+          </a>
+        </nav>
+      ` : ''}
+      <h1 class="bp-hero-title">${window.utils.escapeHtml(f.name)}</h1>
+      <ul class="bp-hero-meta">
+        ${f.city ? `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(f.city)}</li>` : ''}
+        ${f.phone ? `<li><a href="tel:${window.utils.escapeHtml(f.phone)}"><i data-lucide="phone"></i>${window.utils.escapeHtml(f.phone)}</a></li>` : ''}
+        ${surfaceLabel ? `<li><i data-lucide="trees"></i>${window.utils.escapeHtml(surfaceLabel)}</li>` : ''}
+      </ul>
+    `;
+    bindManageBtn();
+    const backLink = host.querySelector('a[data-back]');
+    if (backLink) {
+      backLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigateTo('#/');
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
   // STEPPER (sticky + IntersectionObserver)
   // ═══════════════════════════════════════════════════════════════
 
-  function mountStepper(host) {
-    const steps = [
-      { key: 'field', label: 'الأرضية', num: '١' },
-      { key: 'date',  label: 'التاريخ', num: '٢' },
-      { key: 'slot',  label: 'الموعد',  num: '٣' },
-      { key: 'form',  label: 'بياناتك', num: '٤' }
-    ];
+  function mountStepper(host, steps) {
     host.innerHTML = `
       <ol class="bp-stepper-list">
         ${steps.map((s) => `
@@ -229,55 +342,70 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // FIELDS
+  // LANDING FIELDS (بطاقات صفحة المنشأة — تنقّل لصفحة الأرضية)
   // ═══════════════════════════════════════════════════════════════
 
-  function mountFields(host) {
-    const fields = state.tenantInfo.fields;
-    host.innerHTML = `
-      <div class="bp-fields-grid" id="bp-fields-grid">
-        ${fields.map((f) => `
-          <button type="button" class="bp-field-card" data-id="${f.id}">
-            <div class="bp-field-card-icon"><i data-lucide="goal"></i></div>
-            <div class="bp-field-card-body">
-              <h3 class="bp-field-card-name">${window.utils.escapeHtml(f.name)}</h3>
-              <div class="bp-field-card-meta">
-                ${f.city ? `<span><i data-lucide="map-pin"></i>${window.utils.escapeHtml(f.city)}</span>` : ''}
-                ${f.phone ? `<span><i data-lucide="phone"></i>${window.utils.escapeHtml(f.phone)}</span>` : ''}
-              </div>
-            </div>
-            <span class="bp-field-card-check" aria-hidden="true"><i data-lucide="check"></i></span>
-          </button>
-        `).join('')}
-      </div>
-    `;
-
-    host.querySelectorAll('.bp-field-card').forEach((card) => {
-      card.addEventListener('click', () => selectField(card.dataset.id));
-    });
-
-    // اختر تلقائياً لو فيه أرضية واحدة فقط
-    if (fields.length === 1) selectField(fields[0].id);
+  function renderAmenityStrip(amenities, max) {
+    if (!Array.isArray(amenities) || amenities.length === 0) return '';
+    const labels = window.utils.AMENITY_LABELS || {};
+    const shown = amenities.slice(0, max);
+    const rest = amenities.length - shown.length;
+    const items = shown.map((k) => `<li>${window.utils.escapeHtml(labels[k] || k)}</li>`).join('');
+    const more = rest > 0 ? `<li class="bp-amenity-strip__more">+${rest}</li>` : '';
+    return `<ul class="bp-amenity-strip">${items}${more}</ul>`;
   }
 
-  function selectField(fieldId) {
-    const field = state.tenantInfo.fields.find((f) => f.id === fieldId);
-    if (!field) return;
-    state.selectedField = field;
-    state.selectedSlot = null;
+  function renderAmenityChips(amenities) {
+    if (!Array.isArray(amenities) || amenities.length === 0) return '';
+    const labels = window.utils.AMENITY_LABELS || {};
+    const items = amenities.map((k) => `<li>${window.utils.escapeHtml(labels[k] || k)}</li>`).join('');
+    return `<ul class="bp-amenity-strip" style="margin-top:var(--space-3)">${items}</ul>`;
+  }
 
-    document.querySelectorAll('.bp-field-card').forEach((c) => {
-      c.classList.toggle('is-selected', c.dataset.id === fieldId);
+  function mountLandingFields(host) {
+    const fields = state.tenantInfo.fields;
+    host.innerHTML = fields.map((f) => {
+      const cover = Array.isArray(f.image_urls) && f.image_urls.length ? f.image_urls[0] : null;
+      const surfaceLabel = f.surface_type ? (window.utils.SURFACE_LABELS[f.surface_type] || f.surface_type) : null;
+      return `
+        <button type="button" class="bp-landing-field-card" data-id="${f.id}">
+          <div class="bp-landing-field-card__media">
+            ${cover
+              ? `<img src="${window.utils.escapeHtml(cover)}" alt="" loading="lazy">`
+              : `<i data-lucide="goal"></i>`}
+            ${surfaceLabel ? `<span class="bp-surface-badge">${window.utils.escapeHtml(surfaceLabel)}</span>` : ''}
+          </div>
+          <div class="bp-landing-field-card__body">
+            <h3>${window.utils.escapeHtml(f.name)}</h3>
+            ${f.city ? `<p class="bp-landing-field-card__meta"><i data-lucide="map-pin"></i>${window.utils.escapeHtml(f.city)}</p>` : ''}
+            ${renderAmenityStrip(f.amenities, 3)}
+            <span class="bp-landing-field-card__cta">
+              <span>احجز الآن</span>
+              <i data-lucide="arrow-left"></i>
+            </span>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    host.querySelectorAll('.bp-landing-field-card').forEach((card) => {
+      card.addEventListener('click', () => navigateTo(`#/field/${card.dataset.id}`));
     });
+  }
 
-    // أظهر قسم الخريطة بعد اختيار أرضية
-    const mapSection = document.getElementById('bp-section-map');
-    mapSection.hidden = false;
-    mountMap(document.getElementById('bp-map-host'));
+  // ═══════════════════════════════════════════════════════════════
+  // FIELD INFO (في صفحة الأرضية: معرض + وصف + مزايا + خريطة)
+  // ═══════════════════════════════════════════════════════════════
 
-    // اجلب slots لو في تاريخ مختار
-    if (state.selectedDate) refreshSlots();
-    refreshActionBar();
+  function mountFieldInfo(host) {
+    const f = state.selectedField;
+    host.innerHTML = `
+      <div id="bp-field-info-map"></div>
+      ${f.description ? `<p class="bp-field-description">${window.utils.escapeHtml(f.description)}</p>` : ''}
+      ${renderAmenityChips(f.amenities)}
+    `;
+    mountMap(host.querySelector('#bp-field-info-map'));
+    window.utils.renderIcons(host);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -285,8 +413,11 @@
   // ═══════════════════════════════════════════════════════════════
 
   function buildMapEmbedUrl(field, tenant) {
-    if (field.location_url) {
-      return `https://www.google.com/maps?q=${encodeURIComponent(field.location_url)}&output=embed`;
+    // الإحداثيات هي المصدر الوحيد الموثوق للـ embed: ?q=lat,lng يعرض دبوساً دقيقاً
+    // بلا مفتاح API. لا نمرّر location_url هنا — Google's embed لا يتبع روابط
+    // maps.app.goo.gl المختصرة فيُظهر خريطة العالم بدل الموقع.
+    if (field.latitude != null && field.longitude != null) {
+      return `https://www.google.com/maps?q=${field.latitude},${field.longitude}&z=17&output=embed`;
     }
     const parts = [tenant.name, field.name, field.city].filter(Boolean);
     return `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
@@ -310,9 +441,11 @@
     const embedUrl = buildMapEmbedUrl(f, t);
     const openUrl = buildMapOpenUrl(f, t);
     const waUrl = buildWhatsAppUrl(f.phone);
+    const images = Array.isArray(f.image_urls) ? f.image_urls : [];
 
     host.innerHTML = `
       <aside class="bp-map-card" data-state="loading">
+        ${renderGalleryBlock(images, f.name)}
         <header class="bp-map-card-head">
           <div>
             <strong class="bp-map-card-title">${window.utils.escapeHtml(f.name)}</strong>
@@ -375,6 +508,107 @@
       card.dataset.state = 'ok';
     }, { once: true });
     iframe.src = embedUrl;
+
+    // ربط lightbox على banner + thumbnails (إن وجدت)
+    if (images.length > 0) {
+      const banner = card.querySelector('.bp-map-card-banner');
+      if (banner) banner.addEventListener('click', () => openLightbox(images, 0));
+      card.querySelectorAll('.bp-gallery-thumb').forEach((thumb) => {
+        thumb.addEventListener('click', () => {
+          const idx = Number(thumb.dataset.index) || 0;
+          openLightbox(images, idx);
+        });
+      });
+    }
+  }
+
+  // ── معرض الصور: banner + شريط thumbnails (إن > 1) ─────────────
+  function renderGalleryBlock(urls, alt) {
+    if (!urls || urls.length === 0) return '';
+    const safeAlt = window.utils.escapeHtml(alt || '');
+    const cover = window.utils.escapeHtml(urls[0]);
+    if (urls.length === 1) {
+      return `<img class="bp-map-card-banner" src="${cover}" alt="${safeAlt}" loading="lazy">`;
+    }
+    const thumbs = urls.map((u, i) => `
+      <button type="button" class="bp-gallery-thumb${i === 0 ? ' is-active' : ''}" data-index="${i}" aria-label="صورة ${i + 1}">
+        <img src="${window.utils.escapeHtml(u)}" alt="" loading="lazy">
+      </button>
+    `).join('');
+    return `
+      <img class="bp-map-card-banner" src="${cover}" alt="${safeAlt}" loading="lazy">
+      <div class="bp-gallery-thumbs">${thumbs}</div>
+    `;
+  }
+
+  // ── Lightbox (vanilla، يدعم لوحة المفاتيح + swipe) ────────────
+  function openLightbox(urls, startIndex) {
+    if (!Array.isArray(urls) || urls.length === 0) return;
+    let index = Math.max(0, Math.min(startIndex | 0, urls.length - 1));
+
+    const overlay = document.createElement('div');
+    overlay.className = 'bp-lightbox';
+    overlay.innerHTML = `
+      <button type="button" class="bp-lightbox__close" aria-label="إغلاق">
+        <i data-lucide="x"></i>
+      </button>
+      <button type="button" class="bp-lightbox__nav bp-lightbox__nav--prev" aria-label="السابق" ${urls.length === 1 ? 'hidden' : ''}>
+        <i data-lucide="chevron-right"></i>
+      </button>
+      <button type="button" class="bp-lightbox__nav bp-lightbox__nav--next" aria-label="التالي" ${urls.length === 1 ? 'hidden' : ''}>
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <img class="bp-lightbox__image" alt="">
+      <div class="bp-lightbox__counter" ${urls.length === 1 ? 'hidden' : ''}></div>
+    `;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    window.utils.renderIcons(overlay);
+
+    const imgEl = overlay.querySelector('.bp-lightbox__image');
+    const counterEl = overlay.querySelector('.bp-lightbox__counter');
+
+    function show(i) {
+      index = (i + urls.length) % urls.length;
+      imgEl.src = urls[index];
+      if (counterEl) counterEl.textContent = `${index + 1} / ${urls.length}`;
+    }
+    function next() { show(index + 1); }
+    function prev() { show(index - 1); }
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      overlay.remove();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') next();  // RTL: السهم الأيسر = للأمام
+      else if (e.key === 'ArrowRight') prev();
+    }
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.querySelector('.bp-lightbox__close').addEventListener('click', close);
+    overlay.querySelector('.bp-lightbox__nav--prev').addEventListener('click', (e) => { e.stopPropagation(); prev(); });
+    overlay.querySelector('.bp-lightbox__nav--next').addEventListener('click', (e) => { e.stopPropagation(); next(); });
+    document.addEventListener('keydown', onKey);
+
+    // swipe على الموبايل
+    let touchStartX = null;
+    overlay.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    overlay.addEventListener('touchend', (e) => {
+      if (touchStartX === null) return;
+      const dx = (e.changedTouches[0]?.clientX || 0) - touchStartX;
+      touchStartX = null;
+      if (Math.abs(dx) < 40 || urls.length === 1) return;
+      // RTL: swipe من اليمين لليسار (dx<0) = التالي، العكس = السابق
+      if (dx < 0) next(); else prev();
+    });
+
+    show(index);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1048,7 +1282,7 @@
     const lookupBtn = document.getElementById('bp-manage-lookup');
     window.utils.bindPhoneInput(phoneInput);
 
-    document.getElementById('bp-manage-back').addEventListener('click', () => renderBookView());
+    document.getElementById('bp-manage-back').addEventListener('click', () => dispatchRoute());
 
     const doLookup = async () => {
       const phone = phoneInput.value.trim();
@@ -1155,7 +1389,7 @@
     window.utils.renderIcons(root);
 
     document.getElementById('bp-manage-other').addEventListener('click', () => renderManageEntryView());
-    document.getElementById('bp-manage-tobook').addEventListener('click', () => renderBookView());
+    document.getElementById('bp-manage-tobook').addEventListener('click', () => dispatchRoute());
 
     root.querySelectorAll('[data-cancel-id]').forEach((btn) => {
       btn.addEventListener('click', async () => {

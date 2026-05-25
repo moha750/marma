@@ -91,6 +91,28 @@ window.utils = {
     return `${currencyFormatter.format(n)} ر.س`;
   },
 
+  // قاموس الترجمة للمزايا (مفاتيح كانونية ↔ تسميات عربية)
+  AMENITY_LABELS: {
+    showers: 'دش',
+    parking: 'موقف سيارات',
+    lights: 'إضاءة ليلية',
+    balls: 'كرات',
+    lockers: 'خزائن',
+    wifi: 'واي-فاي',
+    shaded: 'مظلّل',
+    cafeteria: 'كافتيريا',
+    prayer_room: 'مصلّى',
+    seating: 'جلسات للمشجعين'
+  },
+
+  // قاموس الترجمة لأنواع الأرضيات
+  SURFACE_LABELS: {
+    natural_grass: 'عشب طبيعي',
+    artificial_grass: 'عشب صناعي',
+    indoor: 'صالة مغلقة',
+    court: 'ملعب صلب'
+  },
+
   // حساب الفرق بالساعات بين تاريخين
   hoursBetween(start, end) {
     const ms = new Date(end).getTime() - new Date(start).getTime();
