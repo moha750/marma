@@ -9,7 +9,7 @@
 //
 // عند نشر إصدار جديد: ارفع CACHE_VERSION → SW الجديد ينظّف الكاش القديم ويأخذ السيطرة.
 
-const CACHE_VERSION = 'marma-v2';
+const CACHE_VERSION = 'marma-v3';
 const STATIC_CACHE  = `marma-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `marma-runtime-${CACHE_VERSION}`;
 

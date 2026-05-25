@@ -7,6 +7,9 @@
   <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
   <title>حجز ملعب - مَرمى</title>
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <!-- SW auto-reload: عند تفعّل service-worker جديد (post-deploy) أعد تحميل الصفحة تلقائياً
+       حتى يخدمها الـ SW الجديد بدلاً من القديم. يحول مشكلة "احتاج hard-reload بعد كل push". -->
+  <script>(function(){if(!('serviceWorker' in navigator))return;var done=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(done)return;done=true;location.reload();});})();</script>
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
