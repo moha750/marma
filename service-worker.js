@@ -9,9 +9,26 @@
 //
 // عند نشر إصدار جديد: ارفع CACHE_VERSION → SW الجديد ينظّف الكاش القديم ويأخذ السيطرة.
 
-const CACHE_VERSION = 'marma-v1';
+const CACHE_VERSION = 'marma-v2';
 const STATIC_CACHE  = `marma-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `marma-runtime-${CACHE_VERSION}`;
+
+// base path للنشر تحت subpath (مثل GitHub Pages /marma/). يُستخرج من scope تلقائياً.
+// لا نستخدم self.registration.scope في الـ top-level لأنه قد لا يكون متاحاً قبل install.
+function getBasePath() {
+  try {
+    const scopePath = new URL(self.registration.scope).pathname;  // '/marma/' أو '/'
+    return scopePath.endsWith('/') ? scopePath.slice(0, -1) : scopePath;
+  } catch (_) { return ''; }
+}
+
+// يُسقط base prefix إن وُجد — لتطبيع المسارات قبل المقارنة
+function stripBase(pathname) {
+  const base = getBasePath();
+  if (base && pathname.startsWith(base + '/')) return pathname.slice(base.length);
+  if (base && pathname === base) return '/';
+  return pathname;
+}
 
 // الأصول التي نريد ضمان توفّرها offline من أول زيارة.
 // ملاحظة: ملفات CSS و JS الأخرى تتمّ فهرستها بواسطة Vite (hashing) فلا يمكن إدراجها هنا
@@ -144,7 +161,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // باقي الأصول (JS, CSS, خطوط, صور) → cache-first
+  // أصولنا الديناميكية (JS/CSS من src/styles) → network-first لضمان النضارة بعد كل نشر
+  if (isDynamicAsset(url.pathname)) {
+    event.respondWith(networkFirst(req));
+    return;
+  }
+
+  // باقي الأصول (خطوط، صور، شعارات في /assets) → cache-first
   event.respondWith(cacheFirst(req));
 });
 
@@ -201,6 +224,23 @@ async function cacheFirst(req) {
   }
 }
 
+// network-first: يجلب من الشبكة دائماً إن كانت متاحة، ويسقط للكاش فقط لو فشلت.
+// مناسب لأصولنا الديناميكية (JS/CSS) لتجنّب خدمة نسخة قديمة بعد deploy جديد.
+async function networkFirst(req) {
+  try {
+    const fresh = await fetch(req);
+    if (fresh && (fresh.ok || fresh.type === 'opaque')) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(req, fresh.clone());
+    }
+    return fresh;
+  } catch (_) {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    return new Response('', { status: 504, statusText: 'Offline' });
+  }
+}
+
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(req);
@@ -218,14 +258,26 @@ async function staleWhileRevalidate(req) {
 // ─── helpers ──────────────────────────────────────────────
 
 function isPublicPage(pathname) {
-  return pathname === '/'
-      || pathname === '/index.html'
-      || pathname === '/book.html'
-      || pathname.startsWith('/admin/');
+  const p = stripBase(pathname);
+  return p === '/'
+      || p === '/index.html'
+      || p === '/book.html'
+      || p.startsWith('/admin/');
 }
 
 function isAppRoute(pathname) {
-  return APP_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'));
+  const p = stripBase(pathname);
+  return APP_ROUTES.some((r) => p === r || p.startsWith(r + '/'));
+}
+
+// أصولنا الديناميكية (JS/CSS من src/ و styles/) — تتغيّر مع كل نشر.
+// نستخدم network-first لها لضمان أن المستخدم يرى آخر إصدار بعد كل push.
+function isDynamicAsset(pathname) {
+  const p = stripBase(pathname);
+  return p.startsWith('/src/')
+      || p.startsWith('/styles/')
+      || p.endsWith('/book.js')
+      || p.endsWith('/main.css');
 }
 
 function isCdnAsset(url) {
