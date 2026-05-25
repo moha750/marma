@@ -1462,17 +1462,29 @@
 .bp-landing-field-card__media {
   position: relative;
   aspect-ratio: 16 / 9;
+  overflow: hidden;
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--c-brand) 18%, var(--c-soft)),
     var(--c-soft));
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: color-mix(in srgb, var(--c-brand) 60%, var(--c-faint));
 }
-.bp-landing-field-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bp-landing-field-card__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* الأيقونة الفولباك (حين لا توجد صورة) — توسيط مطلق */
 .bp-landing-field-card__media svg.lucide,
-.bp-landing-field-card__media i[data-lucide] { width: 48px; height: 48px; }
+.bp-landing-field-card__media i[data-lucide] {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 48px;
+  height: 48px;
+}
 
 .bp-landing-field-card__body {
   padding: var(--space-4);
