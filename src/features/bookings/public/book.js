@@ -242,11 +242,9 @@
   function mountTenantHero(host, { cities, primaryPhone, hasCover }) {
     const t = state.tenantInfo;
     const fieldsCount = t.fields.length;
-    // بدون صورة → الـ cover نفسه يصير "الواجهة" (الاسم كبيراً) ونخفي h1 لتفادي التكرار.
-    // مع صورة → سلوك hero تقليدي (صورة + اسم h1 تحتها).
     const coverHtml = hasCover
       ? `<div class="bp-hero-cover"><img src="${window.utils.escapeHtml(t.cover_image_url)}" alt="غلاف ${window.utils.escapeHtml(t.name)}"></div>`
-      : `<div class="bp-hero-cover bp-hero-cover--name"><span class="bp-hero-cover-name">${window.utils.escapeHtml(t.name)}</span></div>`;
+      : `<div class="bp-hero-cover" data-empty="1" data-label="${fieldsCount} ${fieldsCount === 1 ? 'أرضية' : 'أرضيات'}"></div>`;
 
     host.innerHTML = `
       ${renderHeroTop()}
@@ -255,7 +253,7 @@
         <span class="bp-hero-tag-dot"></span>
         احجز موعدك في 30 ثانية
       </span>
-      ${hasCover ? `<h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>` : ''}
+      <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
       ${t.description ? `<p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>` : '<p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>'}
       <ul class="bp-hero-meta">
         ${cities[0] ? `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(cities[0])}${cities.length > 1 ? ` <span class="text-tertiary">+${cities.length - 1}</span>` : ''}</li>` : ''}
