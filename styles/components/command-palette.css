@@ -188,6 +188,39 @@
   flex-shrink: 0;
 }
 
+/* عنصر مقفول (اشتراك منتهٍ) — باهت مع أيقونة قفل، خامل تماماً */
+.palette-item.is-locked {
+  cursor: not-allowed;
+}
+
+/* لا إضاءة عند المرور (لا يُحدَّد بالأسهم ولا يُنفَّذ بالنقر) */
+.palette-item.is-locked:hover {
+  background: transparent;
+}
+
+.palette-item.is-locked .palette-item-icon,
+.palette-item.is-locked .palette-item-title {
+  opacity: 0.6;
+}
+
+.palette-item.is-locked .palette-item-sub {
+  color: var(--warning);
+}
+
+.palette-item-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.palette-item-lock svg.lucide {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+
 .palette-empty {
   padding: var(--space-8) var(--space-4);
   text-align: center;

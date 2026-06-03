@@ -127,14 +127,14 @@
   color: var(--text-primary);
   line-height: var(--leading-snug);
   animation: toastIn var(--duration-normal) var(--ease-spring);
-  border-inline-start: 3px solid var(--accent-500);
 }
 
-.toast--success { border-inline-start-color: var(--success); }
-.toast--error,
-.toast--danger  { border-inline-start-color: var(--danger); }
-.toast--warning { border-inline-start-color: var(--warning); }
-.toast--info    { border-inline-start-color: var(--info); }
+/* لون الحالة على الأيقونة وحدها (النص يبقى محايداً للقراءة) */
+.toast--success i, .toast--success svg { color: var(--success); }
+.toast--error i,   .toast--error svg,
+.toast--danger i,  .toast--danger svg  { color: var(--danger); }
+.toast--warning i, .toast--warning svg { color: var(--warning); }
+.toast--info i,    .toast--info svg    { color: var(--info); }
 
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(20px); }

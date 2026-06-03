@@ -74,7 +74,7 @@
     }
     return `
       <div class="table-wrapper">
-        <table class="table table--sticky-first">
+        <table class="table table--cards">
           <thead>
             <tr>
               <th>الاسم</th>
@@ -86,17 +86,17 @@
           </thead>
           <tbody>
             ${customers.map((c) => `
-              <tr data-id="${c.id}" class="is-clickable" data-href="${detailsHref(c.id)}">
-                <td>
+              <tr data-id="${c.id}">
+                <td data-label="الاسم">
                   <a href="${detailsHref(c.id)}" class="fw-semibold">${window.utils.escapeHtml(c.full_name)}</a>
                 </td>
-                <td class="tabular-nums">${window.utils.escapeHtml(c.phone || '—')}</td>
-                <td class="text-muted">${window.utils.escapeHtml(c.notes ? truncate(c.notes, 40) : '—')}</td>
-                <td class="text-tertiary text-xs">${window.utils.formatDate(c.created_at)}</td>
+                <td data-label="رقم الجوال" class="tabular-nums">${window.utils.escapeHtml(c.phone || '—')}</td>
+                <td data-label="ملاحظات" class="text-muted">${window.utils.escapeHtml(c.notes ? truncate(c.notes, 40) : '—')}</td>
+                <td data-label="تاريخ الإضافة" class="text-tertiary text-xs">${window.utils.formatDate(c.created_at)}</td>
                 <td class="actions-cell">
                   <div class="actions-inline">
                     <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${c.id}" title="تعديل">
-                      <i data-lucide="pencil"></i>
+                      <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
                     </button>
                   </div>
                 </td>
@@ -230,13 +230,7 @@
             });
           });
 
-          listContainer.querySelectorAll('tr.is-clickable[data-href]').forEach((row) => {
-            row.addEventListener('click', (e) => {
-              if (e.target.closest('a, button, input, textarea, select, label')) return;
-              window.location.href = row.dataset.href;
-            });
-          });
-
+          // الانتقال للتفاصيل عبر رابط الاسم الصريح، والتعديل عبر زره (لا نقر على الصف)
           window.utils.renderIcons(container);
         } catch (err) {
           if (!alive) return;

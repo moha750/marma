@@ -136,7 +136,7 @@
         }
         return `
           <div class="table-wrapper" style="box-shadow:none;border-radius:0">
-            <table class="table">
+            <table class="table table--cards">
               <thead>
                 <tr>
                   <th>الاسم</th>
@@ -150,19 +150,18 @@
                   const isSelf = s.id === ctx.user.id;
                   return `
                     <tr>
-                      <td>
-                        <div class="fw-semibold">${window.utils.escapeHtml(s.full_name)}</div>
-                        ${isSelf ? '<span class="badge badge--info">أنت</span>' : ''}
+                      <td data-label="الاسم">
+                        <div class="fw-semibold">${window.utils.escapeHtml(s.full_name)}${isSelf ? ' <span class="text-tertiary fw-regular">(أنت)</span>' : ''}</div>
                       </td>
-                      <td>${roleBadge(s.role)}</td>
-                      <td class="text-tertiary text-xs">${window.utils.formatDate(s.created_at)}</td>
+                      <td data-label="الدور" class="card-tag">${roleBadge(s.role)}</td>
+                      <td data-label="تاريخ الانضمام" class="text-tertiary text-xs">${window.utils.formatDate(s.created_at)}</td>
                       <td class="actions-cell">
                         ${!isSelf && s.role === 'staff' ? `
                           <div class="actions-inline">
                             <button class="btn btn--xs btn--danger-quiet" data-action="remove-staff"
                                     data-id="${s.id}" data-name="${window.utils.escapeHtml(s.full_name)}"
                                     title="إزالة">
-                              <i data-lucide="user-minus"></i>
+                              <i data-lucide="user-minus"></i><span class="btn-label">إزالة</span>
                             </button>
                           </div>
                         ` : ''}
@@ -189,7 +188,7 @@
         }
         return `
           <div class="table-wrapper" style="box-shadow:none;border-radius:0">
-            <table class="table">
+            <table class="table table--cards">
               <thead>
                 <tr>
                   <th>الاسم</th>
@@ -203,14 +202,14 @@
                   const url = buildInviteUrl(i.code);
                   return `
                     <tr>
-                      <td class="fw-semibold">${window.utils.escapeHtml(i.full_name)}</td>
-                      <td class="text-muted">${window.utils.escapeHtml(i.email)}</td>
-                      <td class="text-tertiary text-xs">${window.utils.formatDate(i.expires_at)}</td>
+                      <td data-label="الاسم" class="fw-semibold">${window.utils.escapeHtml(i.full_name)}</td>
+                      <td data-label="البريد الإلكتروني" class="text-muted">${window.utils.escapeHtml(i.email)}</td>
+                      <td data-label="تنتهي في" class="text-tertiary text-xs">${window.utils.formatDate(i.expires_at)}</td>
                       <td class="actions-cell">
                         <div class="actions-inline">
                           <button class="btn btn--xs btn--accent-quiet" data-action="copy"
                                   data-url="${window.utils.escapeHtml(url)}" title="نسخ الرابط">
-                            <i data-lucide="link"></i>
+                            <i data-lucide="link"></i><span class="btn-label">نسخ الرابط</span>
                           </button>
                           <button class="btn btn--xs btn--danger-quiet" data-action="delete-invite"
                                   data-id="${i.id}" title="حذف">

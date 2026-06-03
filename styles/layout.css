@@ -189,6 +189,82 @@
   color: var(--warning);
 }
 
+/* ─── حالة الاشتراك المنتهي: تبويبات مقفولة ─── */
+/* القفل يُبلَّغ بصرياً قبل النقر — لا توجيه صامت ولا إحباط بعد النقر */
+.sidebar-nav a.nav-link--locked,
+.bottom-nav a.nav-link--locked {
+  color: var(--text-tertiary, var(--text-secondary));
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sidebar-nav a.nav-link--locked:hover,
+.bottom-nav a.nav-link--locked:hover {
+  background: transparent;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.nav-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-nav .nav-lock {
+  margin-inline-start: auto;
+}
+
+.nav-lock svg.lucide {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+
+/* في الـ bottom-nav: القفل شارة صغيرة فوق الأيقونة */
+.bottom-nav .nav-icon {
+  position: relative;
+}
+
+.bottom-nav .nav-lock {
+  position: absolute;
+  inset-block-start: -4px;
+  inset-inline-end: -8px;
+  background: var(--surface-1);
+  border-radius: var(--radius-full);
+}
+
+.bottom-nav .nav-lock svg.lucide {
+  width: 11px;
+  height: 11px;
+}
+
+/* تبويب الاشتراك يُبرز كمخرج وحيد عند القفل */
+.sidebar-nav a.nav-link--unlock {
+  color: var(--warning);
+  font-weight: var(--weight-semibold);
+}
+
+.sidebar-nav a.nav-link--unlock:hover {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
+
+/* عندما يكون نشطاً: اجعل خلفيته وشريطه برتقاليين أيضاً (بدل الأخضر الافتراضي) */
+.sidebar-nav a.nav-link--unlock.active {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
+
+.sidebar-nav a.nav-link--unlock.active::before {
+  background: var(--warning);
+}
+
+[data-theme="dark"] .sidebar-nav a.nav-link--unlock.active {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
+
 /* فوتر الشريط الجانبي — بطاقة هوية المستخدم بعرض كامل */
 .sidebar-footer {
   position: relative;
@@ -691,7 +767,6 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   border-block-end: 1px solid transparent;
-  border-inline-start: 3px solid transparent;
 }
 
 .trial-banner-icon { display: inline-flex; flex-shrink: 0; }
@@ -723,17 +798,14 @@
 .trial-banner--trial {
   background: var(--info-tint);
   color: var(--info);
-  border-inline-start-color: var(--info);
 }
 .trial-banner--grace {
   background: var(--warning-tint);
   color: var(--warning);
-  border-inline-start-color: var(--warning);
 }
 .trial-banner--soon {
   background: var(--surface-2);
   color: var(--text-primary);
-  border-inline-start-color: var(--border-strong);
 }
 
 /* ─────────────────────────────────────────────

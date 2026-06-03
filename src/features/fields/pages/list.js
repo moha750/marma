@@ -123,7 +123,7 @@
             </div>
 
             <div class="table-wrapper">
-              <table class="table">
+              <table class="table table--cards">
                 <thead>
                   <tr>
                     <th>اسم الأرضية</th>
@@ -136,20 +136,20 @@
                 <tbody>
                   ${fields.map((f) => `
                     <tr data-status="${f.is_active ? 'confirmed' : 'completed'}" data-id="${f.id}">
-                      <td class="fw-semibold">
+                      <td data-label="اسم الأرضية" class="fw-semibold">
                         ${(f.image_urls && f.image_urls[0])
                           ? `<img src="${window.utils.escapeHtml(f.image_urls[0])}" class="field-list-thumb" alt="">`
                           : ''}
                         ${window.utils.escapeHtml(f.name)}
                       </td>
-                      <td>${window.utils.escapeHtml(f.city || '—')}</td>
-                      <td class="tabular-nums">${window.utils.escapeHtml(f.phone || '—')}</td>
-                      <td>${statusChip(f.is_active)}</td>
+                      <td data-label="المدينة">${window.utils.escapeHtml(f.city || '—')}</td>
+                      <td data-label="الجوال" class="tabular-nums">${window.utils.escapeHtml(f.phone || '—')}</td>
+                      <td data-label="الحالة" class="card-tag">${statusChip(f.is_active)}</td>
                       ${isOwner ? `
                         <td class="actions-cell">
                           <div class="actions-inline">
                             <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${f.id}" title="تعديل">
-                              <i data-lucide="pencil"></i>
+                              <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
                             </button>
                             <button class="btn btn--xs btn--ghost" data-action="toggle" data-id="${f.id}" title="${f.is_active ? 'تعطيل' : 'تفعيل'}">
                               <i data-lucide="${f.is_active ? 'eye-off' : 'eye'}"></i>

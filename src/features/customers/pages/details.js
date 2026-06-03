@@ -255,7 +255,7 @@
                 </div>
               ` : `
                 <div class="table-wrapper" style="box-shadow:none;border-radius:0">
-                  <table class="table table--sticky-first">
+                  <table class="table table--cards">
                     <thead>
                       <tr>
                         <th>التاريخ والوقت</th>
@@ -264,6 +264,7 @@
                         <th>السعر</th>
                         <th>المدفوع</th>
                         <th>الحالة</th>
+                        <th class="actions-cell"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -271,16 +272,23 @@
                         const hours = window.utils.hoursBetween(b.start_time, b.end_time);
                         const owed  = Number(b.total_price || 0) - Number(b.paid_amount || 0);
                         return `
-                          <tr data-status="${window.utils.escapeHtml(b.status)}" data-id="${b.id}" class="is-clickable">
-                            <td>${window.utils.formatDateTime(b.start_time)}</td>
-                            <td>${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                            <td class="tabular-nums">${hours.toFixed(1)} س</td>
-                            <td class="tabular-nums">${fmtMoney(b.total_price)}</td>
-                            <td class="tabular-nums">
+                          <tr data-status="${window.utils.escapeHtml(b.status)}" data-id="${b.id}">
+                            <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
+                            <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
+                            <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
+                            <td data-label="السعر" class="tabular-nums">${fmtMoney(b.total_price)}</td>
+                            <td data-label="المدفوع" class="tabular-nums">
                               ${fmtMoney(b.paid_amount)}
                               ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}
                             </td>
-                            <td>${statusChip(b.status)}</td>
+                            <td data-label="الحالة" class="card-tag">${statusChip(b.status)}</td>
+                            <td class="actions-cell">
+                              <div class="actions-inline">
+                                <button class="btn btn--xs btn--ghost" data-action="open-booking" data-id="${b.id}" title="تعديل">
+                                  <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         `;
                       }).join('')}
@@ -304,9 +312,9 @@
             });
           }
 
-          container.querySelectorAll('tr[data-id]').forEach((tr) => {
-            tr.addEventListener('click', () => {
-              const booking = bookings.find((b) => b.id === tr.dataset.id);
+          container.querySelectorAll('[data-action="open-booking"]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const booking = bookings.find((b) => b.id === btn.dataset.id);
               if (booking) window.bookingModal.open({ booking, onSaved: render });
             });
           });

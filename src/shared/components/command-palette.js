@@ -24,44 +24,60 @@ window.commandPalette = (function () {
 
   // ─── جمع المصادر ───────────────────────────────────────
 
+  // اشتراك منتهٍ ⇒ العناصر المؤدية لصفحات مقفولة تُعرض كمقفولة وتوجّه للاشتراك.
+  function subscriptionLocked() {
+    const ctx = (window.layout && window.layout.getContext && window.layout.getContext()) || {};
+    return !!(ctx.status && ctx.status.is_active === false);
+  }
+
   function collectNavigation() {
     if (!window.layout || !Array.isArray(window.layout.NAV_ITEMS)) return [];
     const ctx = (window.layout.getContext && window.layout.getContext()) || {};
     const role = ctx.profile && ctx.profile.role;
+    const locked = subscriptionLocked();
     return window.layout.NAV_ITEMS
       .filter((it) => !it.ownerOnly || role === 'owner')
-      .map((it) => ({
-        id: `nav:${it.key}`,
-        group: 'التنقل',
-        title: it.label,
-        sub: it.path,
-        icon: it.icon,
-        run: () => navigate(it.path)
-      }));
+      .map((it) => {
+        const itemLocked = locked && it.key !== 'subscription';
+        return {
+          id: `nav:${it.key}`,
+          group: 'التنقل',
+          title: it.label,
+          sub: itemLocked ? 'مقفول — جدّد اشتراكك' : it.path,
+          icon: it.icon,
+          locked: itemLocked,
+          run: () => { if (!itemLocked) navigate(it.path); }
+        };
+      });
   }
 
   function collectCustomers() {
     if (!window.store || !window.store.peek) return [];
+    const locked = subscriptionLocked();
     const customers = window.store.peek('customers:all') || [];
     return customers.slice(0, 50).map((c) => ({
       id: `cust:${c.id}`,
       group: 'العملاء',
       title: c.full_name || 'عميل بلا اسم',
-      sub: c.phone || '',
+      sub: locked ? 'مقفول — جدّد اشتراكك' : (c.phone || ''),
       icon: 'user',
-      run: () => navigate(`/customers/${c.id}`)
+      locked,
+      run: () => { if (!locked) navigate(`/customers/${c.id}`); }
     }));
   }
 
   function collectQuickActions() {
+    const locked = subscriptionLocked();
     const defaults = [
       {
         id: 'qa:new-booking',
         group: 'إجراءات سريعة',
         title: 'حجز جديد',
-        sub: 'افتح نموذج حجز جديد',
+        sub: locked ? 'مقفول — جدّد اشتراكك' : 'افتح نموذج حجز جديد',
         icon: 'calendar-plus',
+        locked,
         run: () => {
+          if (locked) return;
           if (window.bookingModal && window.bookingModal.open) {
             window.bookingModal.open();
           } else {
@@ -73,9 +89,10 @@ window.commandPalette = (function () {
         id: 'qa:new-customer',
         group: 'إجراءات سريعة',
         title: 'إضافة عميل',
-        sub: 'صفحة العملاء',
+        sub: locked ? 'مقفول — جدّد اشتراكك' : 'صفحة العملاء',
         icon: 'user-plus',
-        run: () => navigate('/customers')
+        locked,
+        run: () => { if (!locked) navigate('/customers'); }
       },
       {
         id: 'qa:toggle-theme',
@@ -175,13 +192,14 @@ window.commandPalette = (function () {
       <div class="palette-section">
         ${g.label ? `<div class="palette-section-label">${escape(g.label)}</div>` : ''}
         ${g.items.map(({ it, idx }) => `
-          <button type="button" class="palette-item ${idx === activeIdx ? 'is-active' : ''}"
+          <button type="button" class="palette-item ${idx === activeIdx ? 'is-active' : ''} ${it.locked ? 'is-locked' : ''}"
                   data-idx="${idx}" data-id="${escape(it.id)}">
             <span class="palette-item-icon"><i data-lucide="${escape(it.icon || 'arrow-right')}"></i></span>
             <span class="palette-item-text">
               <span class="palette-item-title">${escape(it.title)}</span>
               ${it.sub ? `<span class="palette-item-sub">${escape(it.sub)}</span>` : ''}
             </span>
+            ${it.locked ? `<span class="palette-item-lock"><i data-lucide="lock"></i></span>` : ''}
           </button>
         `).join('')}
       </div>
@@ -196,15 +214,27 @@ window.commandPalette = (function () {
     if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
   }
 
-  function setActive(idx) {
+  // أول عنصر قابل للتحديد (غير مقفول)؛ يرجع 0 إن كانت كلها مقفولة
+  function firstSelectable() {
+    const i = filtered.findIndex((it) => !it.locked);
+    return i === -1 ? 0 : i;
+  }
+
+  // ينقل التحديد باتجاه dir (+1/-1) متخطّياً العناصر المقفولة
+  function move(dir) {
     if (filtered.length === 0) return;
-    activeIdx = (idx + filtered.length) % filtered.length;
-    render();
+    let i = activeIdx;
+    for (let n = 0; n < filtered.length; n++) {
+      i = (i + dir + filtered.length) % filtered.length;
+      if (!filtered[i].locked) { activeIdx = i; render(); return; }
+    }
+    // كلها مقفولة — لا تغيير
   }
 
   function executeActive() {
     const it = filtered[activeIdx];
-    if (it && typeof it.run === 'function') {
+    if (!it || it.locked) return;           // المقفول خامل
+    if (typeof it.run === 'function') {
       try { it.run(); } catch (e) { console.error(e); }
     }
   }
@@ -239,13 +269,13 @@ window.commandPalette = (function () {
 
     input.addEventListener('input', () => {
       filtered = filterItems(input.value);
-      activeIdx = 0;
+      activeIdx = firstSelectable();
       render();
     });
 
     backdrop.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx + 1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIdx - 1); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
       else if (e.key === 'Enter') { e.preventDefault(); executeActive(); }
       else if (e.key === 'Escape') { e.preventDefault(); close(); }
     });
@@ -254,7 +284,8 @@ window.commandPalette = (function () {
       const item = e.target.closest('.palette-item');
       if (item) {
         const idx = Number(item.dataset.idx);
-        if (!Number.isNaN(idx)) {
+        // تجاهل العناصر المقفولة — لا تحديد ولا تنفيذ
+        if (!Number.isNaN(idx) && filtered[idx] && !filtered[idx].locked) {
           activeIdx = idx;
           executeActive();
         }
@@ -268,7 +299,7 @@ window.commandPalette = (function () {
     if (!backdrop) build();
     items = collectAll();
     filtered = filterItems('');
-    activeIdx = 0;
+    activeIdx = firstSelectable();
     input.value = '';
     render();
     requestAnimationFrame(() => {

@@ -106,8 +106,17 @@ window.router = (function () {
       return;
     }
 
+    // حبس الـtenant المنتهي اشتراكه في صفحة الاشتراك
+    // (status يُحمَّل عند الإقلاع؛ نَحبِس فقط عندما نعرف يقيناً أنه غير نشط)
+    const isLocked = ctx.status && !ctx.status.is_active;
+    if (isLocked && targetName !== 'subscription') {
+      navigate('subscription');
+      return;
+    }
+
     // حماية الصفحات الخاصة بالمالك فقط
-    if (route.ownerOnly && ctx.profile.role !== 'owner') {
+    // استثناء: صفحة الاشتراك تبقى متاحة للموظف عند القفل (عرض-فقط) لتجنّب حلقة التوجيه
+    if (route.ownerOnly && ctx.profile.role !== 'owner' && !(isLocked && targetName === 'subscription')) {
       navigate('dashboard');
       return;
     }

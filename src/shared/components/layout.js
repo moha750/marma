@@ -78,7 +78,7 @@ window.layout = (function () {
 
   // ─── بناء التنقل المُجمَّع ───────────────────────────────
 
-  function buildNavHtml(profile) {
+  function buildNavHtml(profile, isLocked) {
     const visible = NAV_ITEMS.filter((it) => !it.ownerOnly || profile.role === 'owner');
     const groups = [];
     let lastGroup = null;
@@ -92,26 +92,44 @@ window.layout = (function () {
     return groups.map((g) => `
       <div class="nav-group">
         ${g.label ? `<div class="nav-group-label">${window.utils.escapeHtml(g.label)}</div>` : ''}
-        ${g.items.map((item) => `
-          <a href="${window.utils.path(item.path)}" data-nav-key="${item.key}" title="${window.utils.escapeHtml(item.label)}">
+        ${g.items.map((item) => {
+          // عند انتهاء الاشتراك: كل التبويبات تُقفل بصرياً عدا "الاشتراك" الذي يُبرز كمخرج وحيد.
+          // المقفول بلا href ⇒ غير قابل للنقر ولا التنقّل (الراوتر يتجاهل الروابط بلا href).
+          const locked   = isLocked && item.key !== 'subscription';
+          const unlock   = isLocked && item.key === 'subscription';
+          const hrefAttr = locked ? '' : ` href="${window.utils.path(item.path)}"`;
+          const cls      = locked ? ' class="nav-link--locked"' : (unlock ? ' class="nav-link--unlock"' : '');
+          const title    = locked ? 'جدّد اشتراكك للوصول' : item.label;
+          const lockAttr = locked ? ' aria-disabled="true" tabindex="-1"' : '';
+          const lockIcon = locked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
+          return `
+          <a${hrefAttr} data-nav-key="${item.key}"${cls}${lockAttr} title="${window.utils.escapeHtml(title)}">
             <span class="nav-icon"><i data-lucide="${item.icon}"></i></span>
             <span class="nav-label">${window.utils.escapeHtml(item.label)}</span>
-          </a>
-        `).join('')}
+            ${lockIcon}
+          </a>`;
+        }).join('')}
       </div>
     `).join('');
   }
 
-  function buildBottomNavHtml() {
+  function buildBottomNavHtml(isLocked) {
     return `
       <nav class="bottom-nav" id="bottom-nav" aria-label="التنقل السفلي">
         <div class="bottom-nav-list">
-          ${BOTTOM_NAV.map((it) => `
-            <a href="${window.utils.path(it.path)}" data-bottom-key="${it.key}">
-              <span class="nav-icon"><i data-lucide="${it.icon}"></i></span>
+          ${BOTTOM_NAV.map((it) => {
+            // كل عناصر الـ bottom-nav تشغيلية، فجميعها تُقفل عند انتهاء الاشتراك.
+            // المقفول بلا href ⇒ غير قابل للنقر ولا التنقّل.
+            const hrefAttr = isLocked ? '' : ` href="${window.utils.path(it.path)}"`;
+            const cls  = isLocked ? ' class="nav-link--locked"' : '';
+            const aria = isLocked ? ' aria-disabled="true" tabindex="-1"' : '';
+            const lock = isLocked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
+            return `
+            <a${hrefAttr} data-bottom-key="${it.key}"${cls}${aria}>
+              <span class="nav-icon"><i data-lucide="${it.icon}"></i>${lock}</span>
               <span>${window.utils.escapeHtml(it.label)}</span>
-            </a>
-          `).join('')}
+            </a>`;
+          }).join('')}
         </div>
       </nav>
     `;
@@ -141,10 +159,13 @@ window.layout = (function () {
     const isSuperAdmin = await window.auth.checkIsSuperAdmin();
     spaCtx = ctx;
 
+    // اشتراك منتهٍ ⇒ نقفل التبويبات بصرياً (الراوتر يبقى خط الدفاع للروابط المباشرة)
+    const isLocked = !!(ctx.status && ctx.status.is_active === false);
+
     document.body.classList.add('app-body');
     const root = document.getElementById('app-root') || document.body;
 
-    const navHtml = buildNavHtml(profile);
+    const navHtml = buildNavHtml(profile, isLocked);
     const adminLinkHtml = isSuperAdmin
       ? `<a href="${window.utils.path('/admin/subscriptions')}" class="admin-link" title="لوحة المشرف">
            <span class="nav-icon"><i data-lucide="shield"></i></span>
@@ -238,7 +259,7 @@ window.layout = (function () {
           <main class="page-content" id="page-content"></main>
         </div>
 
-        ${buildBottomNavHtml()}
+        ${buildBottomNavHtml(isLocked)}
       </div>
     `;
 

@@ -5,17 +5,7 @@
    ╚════════════════════════════════════════════════════════════════╝ */
 
 .lp {
-  --c-bg:        var(--surface-0);
-  --c-surface:   var(--surface-1);
-  --c-soft:      var(--surface-2);
-  --c-bdr:       var(--border-subtle);
-  --c-bdr-2:     var(--border-default);
-  --c-fg:        var(--text-primary);
-  --c-mute:      var(--text-secondary);
-  --c-faint:     var(--text-tertiary);
-  --c-brand:     var(--accent-500);
-  --c-brand-d:   var(--accent-600);
-  --c-brand-50:  var(--accent-50);
+  /* جسر الألوان --c-* مُعرّف في public-shell.css (مشترك مع .bp) */
   --c-warn:      var(--warning);
   --c-warn-tint: var(--warning-tint);
   --c-bad:       var(--danger);

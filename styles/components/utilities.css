@@ -178,6 +178,7 @@ svg.lucide {
 .text-sm { font-size: var(--text-sm); }
 .text-lg { font-size: var(--text-lg); }
 
+.fw-regular   { font-weight: var(--weight-regular); }
 .fw-medium    { font-weight: var(--weight-medium); }
 .fw-semibold  { font-weight: var(--weight-semibold); }
 .fw-bold      { font-weight: var(--weight-bold); }

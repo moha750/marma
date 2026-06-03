@@ -72,6 +72,8 @@
 
   function dispatchRoute() {
     const route = parseHash();
+    // ابدأ كل شاشة من الأعلى — لا تَرِث موضع تمرير الشاشة السابقة
+    window.scrollTo(0, 0);
     if (route.view === 'field') {
       const field = state.tenantInfo.fields.find((f) => f.id === route.fieldId);
       if (!field) { navigateTo('#/', true); return; }
@@ -81,11 +83,7 @@
       renderFieldDetailView();
       return;
     }
-    // landing — لكن إذا أرضية واحدة فقط، redirect تلقائي
-    if (state.tenantInfo.fields.length === 1) {
-      navigateTo(`#/field/${state.tenantInfo.fields[0].id}`, true);
-      return;
-    }
+    // landing — صفحة المستأجر (واجهته) تظهر دائماً، حتى مع أرضية واحدة
     state.selectedField = null;
     state.selectedSlot = null;
     renderTenantLandingView();
@@ -95,17 +93,28 @@
   // RENDERERS (shells)
   // ═══════════════════════════════════════════════════════════════
 
+  // فوتر الإسناد — مشترك في كل شاشات العميل (الإسناد الوحيد لمَرمى)
+  function renderFooter() {
+    return `
+      <footer class="bp-landing-foot">
+        <small>مدعوم بـ <a href="${window.utils.path('/index.html')}">مَرمى</a></small>
+      </footer>
+    `;
+  }
+
   function renderTenantLandingView() {
     const t = state.tenantInfo;
-    const cities = Array.from(new Set(t.fields.map((f) => f.city).filter(Boolean)));
-    const primaryPhone = t.fields.find((f) => f.phone)?.phone;
     const hasCover = !!t.cover_image_url;
     const hasAbout = !!(t.description && t.description.trim());
-    const hasContact = !!primaryPhone || cities.length > 0;
-    const waUrl = primaryPhone ? buildWhatsAppUrl(primaryPhone) : null;
 
     root.innerHTML = `
       <header class="bp-hero bp-hero--tenant" id="bp-hero"></header>
+      ${hasAbout ? `
+        <section class="bp-section">
+          <h2 class="bp-section-title"><i data-lucide="info"></i><span>عن الملعب</span></h2>
+          <p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>
+        </section>
+      ` : ''}
       <section class="bp-section">
         <h2 class="bp-section-title">
           <i data-lucide="goal"></i>
@@ -113,37 +122,8 @@
         </h2>
         <div class="bp-landing-fields" id="bp-landing-fields"></div>
       </section>
-      ${hasAbout ? `
-        <section class="bp-section">
-          <h2 class="bp-section-title"><i data-lucide="info"></i><span>عن الملعب</span></h2>
-          <p class="bp-about-text">${window.utils.escapeHtml(t.description)}</p>
-        </section>
-      ` : ''}
-      ${hasContact ? `
-        <section class="bp-section">
-          <h2 class="bp-section-title"><i data-lucide="map-pin"></i><span>الموقع والتواصل</span></h2>
-          ${cities.length ? `
-            <ul class="bp-city-chips">
-              ${cities.map((c) => `<li><i data-lucide="map-pin"></i>${window.utils.escapeHtml(c)}</li>`).join('')}
-            </ul>
-          ` : ''}
-          ${primaryPhone ? `
-            <div style="margin-top:var(--space-3);display:flex;gap:var(--space-2);flex-wrap:wrap">
-              <a class="btn btn--secondary btn--sm" href="tel:${window.utils.escapeHtml(primaryPhone)}">
-                <i data-lucide="phone"></i><span>اتصل بالملعب</span>
-              </a>
-              ${waUrl ? `
-                <a class="btn btn--secondary btn--sm" href="${window.utils.escapeHtml(waUrl)}" target="_blank" rel="noopener">
-                  <i data-lucide="message-circle"></i><span>واتساب</span>
-                </a>
-              ` : ''}
-            </div>
-          ` : ''}
-        </section>
-      ` : ''}
-      <footer class="bp-landing-foot">
-        <small>مدعوم بـ <a href="${window.utils.path('/index.html')}">مَرمى</a></small>
-      </footer>
+      ${renderManageBanner()}
+      ${renderFooter()}
     `;
 
     mountTenantHero(document.getElementById('bp-hero'), { hasCover });
@@ -152,7 +132,6 @@
   }
 
   function renderFieldDetailView() {
-    const isSoloField = state.tenantInfo.fields.length === 1;
     root.innerHTML = `
       <header class="bp-hero bp-hero--field" id="bp-hero"></header>
       <nav class="bp-stepper" id="bp-stepper" aria-label="مراحل الحجز"></nav>
@@ -191,10 +170,12 @@
         <div id="bp-form-host"></div>
       </section>
 
+      ${renderFooter()}
+
       <div id="bp-action-bar-host"></div>
     `;
 
-    mountFieldHero(document.getElementById('bp-hero'), { showBreadcrumb: !isSoloField });
+    mountFieldHero(document.getElementById('bp-hero'), { showBreadcrumb: true });
     mountStepper(document.getElementById('bp-stepper'), [
       { key: 'date', label: 'التاريخ', num: '١' },
       { key: 'slot', label: 'الموعد',  num: '٢' },
@@ -224,20 +205,21 @@
   // HERO (نسختان: tenant landing + field detail)
   // ═══════════════════════════════════════════════════════════════
 
-  function renderHeroTop() {
+  // بانر واضح للعملاء العائدين — بديل زر الزاوية القديم.
+  // يُحقن في عرض الـ landing وعرض تفاصيل الأرضية (لتغطية مستأجري الأرضية الواحدة).
+  function renderManageBanner() {
     return `
-      <div class="bp-hero-top">
-        <a class="bp-hero-brand" href="${window.utils.path('/index.html')}">
-          <img class="bp-hero-mark" src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true">
-          <span class="bp-hero-brand-name">مَرمى</span>
-        </a>
-        <div class="bp-hero-tools">
-          <button type="button" class="btn btn--ghost btn--sm" id="bp-manage-btn">
-            <i data-lucide="ticket"></i>
-            <span>حجوزاتي</span>
-          </button>
+      <section class="bp-manage-banner">
+        <span class="bp-manage-banner-icon"><i data-lucide="ticket"></i></span>
+        <div class="bp-manage-banner-body">
+          <h3 class="bp-manage-banner-title">هل لديك حجز سابق؟</h3>
+          <p class="bp-manage-banner-text">تابع تفاصيل حجوزاتك، أو عدّلها وألغِها بسهولة عبر رقم جوّالك.</p>
         </div>
-      </div>
+        <button type="button" class="btn btn--primary bp-manage-banner-btn" id="bp-manage-btn">
+          <i data-lucide="ticket"></i>
+          <span>عرض حجوزاتي</span>
+        </button>
+      </section>
     `;
   }
 
@@ -248,20 +230,18 @@
 
   function mountTenantHero(host, { hasCover }) {
     const t = state.tenantInfo;
-    const fieldsCount = t.fields.length;
+    // الغلاف اختياري — يظهر فقط عند رفع صورة فعلية؛ بلا placeholder يوحي بـ "ناقص".
     const coverHtml = hasCover
       ? `<div class="bp-hero-cover"><img src="${window.utils.escapeHtml(t.cover_image_url)}" alt="غلاف ${window.utils.escapeHtml(t.name)}"></div>`
-      : `<div class="bp-hero-cover" data-empty="1" data-label="${fieldsCount} ${fieldsCount === 1 ? 'أرضية' : 'أرضيات'}"></div>`;
+      : '';
 
     host.innerHTML = `
-      ${renderHeroTop()}
       ${coverHtml}
       <span class="bp-hero-tag">
         <span class="bp-hero-tag-dot"></span>
         احجز موعدك في 30 ثانية
       </span>
       <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
-      <p class="bp-hero-lead">سيتواصل معك الملعب لتأكيد الحجز.</p>
     `;
     bindManageBtn();
   }
@@ -272,7 +252,6 @@
     const surfaceLabel = f.surface_type ? (window.utils.SURFACE_LABELS[f.surface_type] || f.surface_type) : null;
 
     host.innerHTML = `
-      ${renderHeroTop()}
       ${showBreadcrumb ? `
         <nav class="bp-breadcrumb">
           <a data-back href="#/">
@@ -444,20 +423,26 @@
     const openUrl = buildMapOpenUrl(f, t);
     const waUrl = buildWhatsAppUrl(f.phone);
     const images = Array.isArray(f.image_urls) ? f.image_urls : [];
+    // الإحداثيات هي الإشارة الوحيدة لموقع حقيقي (تأتي فقط من رابط مُتحقَّق عند الحفظ).
+    // بدونها لا نعرض خريطة تقريبية تضلّل العميل، ولا أزرار موقع بلا وجهة حقيقية.
+    const hasLocation = f.latitude != null && f.longitude != null;
 
     host.innerHTML = `
-      <aside class="bp-map-card" data-state="loading">
+      <aside class="bp-map-card" data-state="${hasLocation ? 'loading' : 'ok'}">
         ${renderGalleryBlock(images, f.name)}
         <header class="bp-map-card-head">
           <div>
             <strong class="bp-map-card-title">${window.utils.escapeHtml(f.name)}</strong>
             ${f.city ? `<span class="bp-map-card-sub"><i data-lucide="map-pin"></i>${window.utils.escapeHtml(f.city)}</span>` : ''}
           </div>
+          ${hasLocation ? `
           <a class="btn btn--ghost btn--sm" href="${window.utils.escapeHtml(openUrl)}" target="_blank" rel="noopener">
             <i data-lucide="navigation"></i>
             <span>افتح في الخرائط</span>
           </a>
+          ` : ''}
         </header>
+        ${hasLocation ? `
         <div class="bp-map-frame">
           <div class="bp-map-loading"><div class="loader"></div><span>جاري تحميل الخريطة...</span></div>
           <iframe class="bp-map-iframe" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
@@ -472,6 +457,7 @@
             </a>
           </div>
         </div>
+        ` : ''}
         <footer class="bp-map-card-foot">
           ${f.phone ? `
             <a class="bp-map-action" href="tel:${window.utils.escapeHtml(f.phone)}">
@@ -493,23 +479,27 @@
               <i data-lucide="message-circle"></i><span>واتساب</span>
             </span>
           `}
+          ${hasLocation ? `
           <a class="bp-map-action" href="${window.utils.escapeHtml(openUrl)}" target="_blank" rel="noopener">
             <i data-lucide="navigation"></i>
             <span>اتجاهات</span>
           </a>
+          ` : ''}
         </footer>
       </aside>
     `;
     window.utils.renderIcons(host);
 
     const card = host.querySelector('.bp-map-card');
-    const iframe = card.querySelector('.bp-map-iframe');
-    const failTimer = setTimeout(() => { card.dataset.state = 'error'; }, 8000);
-    iframe.addEventListener('load', () => {
-      clearTimeout(failTimer);
-      card.dataset.state = 'ok';
-    }, { once: true });
-    iframe.src = embedUrl;
+    if (hasLocation) {
+      const iframe = card.querySelector('.bp-map-iframe');
+      const failTimer = setTimeout(() => { card.dataset.state = 'error'; }, 8000);
+      iframe.addEventListener('load', () => {
+        clearTimeout(failTimer);
+        card.dataset.state = 'ok';
+      }, { once: true });
+      iframe.src = embedUrl;
+    }
 
     // ربط lightbox على banner + thumbnails (إن وجدت)
     if (images.length > 0) {
@@ -767,18 +757,20 @@
 
   function mountSlots(host) {
     host.innerHTML = `
-      <div class="bp-slots-filter" id="bp-slots-filter" role="tablist">
-        <button type="button" class="bp-slots-filter-btn is-active" data-period="all">الكل</button>
-        <button type="button" class="bp-slots-filter-btn" data-period="morning">صباحًا</button>
-        <button type="button" class="bp-slots-filter-btn" data-period="afternoon">ظهرًا</button>
-        <button type="button" class="bp-slots-filter-btn" data-period="evening">مساءً</button>
-      </div>
-      <div id="bp-slots-info"></div>
-      <div id="bp-slots-body">
-        <div class="bp-empty">
-          <div class="bp-empty-icon"><i data-lucide="hand-pointing"></i></div>
-          <h3>اختر الأرضية والتاريخ أولاً</h3>
-          <p>ستظهر هنا المواعيد المتاحة.</p>
+      <div class="bp-slots">
+        <div class="bp-slots-filter" id="bp-slots-filter" role="tablist">
+          <button type="button" class="bp-slots-filter-btn is-active" data-period="all">الكل</button>
+          <button type="button" class="bp-slots-filter-btn" data-period="morning">صباحًا</button>
+          <button type="button" class="bp-slots-filter-btn" data-period="afternoon">ظهرًا</button>
+          <button type="button" class="bp-slots-filter-btn" data-period="evening">مساءً</button>
+        </div>
+        <div id="bp-slots-info"></div>
+        <div id="bp-slots-body">
+          <div class="bp-empty">
+            <div class="bp-empty-icon"><i data-lucide="hand-pointing"></i></div>
+            <h3>اختر الأرضية والتاريخ أولاً</h3>
+            <p>ستظهر هنا المواعيد المتاحة.</p>
+          </div>
         </div>
       </div>
     `;
@@ -818,7 +810,7 @@
         p_date: state.selectedDate
       });
       if (error) throw error;
-      const slots = (data || []).filter((s) => !s.is_past);
+      const slots = (data || []);
       state.cachedSlots.set(cacheKey, slots);
       state.currentSlots = slots;
       renderSlotsBody();
@@ -844,8 +836,8 @@
     if (!body) return;
 
     const filtered = bucketSlots(state.currentSlots, state.slotFilter);
-    const availableInFiltered = filtered.filter((s) => s.is_available).length;
-    const totalAvailable = state.currentSlots.filter((s) => s.is_available).length;
+    const availableInFiltered = filtered.filter((s) => s.is_available && !s.is_past).length;
+    const totalAvailable = state.currentSlots.filter((s) => s.is_available && !s.is_past).length;
 
     if (state.currentSlots.length === 0) {
       info.innerHTML = '';
@@ -883,11 +875,12 @@
       const price = s.slot_price !== undefined ? Number(s.slot_price) : null;
       const isSelected = state.selectedSlot && state.selectedSlot.startIso === startIso;
       const cls = ['bp-slot'];
-      if (!s.is_available) cls.push('is-busy');
+      if (s.is_past) cls.push('is-past');
+      else if (!s.is_available) cls.push('is-busy');
       if (isSelected) cls.push('is-selected');
-      const priceLabel = !s.is_available ? 'محجوز' : (price ? window.utils.formatCurrency(price) : 'متاح');
+      const priceLabel = s.is_past ? 'انتهى' : (!s.is_available ? 'محجوز' : (price ? window.utils.formatCurrency(price) : 'متاح'));
       return `
-        <button type="button" class="${cls.join(' ')}" ${!s.is_available ? 'disabled' : ''}
+        <button type="button" class="${cls.join(' ')}" ${(s.is_past || !s.is_available) ? 'disabled' : ''}
                 data-start="${startIso}" data-end="${endIso}" data-price="${price || ''}">
           <span class="bp-slot-time">${window.utils.formatTime(s.slot_start)}</span>
           <span class="bp-slot-price">${priceLabel}</span>
@@ -1249,12 +1242,6 @@
   function renderManageEntryView() {
     root.innerHTML = `
       <header class="bp-hero">
-        <div class="bp-hero-top">
-          <a class="bp-hero-brand" href="${window.utils.path('/index.html')}">
-            <img class="bp-hero-mark" src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true">
-            <span class="bp-hero-brand-name">مَرمى</span>
-          </a>
-        </div>
         <span class="bp-hero-tag">
           <span class="bp-hero-tag-dot"></span>
           إدارة حجوزاتي
@@ -1277,6 +1264,7 @@
           </button>
         </div>
       </section>
+      ${renderFooter()}
     `;
     window.utils.renderIcons(root);
 
@@ -1362,12 +1350,6 @@
 
     root.innerHTML = `
       <header class="bp-hero">
-        <div class="bp-hero-top">
-          <a class="bp-hero-brand" href="${window.utils.path('/index.html')}">
-            <img class="bp-hero-mark" src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true">
-            <span class="bp-hero-brand-name">مَرمى</span>
-          </a>
-        </div>
         <span class="bp-hero-tag">
           <span class="bp-hero-tag-dot"></span>
           حجوزاتي · ${window.utils.escapeHtml(phone)}
@@ -1387,6 +1369,7 @@
           <span>حجز موعد آخر</span>
         </button>
       </div>
+      ${renderFooter()}
     `;
     window.utils.renderIcons(root);
 

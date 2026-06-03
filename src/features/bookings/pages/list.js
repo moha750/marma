@@ -203,7 +203,7 @@
             </div>
 
             <div class="table-wrapper">
-              <table class="table table--sticky-first">
+              <table class="table table--cards">
                 <thead>
                   <tr>
                     <th>التاريخ والوقت</th>
@@ -221,20 +221,20 @@
                     const hours = window.utils.hoursBetween(b.start_time, b.end_time);
                     const owed  = Number(b.total_price || 0) - Number(b.paid_amount || 0);
                     return `
-                      <tr class="is-clickable" data-id="${b.id}" data-status="${window.utils.escapeHtml(b.status)}">
-                        <td>${window.utils.formatDateTime(b.start_time)}</td>
-                        <td>${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                        <td>
+                      <tr data-id="${b.id}" data-status="${window.utils.escapeHtml(b.status)}">
+                        <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
+                        <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
+                        <td data-label="العميل">
                           <div>${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</div>
                           ${b.customers && b.customers.phone ? `<div class="text-xs text-tertiary">${window.utils.escapeHtml(b.customers.phone)}</div>` : ''}
                         </td>
-                        <td class="tabular-nums">${hours.toFixed(1)} س</td>
-                        <td class="tabular-nums">${fmtMoney(b.total_price)}</td>
-                        <td class="tabular-nums">
+                        <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
+                        <td data-label="السعر" class="tabular-nums">${fmtMoney(b.total_price)}</td>
+                        <td data-label="المدفوع" class="tabular-nums">
                           ${fmtMoney(b.paid_amount)}
                           ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}
                         </td>
-                        <td>${statusChip(b.status)}</td>
+                        <td data-label="الحالة" class="card-tag">${statusChip(b.status)}</td>
                         <td class="actions-cell">
                           <div class="actions-inline">
                             ${b.status === 'pending' ? `
@@ -246,7 +246,7 @@
                               </button>
                             ` : ''}
                             <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="تعديل">
-                              <i data-lucide="pencil"></i>
+                              <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
                             </button>
                           </div>
                         </td>
@@ -258,15 +258,7 @@
             </div>
           `;
 
-          // أحداث الصف — نقرة على أي مكان عدا الأزرار تفتح الـ modal
-          tableContainer.querySelectorAll('tr[data-id]').forEach((tr) => {
-            tr.addEventListener('click', (e) => {
-              if (e.target.closest('[data-action]')) return;
-              const booking = bookings.find((b) => b.id === tr.dataset.id);
-              window.bookingModal.open({ booking, onSaved: refresh });
-            });
-          });
-
+          // الفتح عبر زر التعديل الصريح فقط (لا نقر على الصف/الكرت)
           tableContainer.querySelectorAll('[data-action="approve"]').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
               e.stopPropagation();
