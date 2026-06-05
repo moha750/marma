@@ -49,7 +49,33 @@ a:hover { color: var(--color-primary-dark); }
   align-items: center;
   justify-content: center;
   padding: var(--space-md);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  position: relative;
+  overflow: hidden;
+  /* ملعب كرة قدم: عشب أخضر بخطوط جزّ متناوبة فوق تدرّج العلامة */
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0,
+      rgba(255, 255, 255, 0.05) 64px,
+      rgba(0, 0, 0, 0.06) 64px,
+      rgba(0, 0, 0, 0.06) 128px
+    ),
+    linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+}
+
+/* خطوط الملعب البيضاء: الحدود + خط المنتصف + دائرة المنتصف + نقطة البداية */
+.auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  z-index: 0;
+  pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 117px, rgba(255, 255, 255, 0.4) 117px 119px, transparent 120px),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0 4px, transparent 5px),
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.4) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
 }
 
 .auth-card {
@@ -59,6 +85,8 @@ a:hover { color: var(--color-primary-dark); }
   padding: var(--space-xl);
   width: 100%;
   max-width: 440px;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card .logo {
@@ -96,6 +124,82 @@ a:hover { color: var(--color-primary-dark); }
   border-top: 1px solid var(--color-border);
   color: var(--color-text-muted);
   font-size: 0.9rem;
+}
+
+/* شاشة تأكيد البريد بعد التسجيل */
+.auth-confirm {
+  text-align: center;
+}
+
+.auth-confirm__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.auth-confirm__icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.auth-confirm__title {
+  font-size: 1.35rem;
+  margin-bottom: var(--space-sm);
+}
+
+.auth-confirm__email {
+  display: block;
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--color-text);
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.auth-confirm__text {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+  line-height: 1.7;
+}
+
+.auth-confirm__hint {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+}
+
+.auth-confirm__msg {
+  font-size: 0.88rem;
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  margin-bottom: var(--space-sm);
+  line-height: 1.6;
+}
+
+.auth-confirm__msg--error {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.auth-confirm__msg--success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.auth-confirm__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
 /* ملاحظة: قواعد صفحة الهبوط نُقلت إلى styles/components/landing.css */

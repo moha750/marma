@@ -1,194 +1,319 @@
-/* FullCalendar — تخصيصات لتمشي مع نظام Quiet Pitch + الوضع الداكن */
+/* ════════════════════════════════════════════════════════════════
+   FullCalendar — إعادة بناء كاملة لشبكة التقويم (Quiet Pitch + داكن)
+   إعادة بناء 2026: حدود متّسقة، رؤوس مكدّسة، خلايا مريحة، أحداث منمنمة.
+   ════════════════════════════════════════════════════════════════ */
 
 .fc {
   direction: rtl;
   font-family: inherit;
   color: var(--text-primary);
 
-  /* متغيرات FullCalendar — نُربط بـ tokens مَرمى */
+  /* ربط متغيّرات FullCalendar بـ tokens مَرمى */
   --fc-border-color:        var(--border-subtle);
-  --fc-page-bg-color:       var(--surface-1);
+  --fc-page-bg-color:       transparent;
   --fc-neutral-bg-color:    var(--surface-2);
   --fc-neutral-text-color:  var(--text-secondary);
 
-  --fc-today-bg-color:      var(--accent-50);
+  --fc-today-bg-color:      color-mix(in srgb, var(--accent-500) 7%, transparent);
   --fc-now-indicator-color: var(--accent-500);
 
-  --fc-button-text-color:        var(--text-primary);
-  --fc-button-bg-color:           var(--surface-1);
-  --fc-button-border-color:       var(--border-default);
-  --fc-button-hover-bg-color:     var(--surface-2);
-  --fc-button-hover-border-color: var(--border-strong);
-  --fc-button-active-bg-color:    var(--accent-500);
-  --fc-button-active-border-color: var(--accent-500);
-
-  --fc-event-bg-color:     var(--accent-500);
-  --fc-event-border-color: var(--accent-600);
-  --fc-event-text-color:   var(--text-on-accent);
+  --fc-event-bg-color:      var(--accent-500);
+  --fc-event-border-color:  var(--accent-500);
+  --fc-event-text-color:    var(--text-on-accent);
 }
 
-/* العنوان الرئيسي للتقويم */
-.fc .fc-toolbar-title {
-  font-size: var(--text-xl) !important;
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
+[data-theme="dark"] .fc {
+  --fc-today-bg-color: color-mix(in srgb, var(--accent-500) 14%, transparent);
 }
 
-/* أزرار FullCalendar — تأخذ ستايل btn الخاص بنا */
-.fc .fc-button {
-  border-radius: var(--radius-sm);
-  font-weight: var(--weight-medium);
-  font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-3);
-  height: 32px;
-  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
-  box-shadow: none !important;
-}
+/* الارتفاع auto: لا تمرير داخلي. إلغاء حجز شريط التمرير يزيل الشريط
+   الأبيض (gutter) على جانب الشبكة. التمرير الأفقي للجوال يتم على البطاقة. */
+.fc .fc-scroller { overflow: hidden !important; }
 
-.fc .fc-button:focus,
-.fc .fc-button-primary:not(:disabled):focus,
-.fc .fc-button-primary:not(:disabled):active:focus {
-  box-shadow: var(--ring-focus) !important;
-  outline: 0 !important;
-}
+/* ── الإطار: بلا حدّ خارجي (البطاقة توفّره)، خطوط داخلية خفيفة فقط ── */
+.fc-theme-standard .fc-scrollgrid { border: 0; }
+.fc-theme-standard td,
+.fc-theme-standard th { border-color: var(--border-subtle); }
+.fc .fc-scrollgrid-section-header > *,
+.fc .fc-scrollgrid-section-body > * { border-color: var(--border-subtle); }
 
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled):active {
-  color: var(--text-on-accent) !important;
-}
-
-/* خلية اليوم الحالي */
-.fc .fc-day-today {
-  background: var(--accent-50) !important;
-}
-
-[data-theme="dark"] .fc .fc-day-today {
-  background: var(--accent-50) !important;
-}
-
-/* رؤوس أيام الأسبوع */
+/* ── رؤوس الأيام ── */
 .fc .fc-col-header-cell {
   background: var(--surface-2);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
   padding: var(--space-2) 0;
 }
-
 .fc .fc-col-header-cell-cushion {
-  color: inherit;
+  display: block;
+  text-align: center;
   text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+}
+/* رأس مكدّس (عرض الأسبوع/اليوم): اسم اليوم فوق رقم اليوم */
+.fc .fc-col-header-cell-cushion:has(.fc-dayhead-num) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.fc .fc-dayhead-wd {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  letter-spacing: .01em;
+}
+.fc .fc-dayhead-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.fc .fc-day-today .fc-dayhead-num { background: var(--accent-500); color: var(--text-on-accent); }
+.fc .fc-day-today .fc-dayhead-wd  { color: var(--accent-700); }
+[data-theme="dark"] .fc .fc-day-today .fc-dayhead-wd { color: var(--accent-500); }
+
+/* ── عمود الوقت (المحور) ── */
+.fc .fc-timegrid-axis { background: var(--surface-2); }
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  padding: 0 var(--space-2);
 }
 
-/* رقم اليوم في خلايا الشهر */
+/* ── صفوف/خلايا الوقت: ارتفاع مريح + خطوط نصف الساعة أخفت ── */
+.fc .fc-timegrid-slot { height: 2.7em; }
+.fc .fc-timegrid-slot-lane { border-top-color: var(--border-subtle); }
+.fc .fc-timegrid-slot-minor { border-top-style: dotted; border-top-color: var(--border-subtle); }
+.fc .fc-timegrid-col.fc-day-today { background: var(--fc-today-bg-color); }
+
+/* خلفية الأوقات خارج التشغيل (إن استُخدمت businessHours) */
+.fc .fc-non-business {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface-2),
+    var(--surface-2) 5px,
+    var(--surface-3) 5px,
+    var(--surface-3) 10px
+  );
+  opacity: 0.35;
+}
+
+/* ── الأحداث (عام) ── */
+.fc-event {
+  cursor: pointer;
+  border: 1px solid transparent;     /* اللون يأتي من borderColor (تدرّج خفيف) */
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+}
+/* نمط مكتوم: شريط لوني جانبي بلون الحالة، اسم بارز، وقت مكتوم، أيقونة ملوّنة */
+.fc-event .fc-event-main { border-inline-start: 3px solid var(--ev-accent, var(--accent-500)); }
+.fc-event-time { color: var(--text-tertiary); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
+.fc-event-title { font-weight: var(--weight-semibold); }
+.fc-ev-icon { width: 12px; height: 12px; vertical-align: -1.5px; margin-inline-end: 4px; flex-shrink: 0; color: var(--ev-accent, currentColor); }
+
+/* أحداث عرض الأسبوع/اليوم */
+.fc-timegrid-event {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  transition: box-shadow var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+}
+.fc-timegrid-event .fc-event-main { padding: 4px 9px; }
+/* الاسم أبرز فوق، الوقت مكتوم تحته */
+.fc-timegrid-event .fc-event-main-frame { display: flex; flex-direction: column; }
+.fc-timegrid-event .fc-event-title-container { order: 1; }
+.fc-timegrid-event .fc-event-time { order: 2; font-size: var(--text-2xs); }
+.fc-timegrid-event:hover { box-shadow: var(--shadow-1); filter: brightness(.97); z-index: 5; }
+
+/* أحداث عرض الشهر — شرائح مكتومة بشريط جانبي (نفس نمط الأسبوع/اليوم) */
+.fc-daygrid-event {
+  border-radius: var(--radius-sm);
+  padding: 0;             /* الحشو على .fc-event-main ليلتصق الشريط بالحافة */
+  margin: 1px 4px;
+  font-size: var(--text-2xs);
+  box-shadow: none;
+}
+.fc-daygrid-event .fc-event-main { padding: 1px 7px; }
+.fc-daygrid-event:hover { filter: brightness(.97); }
+
+/* رقم اليوم في عرض الشهر */
+.fc .fc-daygrid-day-top { flex-direction: row-reverse; }
 .fc .fc-daygrid-day-number {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
   font-variant-numeric: tabular-nums;
 }
-
-.fc .fc-daygrid-day-top {
-  flex-direction: row-reverse;
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 24px; margin: 4px; padding: 0;
+  background: var(--accent-500); color: var(--text-on-accent);
+  border-radius: var(--radius-full); font-weight: var(--weight-semibold);
 }
 
-/* عمود الوقت في عرض الأسبوع/اليوم */
-.fc .fc-timegrid-axis-cushion,
-.fc .fc-timegrid-slot-label-cushion {
-  font-size: var(--text-2xs);
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
+/* ── حالات الأحداث ── */
+/* ملغي: تدرّج أحمر فاتح + نص أحمر مع شطب. الشطب على عناصر النص فيأخذ لون النص الأحمر */
+.fc-event.status-cancelled .fc-event-title,
+.fc-event.status-cancelled .fc-event-time { text-decoration: line-through; }
 
-/* الأحداث */
-.fc-event {
-  cursor: pointer;
-  padding: 2px 6px;
-  font-size: var(--text-xs);
-  border-radius: var(--radius-xs);
-  font-weight: var(--weight-medium);
-}
-
-.fc-event-title,
-.fc-event-time {
-  font-variant-numeric: tabular-nums;
-}
-
-/* حالة الإلغاء */
-.fc-event.status-cancelled {
-  opacity: 0.45;
-  text-decoration: line-through;
-}
-
-/* حالة الانتظار — خطوط مائلة دقيقة */
-.fc-event.status-pending {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.22),
-    rgba(255, 255, 255, 0.22) 4px,
-    transparent 4px,
-    transparent 10px
-  );
-  font-weight: var(--weight-semibold);
-}
-
-/* مؤشّر الوقت الحالي */
-.fc .fc-timegrid-now-indicator-line {
-  border-color: var(--accent-500);
-  border-top-width: 2px;
-}
-
+/* ── مؤشّر الوقت الحالي ── */
+.fc .fc-timegrid-now-indicator-line { border-color: var(--accent-500); border-top-width: 2px; }
 .fc .fc-timegrid-now-indicator-arrow {
   border-color: var(--accent-500);
+  border-width: 5px;
 }
 
-/* روابط "More events" */
-.fc .fc-more-link {
-  font-size: var(--text-xs);
-  color: var(--accent-700);
-  font-weight: var(--weight-medium);
-}
-
-[data-theme="dark"] .fc .fc-more-link {
-  color: var(--accent-600);
-}
-
-/* الـ popover (المزيد من الأحداث) */
-.fc .fc-popover {
-  background: var(--surface-1);
-  box-shadow: var(--shadow-3);
-  border: 0;
-  border-radius: var(--radius-md);
-}
-
-.fc .fc-popover-header {
+/* ── عرض القائمة (listWeek) ── */
+.fc-theme-standard .fc-list { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+.fc .fc-list-day-cushion {
   background: var(--surface-2);
-  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   font-weight: var(--weight-semibold);
   font-size: var(--text-sm);
-  color: var(--text-primary);
+}
+.fc .fc-list-event { cursor: pointer; }
+.fc .fc-list-event:hover td { background: var(--surface-2); }
+.fc .fc-list-event-time { color: var(--text-secondary); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium); }
+.fc .fc-list-event-title { color: var(--text-primary); font-weight: var(--weight-medium); }
+.fc .fc-list-event-graphic .fc-list-event-dot { border-width: 5px; border-radius: var(--radius-full); border-color: var(--ev-accent, var(--accent-500)); }
+/* ملغي في القائمة: عنوان أحمر مشطوب + وقت مشطوب */
+.fc-list-event.status-cancelled .fc-list-event-title { color: var(--danger); text-decoration: line-through; }
+.fc-list-event.status-cancelled .fc-list-event-time { text-decoration: line-through; }
+.fc .fc-list-table td { border-color: var(--border-subtle); padding: var(--space-3); }
+.fc .fc-list-empty { background: var(--surface-1); color: var(--text-tertiary); font-size: var(--text-sm); }
+
+/* ── روابط "المزيد" + الـ popover ── */
+.fc .fc-more-link { font-size: var(--text-xs); color: var(--accent-700); font-weight: var(--weight-semibold); }
+[data-theme="dark"] .fc .fc-more-link { color: var(--accent-500); }
+.fc .fc-popover { background: var(--surface-1); box-shadow: var(--shadow-3); border: 0; border-radius: var(--radius-md); overflow: hidden; }
+.fc .fc-popover-header {
+  background: var(--surface-2); border-bottom: 1px solid var(--border-subtle);
+  font-weight: var(--weight-semibold); font-size: var(--text-sm); color: var(--text-primary);
   padding: var(--space-2) var(--space-3);
 }
+.fc .fc-popover-body { padding: var(--space-2); }
 
-.fc .fc-popover-body {
-  padding: var(--space-2);
+/* ════════════════════════════════════════════════════════
+   هيكل صفحة التقويم (chrome) — شريط تحكّم + فلاتر + بطاقة
+   ════════════════════════════════════════════════════════ */
+
+/* شريط التحكّم: تنقّل + عنوان الفترة + مبدّل العرض */
+.cal-toolbar {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+  flex-wrap: wrap;
+  background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3);
 }
-
-/* الجداول الداخلية */
-.fc .fc-scrollgrid,
-.fc .fc-scrollgrid-section > td,
-.fc table {
-  border-color: var(--border-subtle);
+.cal-nav { display: inline-flex; align-items: center; gap: var(--space-2); }
+.cal-nav-btn {
+  width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-default); background: var(--surface-1); color: var(--text-secondary);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
 }
+.cal-nav-btn:hover { background: var(--surface-2); color: var(--text-primary); border-color: var(--border-strong); }
+.cal-nav-btn:focus-visible { box-shadow: var(--ring-focus); outline: 0; }
+.cal-nav-btn svg.lucide, .cal-nav-btn i[data-lucide] { width: 18px; height: 18px; }
+.cal-today {
+  height: 34px; padding: 0 var(--space-3); border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default); background: var(--surface-1); color: var(--text-primary);
+  font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+.cal-today:hover { background: var(--accent-50); color: var(--accent-700); border-color: var(--accent-300); }
+.cal-today:focus-visible { box-shadow: var(--ring-focus); outline: 0; }
+.cal-title {
+  font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--text-primary);
+  font-variant-numeric: tabular-nums; text-align: center; flex: 1 1 auto;
+}
+.cal-views { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-md); padding: 3px; gap: 2px; }
+.cal-view {
+  height: 30px; padding: 0 var(--space-3); border: 0; background: transparent; color: var(--text-secondary);
+  border-radius: var(--radius-sm); cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium);
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.cal-view:hover { color: var(--text-primary); }
+.cal-view.is-active { background: var(--surface-1); color: var(--accent-700); box-shadow: var(--shadow-1); font-weight: var(--weight-semibold); }
 
-/* النص في خلايا الوقت غير-المتاح */
-.fc .fc-non-business {
-  background: repeating-linear-gradient(
-    45deg,
-    var(--surface-2),
-    var(--surface-2) 4px,
-    var(--surface-3) 4px,
-    var(--surface-3) 8px
-  );
-  opacity: 0.4;
+/* شريط الفلاتر + مفتاح الحالات */
+.cal-subbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.cal-fields { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.cal-fields-lbl { font-size: var(--text-xs); color: var(--text-tertiary); font-weight: var(--weight-medium); }
+.cal-fchip {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 var(--space-3);
+  border: 1px solid var(--border-default); background: var(--surface-1); border-radius: var(--radius-full);
+  cursor: pointer; font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--text-primary);
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.cal-fchip .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cal-fchip:hover { border-color: var(--border-strong); }
+.cal-fchip.is-off { color: var(--text-tertiary); background: var(--surface-2); }
+.cal-fchip.is-off .dot { opacity: .25; }
+.cal-fchip.is-off .name { text-decoration: line-through; }
+
+.cal-legend { display: flex; flex-wrap: wrap; gap: var(--space-3); font-size: var(--text-xs); color: var(--text-secondary); }
+.cal-leg { display: inline-flex; align-items: center; gap: 6px; }
+/* مربّعات المفتاح تحاكي الأحداث: تدرّج مكتوم + شريط لوني جانبي */
+.cal-leg .swatch { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+.cal-leg .swatch--confirmed { background: color-mix(in srgb, var(--accent-500) 15%, var(--surface-1)); border-inline-start: 3px solid var(--accent-500); }
+.cal-leg .swatch--pending { background: color-mix(in srgb, var(--warning) 15%, var(--surface-1)); border-inline-start: 3px solid var(--warning); }
+.cal-leg .swatch--blocked { background: color-mix(in srgb, var(--neutral-500) 15%, var(--surface-1)); border-inline-start: 3px solid var(--neutral-500); }
+.cal-leg .swatch--cancelled { background: var(--danger-tint); border-inline-start: 3px solid var(--danger); }
+
+/* بطاقة التقويم — بلا padding: الشبكة تملأ البطاقة بالكامل (overflow يقصّ الزوايا) */
+.cal-card { background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 0; overflow: hidden; }
+.cal-card .fc { --fc-page-bg-color: transparent; }
+
+/* تنبيه: حجوزات تقع خارج أوقات العمل المعروضة */
+.cal-outside {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3);
+  background: var(--warning-tint); color: var(--warning);
+  border-radius: var(--radius); font-size: var(--text-sm); font-weight: var(--weight-medium);
+}
+.cal-outside.is-revealed {
+  background: var(--surface-2); color: var(--text-secondary);
+}
+.cal-outside svg.lucide, .cal-outside i[data-lucide] { width: 16px; height: 16px; flex-shrink: 0; }
+.cal-outside #cal-outside-text { flex: 1; }
+.cal-outside-btn {
+  border: 1px solid currentColor; background: transparent; color: inherit; font: inherit;
+  font-size: var(--text-xs); font-weight: var(--weight-medium);
+  padding: 4px 14px; border-radius: var(--radius-full); cursor: pointer; flex-shrink: 0;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.cal-outside-btn:hover { background: rgba(0, 0, 0, 0.06); }
+
+/* تلميح أسفل التقويم */
+.cal-hint { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-tertiary); }
+.cal-hint svg.lucide, .cal-hint i[data-lucide] { width: 14px; height: 14px; }
+
+/* جوال */
+@media (max-width: 768px) {
+  .cal-toolbar { gap: var(--space-2); padding: var(--space-3); }
+  .cal-title { order: -1; flex-basis: 100%; margin-bottom: var(--space-1); }
+  .cal-nav { flex: 0 0 auto; }
+  .cal-views { flex: 1 1 100%; order: 1; justify-content: space-between; }
+  .cal-view { flex: 1; padding: 0 var(--space-2); text-align: center; }
+  .cal-subbar { align-items: flex-start; }
+  .fc .fc-timegrid-slot { height: 2.4em; }
+
+  /* تمرير أفقي للبطاقة: في الأسبوع/الشهر يضبط JS عرض #calendar الأدنى
+     فتُمرَّر الأعمدة بدل انضغاطها؛ في اليوم/القائمة لا عرض أدنى فتملأ الشاشة. */
+  .cal-card { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  .cal-card::-webkit-scrollbar { height: 6px; }
+  .cal-card::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
+  .cal-card::-webkit-scrollbar-track { background: transparent; }
 }

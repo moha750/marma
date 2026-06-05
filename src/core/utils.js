@@ -320,6 +320,8 @@ window.utils = {
     if (msg.includes('User already registered')) return 'هذا البريد الإلكتروني مسجل مسبقاً';
     if (msg.includes('Email not confirmed')) return 'يرجى تأكيد البريد الإلكتروني أولاً';
     if (msg.includes('Password should be')) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    const securityWait = msg.match(/you can only request this after (\d+) seconds?/i);
+    if (securityWait) return `لأسباب أمنية، يمكنك إعادة الإرسال بعد ${securityWait[1]} ثانية`;
     if (msg.includes('rate limit')) return 'محاولات كثيرة، يرجى الانتظار قليلاً';
 
     return msg;

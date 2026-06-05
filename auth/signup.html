@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
   <title>إنشاء حساب - مَرمى</title>
+  <!-- مشاركة الروابط (Open Graph + Twitter) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="مَرمى">
+  <meta property="og:locale" content="ar_AR">
+  <meta property="og:url" content="https://marma.help/auth/signup.html">
+  <meta property="og:title" content="سجّل ملعبك الآن — مَرمى">
+  <meta property="og:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية ٣ أيام. كل حجوزاتك .. في مَرمى واحد.">
+  <meta property="og:image" content="https://marma.help/assets/og/signup.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="سجّل ملعبك الآن مع تجربة مجانية ٣ أيام">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="سجّل ملعبك الآن — مَرمى">
+  <meta name="twitter:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية ٣ أيام. كل حجوزاتك .. في مَرمى واحد.">
+  <meta name="twitter:image" content="https://marma.help/assets/og/signup.png">
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <link rel="stylesheet" href="../styles/main.css">
 </head>
@@ -14,7 +29,7 @@
       <div class="logo">
         <img src="../assets/logo.svg" alt="مَرمى" class="auth-logo" width="64" height="64">
         <h1 id="page-title">إنشاء حساب جديد</h1>
-        <p class="subtitle" id="page-subtitle">سجل ملعبك الآن - 3 أيام تجربة مجانية</p>
+        <p class="subtitle" id="page-subtitle">سجل ملعبك الآن مع <span style="color:var(--color-success);font-weight:600;">3 أيام تجربة مجانية</span></p>
       </div>
 
       <div id="invite-info" class="hidden" style="background:var(--color-info-light);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:0.9rem;"></div>
@@ -50,7 +65,34 @@
         </button>
       </form>
 
-      <div class="auth-footer">
+      <!-- شاشة تأكيد البريد (تظهر بعد التسجيل بدل التحويل) -->
+      <div id="confirm-panel" class="auth-confirm hidden">
+        <div class="auth-confirm__icon" aria-hidden="true">
+          <i data-lucide="mail-check"></i>
+        </div>
+        <h2 class="auth-confirm__title">تحقّق من بريدك الإلكتروني</h2>
+        <p class="auth-confirm__text">
+          أرسلنا رابط تأكيد إلى
+          <strong class="auth-confirm__email" id="confirm-email"></strong>
+        </p>
+        <p class="auth-confirm__text" style="margin-bottom:var(--space-md);">
+          افتح الرسالة واضغط على رابط التأكيد لتفعيل حسابك وبدء تجربتك المجانية.
+        </p>
+        <div class="auth-confirm__hint">
+          لم تصلك الرسالة؟ انتظر دقيقة وتفقّد مجلد <strong>الرسائل غير المرغوب فيها (Spam)</strong>.
+        </div>
+        <p id="confirm-msg" class="auth-confirm__msg hidden" role="status"></p>
+        <div class="auth-confirm__actions">
+          <button type="button" class="btn btn--primary btn--block" id="resend-btn">
+            <span class="btn-text">إعادة إرسال الرابط</span>
+          </button>
+          <button type="button" class="btn btn--ghost btn--block" id="change-email-btn">
+            استخدام بريد آخر
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-footer" id="auth-footer">
         لديك حساب بالفعل؟ <a href="/auth/login">سجل دخولك</a>
       </div>
     </div>
@@ -82,7 +124,86 @@
       const inviteInfo = document.getElementById('invite-info');
       const pageTitle = document.getElementById('page-title');
       const pageSubtitle = document.getElementById('page-subtitle');
+      const authFooter = document.getElementById('auth-footer');
+      const confirmPanel = document.getElementById('confirm-panel');
+      const confirmEmail = document.getElementById('confirm-email');
+      const resendBtn = document.getElementById('resend-btn');
+      const changeEmailBtn = document.getElementById('change-email-btn');
+      const confirmMsg = document.getElementById('confirm-msg');
       let inviteData = null;
+      let pendingEmail = '';
+      let cooldownTimer = null;
+
+      // مؤقّت لمنع إعادة الإرسال المتكرر
+      function startResendCooldown(secs) {
+        clearInterval(cooldownTimer);
+        const label = resendBtn.querySelector('.btn-text');
+        let remaining = secs;
+        resendBtn.disabled = true;
+        label.textContent = `إعادة الإرسال خلال ${remaining}ث`;
+        cooldownTimer = setInterval(() => {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(cooldownTimer);
+            resendBtn.disabled = false;
+            label.textContent = 'إعادة إرسال الرابط';
+          } else {
+            label.textContent = `إعادة الإرسال خلال ${remaining}ث`;
+          }
+        }, 1000);
+      }
+
+      // عرض شاشة "تحقّق من بريدك" بدل التحويل السريع
+      function showConfirmScreen(email) {
+        pendingEmail = email;
+        confirmEmail.textContent = email;
+        form.style.display = 'none';
+        authFooter.classList.add('hidden');
+        if (inviteInfo) inviteInfo.classList.add('hidden');
+        pageSubtitle.classList.add('hidden');
+        pageTitle.textContent = 'خطوة أخيرة';
+        confirmMsg.classList.add('hidden');
+        confirmPanel.classList.remove('hidden');
+        window.utils.renderIcons();
+        startResendCooldown(60);
+        confirmPanel.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+
+      // الرجوع للنموذج لتصحيح البريد
+      changeEmailBtn.addEventListener('click', () => {
+        clearInterval(cooldownTimer);
+        confirmPanel.classList.add('hidden');
+        form.style.display = '';
+        authFooter.classList.remove('hidden');
+        pageSubtitle.classList.remove('hidden');
+        pageTitle.textContent = inviteCode ? 'انضم كموظف' : 'إنشاء حساب جديد';
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.btn-text').textContent = 'إنشاء الحساب';
+        form.email.focus();
+        form.email.select();
+      });
+
+      // عرض رسالة داخل البطاقة (بدل التوست)
+      function showConfirmMsg(text, type) {
+        confirmMsg.textContent = text;
+        confirmMsg.classList.remove('hidden', 'auth-confirm__msg--error', 'auth-confirm__msg--success');
+        confirmMsg.classList.add(type === 'error' ? 'auth-confirm__msg--error' : 'auth-confirm__msg--success');
+      }
+
+      // إعادة إرسال رابط التأكيد
+      resendBtn.addEventListener('click', async () => {
+        if (resendBtn.disabled || !pendingEmail) return;
+        resendBtn.disabled = true;
+        try {
+          const { error } = await window.sb.auth.resend({ type: 'signup', email: pendingEmail });
+          if (error) throw error;
+          showConfirmMsg('تم إرسال رابط التأكيد مجدداً إلى بريدك', 'success');
+          startResendCooldown(60);
+        } catch (err) {
+          showConfirmMsg(window.utils.formatError(err), 'error');
+          resendBtn.disabled = false;
+        }
+      });
 
       // إذا كان هناك رمز دعوة
       if (inviteCode) {
@@ -152,20 +273,13 @@
           if (error) throw error;
 
           const welcomeMsg = inviteCode ? 'تم إنشاء الحساب بنجاح' : 'مرحباً! لديك 3 أيام تجربة مجانية';
-          // محاولة تسجيل دخول مباشر بعد التسجيل (في حالة عدم تفعيل تأكيد البريد)
           if (data.session) {
+            // تأكيد البريد غير مفعّل: دخول مباشر للوحة التحكم
             window.utils.toast(welcomeMsg, 'success');
             setTimeout(() => window.location.replace(window.utils.path('/dashboard')), 800);
           } else {
-            // التسجيل تم لكن يحتاج تأكيد البريد - نسجّل الدخول مباشرة
-            const { error: signInError } = await window.sb.auth.signInWithPassword({ email, password });
-            if (signInError) {
-              window.utils.toast('تم إنشاء الحساب! يرجى تأكيد البريد الإلكتروني ثم تسجيل الدخول', 'success');
-              setTimeout(() => window.location.replace(window.utils.path('/auth/login')), 2000);
-            } else {
-              window.utils.toast(welcomeMsg, 'success');
-              setTimeout(() => window.location.replace(window.utils.path('/dashboard')), 800);
-            }
+            // يحتاج تأكيد البريد: نعرض شاشة ثابتة "تحقّق من بريدك" بدل توست عابر
+            showConfirmScreen(email);
           }
         } catch (err) {
           window.utils.toast(window.utils.formatError(err), 'error');
