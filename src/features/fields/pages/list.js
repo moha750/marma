@@ -239,7 +239,7 @@
                 <label class="form-label" for="city">المدينة <span class="required">*</span></label>
                 <input type="text" class="form-control" id="city" name="city" required
                        value="${editing ? window.utils.escapeHtml(field.city || '') : ''}"
-                       placeholder="مثلاً: الأحساء، الهفوف">
+                       placeholder="مثلاً: الأحساء">
               </div>
               <div class="form-group">
                 <label class="form-label" for="phone">رقم الجوال <span class="required">*</span></label>
@@ -262,42 +262,44 @@
                         placeholder="ما يميّز هذه الأرضية؟ (نوع العشب، الإضاءة، الخدمات...)">${editing ? window.utils.escapeHtml(field.description || '') : ''}</textarea>
               <span class="form-help">يظهر في صفحة الأرضية. حد أقصى 600 حرف.</span>
             </div>
-            <div class="form-row cols-2">
-              <div class="form-group">
-                <label class="form-label" for="surface_type">نوع الأرضية</label>
-                <select class="form-control" id="surface_type" name="surface_type">
-                  <option value="">— غير محدد —</option>
-                  ${Object.entries(window.utils.SURFACE_LABELS).map(([k, v]) => `
-                    <option value="${k}" ${editing && field.surface_type === k ? 'selected' : ''}>${v}</option>
-                  `).join('')}
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">المزايا</label>
-                <div class="bp-amenity-chips" id="amenity-chips">
-                  ${Object.entries(window.utils.AMENITY_LABELS).map(([k, v]) => {
-                    const active = editing && Array.isArray(field.amenities) && field.amenities.includes(k);
-                    return `<button type="button" class="bp-amenity-chip${active ? ' is-active' : ''}" data-key="${k}">${v}</button>`;
-                  }).join('')}
-                </div>
-                <span class="form-help">اضغط لإضافة/إزالة الميزة. حد أقصى 12.</span>
-              </div>
+            <div class="form-group">
+              <label class="form-label" for="surface_type">نوع الأرضية</label>
+              <select class="form-control" id="surface_type" name="surface_type">
+                <option value="">— غير محدد —</option>
+                ${Object.entries(window.utils.SURFACE_LABELS).map(([k, v]) => `
+                  <option value="${k}" ${editing && field.surface_type === k ? 'selected' : ''}>${v}</option>
+                `).join('')}
+              </select>
             </div>
-            ${editing ? `
+            <div class="form-group">
+              <label class="form-label">المزايا</label>
+              <div class="amenity-grid" id="amenity-chips">
+                ${Object.entries(window.utils.AMENITY_LABELS).map(([k, v]) => {
+                  const active = editing && Array.isArray(field.amenities) && field.amenities.includes(k);
+                  const icon = window.utils.AMENITY_ICONS[k] || 'check';
+                  return `<button type="button" class="amenity-chip${active ? ' is-active' : ''}" data-key="${k}"><i data-lucide="${icon}"></i><span>${v}</span></button>`;
+                }).join('')}
+                ${(editing && Array.isArray(field.amenities) ? field.amenities.filter((a) => !window.utils.AMENITY_LABELS[a]) : []).map((txt) => {
+                  const safe = window.utils.escapeHtml(txt);
+                  return `<span class="amenity-chip amenity-chip--custom is-active" data-custom="${safe}"><i data-lucide="sparkles"></i><span>${safe}</span><button type="button" class="amenity-chip__remove" data-action="remove-custom" aria-label="إزالة"><i data-lucide="x"></i></button></span>`;
+                }).join('')}
+              </div>
+              <div class="amenity-add">
+                <input type="text" class="form-control" id="amenity-custom-input" maxlength="24" placeholder="ميزة أخرى؟ اكتبها هنا">
+                <button type="button" class="btn btn--secondary btn--sm" id="amenity-custom-add"><i data-lucide="plus"></i> إضافة</button>
+              </div>
+              <span class="form-help">اضغط لتفعيل/إلغاء ميزة، أو أضف ميزة خاصة بملعبك.</span>
+            </div>
             <div class="form-group">
               <label class="form-label">
                 صور الأرضية
                 <span class="form-help-inline" id="field-gallery-counter"></span>
               </label>
               <div class="field-gallery" id="field-gallery"></div>
-              <span class="form-help">الصورة الأولى تظهر كغلاف. تُحفظ التغييرات فوراً — JPG/PNG/WebP، حد 5 ميجابايت لكل صورة.</span>
+              <span class="form-help">${editing
+                ? 'الصورة الأولى تظهر كغلاف. تُحفظ التغييرات فوراً — JPG/PNG/WebP، حد 5 ميجابايت لكل صورة.'
+                : 'الصورة الأولى تظهر كغلاف'}</span>
             </div>
-            ` : `
-            <div class="form-group">
-              <label class="form-label">صور الأرضية</label>
-              <div class="form-help">احفظ المعلومات الأساسية أولاً، ثم ستظهر شاشة إضافة الصور تلقائياً.</div>
-            </div>
-            `}
             <span class="form-help">مدة الموعد والسعر يُضبطان من <a href="${window.utils.path('/schedule')}">صفحة أيام وفترات العمل</a>.</span>
           </form>
         `;
@@ -305,10 +307,12 @@
           <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
           <button type="submit" class="btn btn--primary" form="field-form">${editing ? 'حفظ' : 'إضافة'}</button>
         `;
+        const objectUrls = [];   // معاينات الصور المجهّزة — تُحرَّر عند إغلاق النافذة
         const ctrl = window.utils.openModal({
           title: editing ? 'تعديل أرضية' : 'إضافة أرضية',
           body: formHtml,
-          footer
+          footer,
+          onClose: () => objectUrls.forEach((u) => URL.revokeObjectURL(u))
         });
         const form = ctrl.modal.querySelector('#field-form');
         window.utils.bindPhoneInput(form.phone);
@@ -373,24 +377,27 @@
           setStatus('✓ تم تثبيت الموقع', 'success');
         }
 
-        // ── معرض الصور (وضع التعديل فقط) ───────────────────────────
+        // ── معرض الصور: تعديل = حفظ فوري، إضافة = تجهيز محلي يُرفع عند الحفظ ──
         const galleryEl = ctrl.modal.querySelector('#field-gallery');
         const counterEl = ctrl.modal.querySelector('#field-gallery-counter');
-        let galleryUrls = editing ? window.api.listFieldImages(field) : [];
-        let galleryBusy = false;
         const MAX_IMG = window.api.MAX_IMAGES_PER_FIELD || 8;
+        let galleryBusy = false;
+        // كل عنصر: { url } للمحفوظة (تعديل) أو { url, file } للمجهّزة (إضافة)
+        let galleryItems = editing
+          ? window.api.listFieldImages(field).map((u) => ({ url: u }))
+          : [];
 
         function renderGallery() {
           if (!galleryEl) return;
-          const items = galleryUrls.map((url, i) => `
-            <div class="field-gallery__item${i === 0 ? ' field-gallery__item--cover' : ''}" data-url="${window.utils.escapeHtml(url)}" data-index="${i}">
-              <img src="${window.utils.escapeHtml(url)}" alt="" loading="lazy">
+          const items = galleryItems.map((it, i) => `
+            <div class="field-gallery__item${i === 0 ? ' field-gallery__item--cover' : ''}" data-url="${window.utils.escapeHtml(it.url)}" data-index="${i}">
+              <img src="${window.utils.escapeHtml(it.url)}" alt="" loading="lazy">
               ${i === 0 ? '<span class="field-gallery__cover-badge">غلاف</span>' : ''}
               <div class="field-gallery__actions">
                 <button type="button" class="field-gallery__btn" data-action="move-prev" ${i === 0 ? 'disabled' : ''} title="تقديم">
                   <i data-lucide="arrow-up"></i>
                 </button>
-                <button type="button" class="field-gallery__btn" data-action="move-next" ${i === galleryUrls.length - 1 ? 'disabled' : ''} title="تأخير">
+                <button type="button" class="field-gallery__btn" data-action="move-next" ${i === galleryItems.length - 1 ? 'disabled' : ''} title="تأخير">
                   <i data-lucide="arrow-down"></i>
                 </button>
                 <button type="button" class="field-gallery__btn field-gallery__btn--danger" data-action="remove" title="حذف">
@@ -399,7 +406,7 @@
               </div>
             </div>
           `).join('');
-          const addBtn = galleryUrls.length < MAX_IMG ? `
+          const addBtn = galleryItems.length < MAX_IMG ? `
             <label class="field-gallery__add">
               <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="add-image">
               <i data-lucide="plus"></i>
@@ -407,7 +414,7 @@
             </label>
           ` : '';
           galleryEl.innerHTML = items + addBtn;
-          if (counterEl) counterEl.textContent = `(${galleryUrls.length} / ${MAX_IMG})`;
+          if (counterEl) counterEl.textContent = `(${galleryItems.length} / ${MAX_IMG})`;
           window.utils.renderIcons(galleryEl);
         }
 
@@ -423,7 +430,20 @@
           }
         }
 
-        if (editing) {
+        // تحقّق مبدئي للملف المجهّز (يُعاد التحقق عند الرفع الفعلي بعد الإنشاء)
+        function validateStagedImage(file) {
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            window.utils.toast('الصيغة غير مدعومة (JPG/PNG/WebP)', 'error');
+            return false;
+          }
+          if (file.size > 5 * 1024 * 1024) {
+            window.utils.toast('حجم الصورة يتجاوز 5 ميجابايت', 'error');
+            return false;
+          }
+          return true;
+        }
+
+        if (galleryEl) {
           renderGallery();
 
           galleryEl.addEventListener('change', (e) => {
@@ -432,12 +452,25 @@
             const file = input.files && input.files[0];
             input.value = '';
             if (!file) return;
-            withBusy(async () => {
-              const next = await window.api.addFieldImage(field.id, file);
-              galleryUrls = next;
+            if (editing) {
+              withBusy(async () => {
+                const next = await window.api.addFieldImage(field.id, file);
+                galleryItems = next.map((u) => ({ url: u }));
+                renderGallery();
+                invalidateFieldsCache();
+              });
+            } else {
+              // إضافة: تجهيز محلي (معاينة فورية، يُرفع عند الحفظ)
+              if (!validateStagedImage(file)) return;
+              if (galleryItems.length >= MAX_IMG) {
+                window.utils.toast(`الحد الأقصى ${MAX_IMG} صور`, 'warning');
+                return;
+              }
+              const url = URL.createObjectURL(file);
+              objectUrls.push(url);
+              galleryItems.push({ url, file });
               renderGallery();
-              invalidateFieldsCache();
-            });
+            }
           });
 
           galleryEl.addEventListener('click', (e) => {
@@ -446,39 +479,41 @@
             const itemEl = btn.closest('.field-gallery__item');
             if (!itemEl) return;
             const index = Number(itemEl.dataset.index);
-            const url = itemEl.dataset.url;
             const action = btn.dataset.action;
 
             if (action === 'remove') {
-              withBusy(async () => {
-                const next = await window.api.removeFieldImage(field.id, url);
-                galleryUrls = next;
+              if (editing) {
+                const url = itemEl.dataset.url;
+                withBusy(async () => {
+                  const next = await window.api.removeFieldImage(field.id, url);
+                  galleryItems = next.map((u) => ({ url: u }));
+                  renderGallery();
+                  invalidateFieldsCache();
+                });
+              } else {
+                const [removed] = galleryItems.splice(index, 1);
+                if (removed && removed.url.startsWith('blob:')) URL.revokeObjectURL(removed.url);
                 renderGallery();
-                invalidateFieldsCache();
-              });
+              }
               return;
             }
-            if (action === 'move-prev' && index > 0) {
-              const next = galleryUrls.slice();
-              [next[index - 1], next[index]] = [next[index], next[index - 1]];
+
+            const movable = (action === 'move-prev' && index > 0)
+              || (action === 'move-next' && index < galleryItems.length - 1);
+            if (!movable) return;
+            const j = action === 'move-prev' ? index - 1 : index + 1;
+            if (editing) {
+              const urls = galleryItems.map((it) => it.url);
+              [urls[j], urls[index]] = [urls[index], urls[j]];
               withBusy(async () => {
-                const saved = await window.api.reorderFieldImages(field.id, next);
-                galleryUrls = saved;
+                const saved = await window.api.reorderFieldImages(field.id, urls);
+                galleryItems = saved.map((u) => ({ url: u }));
                 renderGallery();
                 invalidateFieldsCache();
               });
-              return;
-            }
-            if (action === 'move-next' && index < galleryUrls.length - 1) {
-              const next = galleryUrls.slice();
-              [next[index + 1], next[index]] = [next[index], next[index + 1]];
-              withBusy(async () => {
-                const saved = await window.api.reorderFieldImages(field.id, next);
-                galleryUrls = saved;
-                renderGallery();
-                invalidateFieldsCache();
-              });
-              return;
+            } else {
+              [galleryItems[j], galleryItems[index]] = [galleryItems[index], galleryItems[j]];
+              renderGallery();
             }
           });
         }
@@ -487,17 +522,45 @@
         const amenityChipsEl = ctrl.modal.querySelector('#amenity-chips');
         if (amenityChipsEl) {
           amenityChipsEl.addEventListener('click', (e) => {
-            const btn = e.target.closest('.bp-amenity-chip');
-            if (!btn) return;
-            const isActive = btn.classList.contains('is-active');
-            if (!isActive) {
-              const count = amenityChipsEl.querySelectorAll('.is-active').length;
-              if (count >= 12) {
-                window.utils.toast('الحد الأقصى 12 ميزة', 'warning');
-                return;
-              }
+            const removeBtn = e.target.closest('[data-action="remove-custom"]');
+            if (removeBtn) {
+              const chip = removeBtn.closest('.amenity-chip--custom');
+              if (chip) chip.remove();
+              return;
             }
+            const btn = e.target.closest('.amenity-chip');
+            if (!btn || btn.classList.contains('amenity-chip--custom')) return; // المخصّصة لا تُبدَّل
             btn.classList.toggle('is-active');
+          });
+
+          // إضافة ميزة مخصّصة (نص حرّ) بضوابط: قصّ، منع تكرار، سقف 6 (الطول يحدّه maxlength)
+          const customInput = ctrl.modal.querySelector('#amenity-custom-input');
+          const customAddBtn = ctrl.modal.querySelector('#amenity-custom-add');
+          const addCustomAmenity = () => {
+            const val = (customInput.value || '').trim().replace(/\s+/g, ' ');
+            if (!val) return;
+            const norm = (s) => s.toLocaleLowerCase('ar');
+            const labelValues = Object.values(window.utils.AMENITY_LABELS).map(norm);
+            const customs = Array.from(amenityChipsEl.querySelectorAll('.amenity-chip--custom'))
+              .map((el) => el.dataset.custom);
+            if (labelValues.includes(norm(val)) || customs.map(norm).includes(norm(val))) {
+              window.utils.toast('هذه الميزة موجودة بالفعل', 'warning');
+              return;
+            }
+            const chip = document.createElement('span');
+            chip.className = 'amenity-chip amenity-chip--custom is-active';
+            chip.dataset.custom = val;
+            chip.innerHTML = '<i data-lucide="sparkles"></i><span></span>'
+              + '<button type="button" class="amenity-chip__remove" data-action="remove-custom" aria-label="إزالة"><i data-lucide="x"></i></button>';
+            chip.querySelector('span').textContent = val; // آمن من XSS
+            amenityChipsEl.appendChild(chip);
+            window.utils.renderIcons(chip);
+            customInput.value = '';
+            customInput.focus();
+          };
+          if (customAddBtn) customAddBtn.addEventListener('click', addCustomAmenity);
+          if (customInput) customInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); addCustomAmenity(); }
           });
         }
 
@@ -532,7 +595,9 @@
             return;
           }
           const amenities = amenityChipsEl
-            ? Array.from(amenityChipsEl.querySelectorAll('.bp-amenity-chip.is-active')).map((el) => el.dataset.key)
+            ? Array.from(amenityChipsEl.querySelectorAll('.amenity-chip.is-active'))
+                .map((el) => el.dataset.key || el.dataset.custom)
+                .filter(Boolean)
             : [];
           const payload = {
             name: fd.get('name'),
@@ -545,10 +610,11 @@
             surface_type: (fd.get('surface_type') || '').trim() || null,
             amenities
           };
+          const stagedFiles = editing ? [] : galleryItems.filter((it) => it.file).map((it) => it.file);
           const submitBtn = ctrl.modal.querySelector('button[type="submit"]');
           const origSubmitText = submitBtn.textContent;
           submitBtn.disabled = true;
-          submitBtn.textContent = 'جاري الحفظ...';
+          submitBtn.textContent = stagedFiles.length ? 'جارٍ الحفظ ورفع الصور...' : 'جارٍ الحفظ...';
           try {
             if (editing) {
               await window.api.updateField(field.id, payload);
@@ -558,13 +624,21 @@
               refresh();
             } else {
               const saved = await window.api.createField(payload);
-              window.utils.toast('تمت إضافة الأرضية. أضف صور الأرضية الآن.', 'success');
+              // ارفع الصور المجهّزة بالترتيب (الأولى = الغلاف)
+              let failed = 0;
+              for (const file of stagedFiles) {
+                try { await window.api.addFieldImage(saved.id, file); }
+                catch (_) { failed++; }
+              }
               try { sessionStorage.removeItem('marma:onboarding:pending'); } catch (_) {}
               invalidateFieldsCache();
               ctrl.close();
               refresh();
-              // افتح modal التعديل تلقائياً لتمكين رفع الصور
-              openFieldModal(saved);
+              if (failed > 0) {
+                window.utils.toast(`تمت إضافة الأرضية، لكن تعذّر رفع ${failed} صورة — أضفها من التعديل`, 'warning');
+              } else {
+                window.utils.toast('تمت إضافة الأرضية', 'success');
+              }
             }
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');

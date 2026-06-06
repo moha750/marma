@@ -96,13 +96,25 @@ window.utils = {
     showers: 'دش',
     parking: 'موقف سيارات',
     lights: 'إضاءة ليلية',
-    balls: 'كرات',
     lockers: 'خزائن',
     wifi: 'واي-فاي',
     shaded: 'مظلّل',
     cafeteria: 'كافتيريا',
     prayer_room: 'مصلّى',
     seating: 'جلسات للمشجعين'
+  },
+
+  // أيقونة Lucide لكل ميزة (لعرض منظّم في نافذة الأرضية)
+  AMENITY_ICONS: {
+    showers: 'shower-head',
+    parking: 'square-parking',
+    lights: 'lightbulb',
+    lockers: 'lock',
+    wifi: 'wifi',
+    shaded: 'umbrella',
+    cafeteria: 'coffee',
+    prayer_room: 'moon-star',
+    seating: 'armchair'
   },
 
   // قاموس الترجمة لأنواع الأرضيات

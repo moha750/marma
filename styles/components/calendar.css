@@ -273,7 +273,12 @@
 .cal-leg .swatch--cancelled { background: var(--danger-tint); border-inline-start: 3px solid var(--danger); }
 
 /* بطاقة التقويم — بلا padding: الشبكة تملأ البطاقة بالكامل (overflow يقصّ الزوايا) */
-.cal-card { background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 0; overflow: hidden; }
+/* تمرير أفقي تلقائي: يظهر فقط حين يتجاوز عرض #calendar الأدنى (يضبطه JS للأسبوع/الشهر)
+   عرضَ البطاقة المتاح — فيُمرَّر بدل ضغط الأعمدة، ويتكيّف مع المساحة وحالة الشريط الجانبي. */
+.cal-card { background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.cal-card::-webkit-scrollbar { height: 6px; }
+.cal-card::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
+.cal-card::-webkit-scrollbar-track { background: transparent; }
 .cal-card .fc { --fc-page-bg-color: transparent; }
 
 /* تنبيه: حجوزات تقع خارج أوقات العمل المعروضة */
@@ -309,11 +314,4 @@
   .cal-view { flex: 1; padding: 0 var(--space-2); text-align: center; }
   .cal-subbar { align-items: flex-start; }
   .fc .fc-timegrid-slot { height: 2.4em; }
-
-  /* تمرير أفقي للبطاقة: في الأسبوع/الشهر يضبط JS عرض #calendar الأدنى
-     فتُمرَّر الأعمدة بدل انضغاطها؛ في اليوم/القائمة لا عرض أدنى فتملأ الشاشة. */
-  .cal-card { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
-  .cal-card::-webkit-scrollbar { height: 6px; }
-  .cal-card::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
-  .cal-card::-webkit-scrollbar-track { background: transparent; }
 }

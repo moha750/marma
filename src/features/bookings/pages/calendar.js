@@ -500,6 +500,8 @@
       calendar = new window.FullCalendar.Calendar(calendarEl, {
         initialView: isMobile ? 'timeGridDay' : 'timeGridWeek',
         locale: 'ar',
+        // ملف لغة FC العربي لا يعرّف noEventsText، فيرجع للإنجليزي افتراضياً — نضبطه يدوياً
+        noEventsText: 'لا مواعيد في هذه الفترة',
         direction: 'rtl',
         height: 'auto',
         nowIndicator: true,
@@ -529,11 +531,11 @@
           const view = calendar.view.type;
           if (titleEl) titleEl.textContent = calendar.view.title;
           viewBtns.forEach((b) => b.classList.toggle('is-active', b.dataset.view === view));
-          // على الجوال: امنح عرضَي الأسبوع/الشهر عرضاً أدنى مقروءاً فتُمرَّر البطاقة
-          // أفقياً بدل انضغاط الأعمدة السبعة. اليوم/القائمة يبقيان بعرض الشاشة.
-          const small = window.matchMedia('(max-width: 768px)').matches;
-          const multiCol = (view === 'timeGridWeek' || view === 'dayGridMonth');
-          calendarEl.style.minWidth = (small && multiCol) ? '680px' : '';
+          // حدّ أدنى مريح لأعمدة الأسبوع/الشهر السبعة. البطاقة تُمرَّر أفقياً تلقائياً
+          // فقط حين تضيق المساحة دونه (يتكيّف مع حجم النافذة وحالة الشريط الجانبي)،
+          // بدل ضغط الأعمدة. اليوم/القائمة يملآن المساحة المتاحة.
+          calendarEl.style.minWidth =
+            view === 'timeGridWeek' ? '780px' : (view === 'dayGridMonth' ? '700px' : '');
           try { calendar.updateSize(); } catch (_) {}
         },
         eventDidMount(arg) {

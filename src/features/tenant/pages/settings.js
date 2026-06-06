@@ -22,32 +22,118 @@
     return `${window.location.origin}${window.utils.path('/book')}?t=${encodeURIComponent(tenantId)}`;
   }
 
-  function buildQrUrl(text, size) {
-    const params = new URLSearchParams({
-      size: `${size}x${size}`,
-      data: text,
-      margin: '10',
-      qzone: '2'
-    });
-    return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
+  // ── توليد QR محلياً (بلا API خارجي) مع شعار مرمى في المنتصف ──
+  let qrLibPromise = null;
+  function loadQrLib() {
+    if (window.QRCode && window.QRCode.toCanvas) return Promise.resolve();
+    if (!qrLibPromise) {
+      qrLibPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = window.utils.path('/assets/vendor/qrcode.min.js');
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('تعذّر تحميل مكتبة QR'));
+        document.head.appendChild(s);
+      });
+    }
+    return qrLibPromise;
   }
 
-  async function downloadQr(qrUrl, filename) {
-    try {
-      const res = await fetch(qrUrl);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 0);
-    } catch (_) {
-      window.open(qrUrl, '_blank', 'noopener');
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  // الشعار SVG فيه viewBox فقط — نحقن width/height ليُرسم على canvas في كل المتصفحات
+  // (preserveAspectRatio الافتراضي يحافظ على النسبة داخل المربع)
+  async function loadLogoImage(px) {
+    const res = await fetch(window.utils.path('/assets/logo-mark.svg'));
+    let svg = await res.text();
+    if (!/<svg[^>]*\bwidth=/.test(svg)) {
+      svg = svg.replace(/<svg\s/, `<svg width="${px}" height="${px}" `);
     }
+    return loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+  }
+
+  // يرسم مربّعاً مستدير الزوايا (للعيون)
+  function roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // QR موثوق المسح بلمسة أنيقة: وحدات بيانات مربّعات صلبة (مضمونة المسح) بلون
+  // العلامة الداكن، عيون مدوّرة الزوايا، وشارة دائرية للشعار. تصحيح خطأ H.
+  // الفهرسة data[r*count+c] مطابقة لـ modules.get(r,c). فشل الشعار → رمز نظيف.
+  async function buildQrDataUrl(text, size) {
+    await loadQrLib();
+    const DARK = '#0B3D2E';                 // أخضر العلامة الداكن — تباين عالٍ
+    const render = async (withLogo) => {
+      const qr = window.QRCode.create(text, { errorCorrectionLevel: 'H' });
+      const count = qr.modules.size;
+      const data = qr.modules.data;
+      const margin = 4;                     // منطقة هادئة (بالوحدات)
+      const cell = size / (count + margin * 2);
+      const off = margin * cell;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      const cx = size / 2, cy = size / 2;
+      const clearR = withLogo ? size * 0.18 : 0;   // دائرة فارغة وسط الرمز للشعار
+      const inFinder = (r, c) =>
+        (r < 7 && c < 7) || (r < 7 && c >= count - 7) || (r >= count - 7 && c < 7);
+
+      // وحدات البيانات: مربّعات صلبة كاملة (نتجاوز العيون ودائرة الشعار)
+      ctx.fillStyle = DARK;
+      for (let r = 0; r < count; r++) {
+        for (let c = 0; c < count; c++) {
+          if (!data[r * count + c] || inFinder(r, c)) continue;
+          const x = off + c * cell, y = off + r * cell;
+          if (clearR && Math.hypot(x + cell / 2 - cx, y + cell / 2 - cy) < clearR + cell * 0.6) continue;
+          ctx.fillRect(x, y, cell + 0.6, cell + 0.6);   // تداخل بسيط يسدّ فجوات التقريب
+        }
+      }
+
+      // العيون الثلاثة: بنية finder القياسية بزوايا مدوّرة (تُمسح بثبات)
+      const eye = (or, oc) => {
+        const x = off + oc * cell, y = off + or * cell, s = 7 * cell;
+        ctx.fillStyle = DARK; roundRectPath(ctx, x, y, s, s, cell * 1.3); ctx.fill();
+        ctx.fillStyle = '#fff'; roundRectPath(ctx, x + cell, y + cell, 5 * cell, 5 * cell, cell * 0.95); ctx.fill();
+        ctx.fillStyle = DARK; roundRectPath(ctx, x + 2 * cell, y + 2 * cell, 3 * cell, 3 * cell, cell * 0.6); ctx.fill();
+      };
+      eye(0, 0); eye(0, count - 7); eye(count - 7, 0);
+
+      // شارة الشعار: دائرة بيضاء + الشعار في منتصفها
+      if (withLogo) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(cx, cy, clearR, 0, 2 * Math.PI); ctx.fill();
+        const lw = clearR * 1.5;
+        const img = await loadLogoImage(Math.round(clearR * 2));
+        ctx.drawImage(img, cx - lw / 2, cy - lw / 2, lw, lw);
+      }
+      return canvas.toDataURL('image/png');
+    };
+    try { return await render(true); }
+    catch (_) { return render(false); }
+  }
+
+  function downloadDataUrl(dataUrl, filename) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   function printQr(tenantName, qrUrl) {
@@ -153,7 +239,7 @@
               <textarea class="form-control" name="description" rows="3" maxlength="600"
                         placeholder="اكتب نبذة قصيرة عن الملعب — موقعه، ما يميّزه، نوع الخدمة"
                         ${isOwner ? '' : 'disabled'}>${window.utils.escapeHtml(tenant.description || '')}</textarea>
-              <span class="form-help"><span id="desc-counter">${(tenant.description || '').length}</span>/600 حرف</span>
+              <span class="form-help">600/<span id="desc-counter">${(tenant.description || '').length}</span> حرف</span>
             </div>
           </div>
           ${isOwner ? `
@@ -188,7 +274,7 @@
 
           <div class="qr-share">
             <div class="qr-share-image">
-              <img src="${buildQrUrl(publicLink, 240)}" alt="رمز QR لرابط الحجز" width="200" height="200" loading="lazy">
+              <img alt="رمز QR لرابط الحجز" width="200" height="200">
             </div>
             <div class="qr-share-content">
               <div class="fw-semibold mb-sm">رمز QR للحجز</div>
@@ -228,12 +314,22 @@
 
       const downloadBtn = container.querySelector('#qr-download');
       const printBtn = container.querySelector('#qr-print');
+      const qrImg = container.querySelector('.qr-share-image img');
       const qrFilename = `qr-${(tenant.name || 'booking').replace(/\s+/g, '-')}.png`;
-      downloadBtn.addEventListener('click', () => {
-        downloadQr(buildQrUrl(publicLink, 600), qrFilename);
+
+      // توليد مرّة واحدة بدقّة عالية، يُعاد استخدامه للعرض والتحميل والطباعة
+      const qrReady = buildQrDataUrl(publicLink, 1024);
+      qrReady
+        .then((url) => { if (qrImg) qrImg.src = url; })
+        .catch(() => { window.utils.toast('تعذّر توليد رمز QR', 'error'); });
+
+      downloadBtn.addEventListener('click', async () => {
+        try { downloadDataUrl(await qrReady, qrFilename); }
+        catch (_) { window.utils.toast('تعذّر توليد رمز QR', 'error'); }
       });
-      printBtn.addEventListener('click', () => {
-        printQr(tenant.name, buildQrUrl(publicLink, 600));
+      printBtn.addEventListener('click', async () => {
+        try { printQr(tenant.name, await qrReady); }
+        catch (_) { window.utils.toast('تعذّر توليد رمز QR', 'error'); }
       });
 
       if (isOwner) {
