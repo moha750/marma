@@ -1,0 +1,3 @@
+# Cloudflare Pages — SPA لوحة المشرف العام: أي /admin/* يخدمه admin.html (حالة 200)
+# بقية المسارات غير الموجودة تُخدَم عبر 404.html (= app.html) كما هو معتاد.
+/admin/*  /admin.html  200

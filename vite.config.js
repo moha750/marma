@@ -27,7 +27,10 @@ function spaFallbackMiddleware(req, _res, next) {
   const segments = pathname.split('/').filter(Boolean);
   // إذا كان أول segment هو 'marma' (في preview)، تجاوزه
   const firstSegment = segments[0] === 'marma' ? segments[1] : segments[0];
-  if (firstSegment && APP_ROUTES.includes(firstSegment)) {
+  if (firstSegment === 'admin') {
+    // SPA المشرف العام: /admin/* → admin.html
+    req.url = '/admin.html';
+  } else if (firstSegment && APP_ROUTES.includes(firstSegment)) {
     req.url = '/app.html';
   }
   next();
@@ -55,8 +58,7 @@ export default defineConfig(({ mode }) => {
           signup: resolve(__dirname, 'auth/signup.html'),
           book: resolve(__dirname, 'book.html'),
           app: resolve(__dirname, 'app.html'),
-          adminTenants: resolve(__dirname, 'admin/tenants.html'),
-          adminSubscriptions: resolve(__dirname, 'admin/subscriptions.html')
+          admin: resolve(__dirname, 'admin.html')
         }
       }
     },
@@ -134,6 +136,8 @@ export default defineConfig(({ mode }) => {
           await copyIfExists('service-worker.js');
           // Cloudflare Pages: ملف الـ headers للتحكم في الكاش
           await copyIfExists('_headers');
+          // Cloudflare Pages: توجيه /admin/* إلى admin.html (SPA المشرف)
+          await copyIfExists('_redirects');
 
           // 404.html = نفس app.html (يلتقط كل المسارات غير الموجودة على GitHub Pages)
           try {

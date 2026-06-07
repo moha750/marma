@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo-mark.svg">
+  <meta name="theme-color" content="#0F9D58">
+  <title>لوحة المشرف - مَرمى</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <div id="app-root">
+    <div class="loader-center" style="min-height:100vh"><div class="loader loader--lg"></div></div>
+  </div>
+
+  <!-- CDN libraries -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Config (يبقى في الجذر — في .gitignore) -->
+  <script src="/config.js"></script>
+
+  <!-- Core infrastructure (الترتيب مهم) -->
+  <script src="/src/core/supabase-client.js"></script>
+  <script src="/src/core/utils.js"></script>
+  <script src="/src/core/auth.js"></script>
+
+  <!-- Feature APIs (قبل aggregator) -->
+  <script src="/src/features/tenant/api.js"></script>
+  <script src="/src/features/admin/api.js"></script>
+
+  <!-- API aggregator (window.api) -->
+  <script src="/src/core/api.js"></script>
+
+  <!-- Shared components -->
+  <script src="/src/shared/components/theme-toggle.js"></script>
+  <script src="/src/shared/components/table-cards.js"></script>
+  <script src="/src/features/admin/components/admin-layout.js"></script>
+
+  <!-- SPA infrastructure -->
+  <script src="/src/core/router.js"></script>
+
+  <!-- Route registration -->
+  <script src="/src/app/admin-routes.js"></script>
+
+  <!-- Page modules (يسجّل كل صفحة نفسها في window.pages) -->
+  <script src="/src/features/admin/pages/overview.js"></script>
+  <script src="/src/features/admin/pages/subscriptions.js"></script>
+  <script src="/src/features/admin/pages/tenants.js"></script>
+  <script src="/src/features/admin/pages/tenant-details.js"></script>
+
+  <!-- Boot (آخر شيء) -->
+  <script src="/src/app/admin-boot.js"></script>
+</body>
+</html>

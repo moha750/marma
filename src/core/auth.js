@@ -126,7 +126,7 @@ window.auth = (function () {
 
   // يحدد الوجهة الصحيحة بعد تسجيل الدخول (مع base path):
   // - إذا له profile (مالك أو موظف) → /[base]/dashboard
-  // - إذا لا profile لكن super-admin → /[base]/admin/subscriptions
+  // - إذا لا profile لكن super-admin → /[base]/admin/overview
   // - غير ذلك → null (يجب تسجيل الخروج)
   async function getPostLoginDestination() {
     const { data: { user } } = await window.sb.auth.getUser();
@@ -148,7 +148,7 @@ window.auth = (function () {
       return withBase('/dashboard');
     }
     const isAdmin = await checkIsSuperAdmin({ force: true });
-    if (isAdmin) return withBase('/admin/subscriptions');
+    if (isAdmin) return withBase('/admin/overview');
     return null;
   }
 

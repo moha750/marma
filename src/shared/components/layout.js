@@ -167,7 +167,7 @@ window.layout = (function () {
 
     const navHtml = buildNavHtml(profile, isLocked);
     const adminLinkHtml = isSuperAdmin
-      ? `<a href="${window.utils.path('/admin/subscriptions')}" class="admin-link" title="لوحة المشرف">
+      ? `<a href="${window.utils.path('/admin/overview')}" class="admin-link" title="لوحة المشرف">
            <span class="nav-icon"><i data-lucide="shield"></i></span>
            <span class="nav-label">لوحة المشرف</span>
          </a>`

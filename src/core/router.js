@@ -16,6 +16,11 @@ window.router = (function () {
     return window.__BASE__ || '';
   }
 
+  // المسار الافتراضي عند عدم التطابق — قابل للتهيئة (المالك: dashboard، المشرف: admin-subscriptions)
+  function defaultRouteName() {
+    return (window.app && window.app.defaultRoute) || 'dashboard';
+  }
+
   // يحول pathname المتصفح إلى مسار بدون base
   // مثال: '/marma/customers/abc' → '/customers/abc'
   function stripBase(pathname) {
@@ -99,7 +104,7 @@ window.router = (function () {
     const ctx = window.app && window.app.ctx;
     if (!ctx) return;
 
-    const targetName = name && routes[name] ? name : 'dashboard';
+    const targetName = name && routes[name] ? name : defaultRouteName();
     const route = routes[targetName];
     if (!route) {
       renderNotFound();
@@ -164,7 +169,7 @@ window.router = (function () {
       <div class="card">
         <div class="empty-state">
           <p>الصفحة غير موجودة</p>
-          <a href="${withBase('/dashboard')}" class="btn btn--primary mt-md">العودة للوحة التحكم</a>
+          <a href="${buildPath(defaultRouteName())}" class="btn btn--primary mt-md">العودة للرئيسية</a>
         </div>
       </div>
     `;
@@ -205,9 +210,9 @@ window.router = (function () {
     started = true;
     window.addEventListener('popstate', go);
     document.addEventListener('click', interceptLinkClicks);
-    // إذا الـ pathname لا يطابق أي مسار SPA (مثل دخل المستخدم على /app.html مباشرة أو 404.html) → /dashboard
+    // إذا الـ pathname لا يطابق أي مسار SPA (مثل دخل المستخدم على app.html/admin.html مباشرة أو 404.html) → الافتراضي
     if (!matchRoute(stripBase(location.pathname))) {
-      history.replaceState(null, '', withBase('/dashboard'));
+      history.replaceState(null, '', buildPath(defaultRouteName()));
     }
     go();
   }
