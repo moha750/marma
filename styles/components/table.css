@@ -178,123 +178,119 @@
   }
 }
 
-/* ─── تحويل الجدول إلى كروت مكدّسة على الجوال (opt-in عبر .table--cards) ───
-   للجداول الكثيفة (الحجوزات/العملاء): بدل التمرير الأفقي، يصبح كل صف كرتاً
-   يعرض حقوله رأسياً مع عنوان من data-label. سطح المكتب لا يتأثّر مطلقاً.
+/* ─── تحويل الجدول إلى كروت مكدّسة عند تجاوز عرضه للحاوية ───
+   بدل التمرير الأفقي، يصبح كل صف كرتاً يعرض حقوله رأسياً مع عنوان من data-label.
+   المُحرّك: src/shared/components/table-cards.js يضيف .as-cards على .table-wrapper
+   متى لم يتّسع الجدول — فيعمل بأي عرض (جوال أو سطح مكتب بمساحة ضيّقة)، حسب التجاوز
+   الفعلي لا نقطة فصل ثابتة.
 */
-@media (max-width: 768px) {
-  .table--cards,
-  .table--cards tbody,
-  .table--cards tbody tr,
-  .table--cards tbody td {
-    display: block;
-    width: auto;
-  }
+.table-wrapper.as-cards .table--cards,
+.table-wrapper.as-cards .table--cards tbody,
+.table-wrapper.as-cards .table--cards tbody tr,
+.table-wrapper.as-cards .table--cards tbody td {
+  display: block;
+  width: auto;
+}
 
-  /* أخفِ الرأس بصرياً مع إبقائه متاحاً لقارئات الشاشة */
-  .table--cards thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-  }
+/* أخفِ الرأس بصرياً مع إبقائه متاحاً لقارئات الشاشة */
+.table-wrapper.as-cards .table--cards thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 
-  /* كل صف = كرت: سطح + حلقة رفيعة + إنارة داخلية (توقيع Quiet Pitch) */
-  .table--cards tbody tr {
-    position: relative;
-    background: var(--surface-1);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-1), var(--ring-inset);
-    margin-bottom: var(--space-3);
-    overflow: hidden;
-  }
-  .table--cards tbody tr:last-child { margin-bottom: 0; }
-  .table--cards tbody tr:hover { background: var(--surface-1); }
+/* كل صف = كرت: سطح + حلقة رفيعة + إنارة داخلية (توقيع Quiet Pitch) */
+.table-wrapper.as-cards .table--cards tbody tr {
+  position: relative;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1), var(--ring-inset);
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+}
+.table-wrapper.as-cards .table--cards tbody tr:last-child { margin-bottom: 0; }
+.table-wrapper.as-cards .table--cards tbody tr:hover { background: var(--surface-1); }
 
-  /* أعِد ضبط الحدود/الحشو لكل خلية داخل الكرت */
-  .table--cards tbody td {
-    position: relative;
-    border: 0;
-    padding: var(--space-2) var(--space-4);
-    text-align: end;
-  }
+/* أعِد ضبط الحدود/الحشو لكل خلية داخل الكرت */
+.table-wrapper.as-cards .table--cards tbody td {
+  position: relative;
+  border: 0;
+  padding: var(--space-2) var(--space-4);
+  text-align: end;
+}
 
-  /* الترويسة: أوّل خلية = الحقل الأبرز (أكبر، بلا تسمية)، يفصلها خط واحد.
-     نستخدم الكلاسين معاً (.table.table--cards) لرفع الـ specificity فوق قاعدة
-     `.table tbody tr:last-child td { border-bottom:0 }` كي لا يختفي الفاصل عن آخر كرت. */
-  .table.table--cards tbody td:first-child {
-    padding-block: var(--space-3);
-    font-size: var(--text-md);
-    font-weight: var(--weight-semibold);
-    color: var(--text-primary);
-    text-align: start;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .table--cards tbody td:first-child::before { content: none; }
+/* الترويسة: أوّل خلية = الحقل الأبرز (أكبر، بلا تسمية)، يفصلها خط واحد. */
+.table-wrapper.as-cards .table.table--cards tbody td:first-child {
+  padding-block: var(--space-3);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  text-align: start;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.table-wrapper.as-cards .table--cards tbody td:first-child::before { content: none; }
 
-  /* شارة الحالة (.card-tag): تُرفع إلى هيدر الكرت — أعلى جهة النهاية، مقابل العنوان */
-  .table--cards tbody td.card-tag {
-    position: absolute;
-    inset-block-start: var(--space-3);
-    inset-inline-end: var(--space-4);
-    padding: 0;
-    z-index: 1;
-  }
-  .table--cards tbody td.card-tag::before { content: none; }
-  /* احجز مساحة في العنوان للشارة (فقط حين توجد شارة) كي لا يصطدما — يكفي لأطول chip */
-  .table--cards tbody tr:has(.card-tag) td:first-child {
-    padding-inline-end: 88px;
-  }
+/* شارة الحالة (.card-tag): تُرفع إلى هيدر الكرت — أعلى جهة النهاية، مقابل العنوان */
+.table-wrapper.as-cards .table--cards tbody td.card-tag {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-end: var(--space-4);
+  padding: 0;
+  z-index: 1;
+}
+.table-wrapper.as-cards .table--cards tbody td.card-tag::before { content: none; }
+.table-wrapper.as-cards .table--cards tbody tr:has(.card-tag) td:first-child {
+  padding-inline-end: 88px;
+}
 
-  /* الحقول الثانوية: تسمية هادئة جداً عند البداية + قيمة بارزة عند النهاية */
-  .table--cards tbody td:not(:first-child):not(.actions-cell):not(.card-tag) {
-    padding-inline-start: 40%;
-  }
-  .table--cards tbody td:not(:first-child):not(.actions-cell):not(.card-tag)::before {
-    content: attr(data-label);
-    position: absolute;
-    inset-inline-start: var(--space-4);
-    inset-block-start: var(--space-2);
-    width: 34%;
-    text-align: start;
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-medium);
-    color: var(--text-tertiary);
-    line-height: var(--leading-snug);
-  }
+/* الحقول الثانوية: تسمية هادئة جداً عند البداية + قيمة بارزة عند النهاية */
+.table-wrapper.as-cards .table--cards tbody td:not(:first-child):not(.actions-cell):not(.card-tag) {
+  padding-inline-start: 40%;
+}
+.table-wrapper.as-cards .table--cards tbody td:not(:first-child):not(.actions-cell):not(.card-tag)::before {
+  content: attr(data-label);
+  position: absolute;
+  inset-inline-start: var(--space-4);
+  inset-block-start: var(--space-2);
+  width: 34%;
+  text-align: start;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  line-height: var(--leading-snug);
+}
 
-  /* أخفِ ذيل الأفعال إن كان بلا أزرار (مثل صف المالك/"أنت" في الموظفين) */
-  .table--cards tbody td.actions-cell:not(:has(.actions-inline)) {
-    display: none;
-  }
+/* أخفِ ذيل الأفعال إن كان بلا أزرار */
+.table-wrapper.as-cards .table--cards tbody td.actions-cell:not(:has(.actions-inline)) {
+  display: none;
+}
 
-  /* ذيل الأفعال: فاصل علوي خفيف + أزرار ظاهرة عند النهاية (بلا خلفية ثقيلة) */
-  .table--cards tbody td.actions-cell {
-    padding: var(--space-2) var(--space-3);
-    border-top: 1px solid var(--border-subtle);
-    text-align: start;
-  }
-  .table--cards tbody td.actions-cell::before { content: none; }
-  .table--cards tbody td.actions-cell .actions-inline {
-    opacity: 1;
-    width: 100%;
-    justify-content: flex-end;
-  }
-  /* الزر الأساسي يظهر بنصه داخل ذيل الكرت (أيقونة + نص) لوضوح الإيماءة */
-  .table--cards .btn-label { display: inline; }
+/* ذيل الأفعال: فاصل علوي خفيف + أزرار ظاهرة عند النهاية */
+.table-wrapper.as-cards .table--cards tbody td.actions-cell {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  text-align: start;
+}
+.table-wrapper.as-cards .table--cards tbody td.actions-cell::before { content: none; }
+.table-wrapper.as-cards .table--cards tbody td.actions-cell .actions-inline {
+  opacity: 1;
+  width: 100%;
+  justify-content: flex-end;
+}
+.table-wrapper.as-cards .table--cards .btn-label { display: inline; }
 
-  /* لا تكرّر خلفية/ظل الحاوية فوق ظلال الكروت */
-  .table-wrapper:has(.table--cards) {
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
-    overflow: visible;
-  }
+/* لا تكرّر خلفية/ظل الحاوية فوق ظلال الكروت */
+.table-wrapper.as-cards {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 /* نص داخل الزر — مخفي افتراضياً، يظهر فقط داخل كرت الجوال (القاعدة أعلاه) */

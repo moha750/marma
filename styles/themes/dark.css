@@ -102,22 +102,9 @@
   --color-info-light:    var(--info-tint);
 }
 
-/* تحسينات خاصة بالداكن للحقول والـ scrollbars */
+/* تحسينات خاصة بالداكن للحقول (شريط التمرير موحّد عالمياً في base.css ويتكيّف عبر التوكنات) */
 [data-theme="dark"] input,
 [data-theme="dark"] textarea,
 [data-theme="dark"] select {
   color-scheme: dark;
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-track {
-  background: var(--surface-1);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border-radius: var(--radius-sm);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
 }

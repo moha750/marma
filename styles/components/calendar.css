@@ -210,11 +210,26 @@
    ════════════════════════════════════════════════════════ */
 
 /* شريط التحكّم: تنقّل + عنوان الفترة + مبدّل العرض */
+/* حاوية استعلام: الشريط يتكيّف حسب عرضه الفعلي (لا عرض النافذة) — فلا "لخبطة"
+   في المساحة المتوسطة مهما كانت حالة الشريط الجانبي. */
+.cal-toolbar-c { container-type: inline-size; }
 .cal-toolbar {
-  display: flex; align-items: center; justify-content: center; gap: var(--space-3);
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2);
   flex-wrap: wrap;
   background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
   padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3);
+}
+
+/* ثنائي صرف: إمّا صف واحد (افتراضي)، وإمّا عمود واحد كامل عند ضيق الشريط —
+   بلا حالة هجينة. العنوان أعلى العمود، ثم التنقّل، ثم العروض، كلها موسّطة. */
+@container (max-width: 480px) {
+  .cal-toolbar {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  .cal-title { order: -1; flex: 0 0 auto; white-space: normal; }
 }
 .cal-nav { display: inline-flex; align-items: center; gap: var(--space-2); }
 .cal-nav-btn {
@@ -227,7 +242,7 @@
 .cal-nav-btn:focus-visible { box-shadow: var(--ring-focus); outline: 0; }
 .cal-nav-btn svg.lucide, .cal-nav-btn i[data-lucide] { width: 18px; height: 18px; }
 .cal-today {
-  height: 34px; padding: 0 var(--space-3); border-radius: var(--radius-sm);
+  height: 34px; padding: 0 var(--space-2); border-radius: var(--radius-sm);
   border: 1px solid var(--border-default); background: var(--surface-1); color: var(--text-primary);
   font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer;
   transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
@@ -237,10 +252,11 @@
 .cal-title {
   font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--text-primary);
   font-variant-numeric: tabular-nums; text-align: center; flex: 1 1 auto;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cal-views { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-md); padding: 3px; gap: 2px; }
 .cal-view {
-  height: 30px; padding: 0 var(--space-3); border: 0; background: transparent; color: var(--text-secondary);
+  height: 30px; padding: 0 var(--space-2); border: 0; background: transparent; color: var(--text-secondary);
   border-radius: var(--radius-sm); cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium);
   transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 }
@@ -276,9 +292,6 @@
 /* تمرير أفقي تلقائي: يظهر فقط حين يتجاوز عرض #calendar الأدنى (يضبطه JS للأسبوع/الشهر)
    عرضَ البطاقة المتاح — فيُمرَّر بدل ضغط الأعمدة، ويتكيّف مع المساحة وحالة الشريط الجانبي. */
 .cal-card { background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
-.cal-card::-webkit-scrollbar { height: 6px; }
-.cal-card::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
-.cal-card::-webkit-scrollbar-track { background: transparent; }
 .cal-card .fc { --fc-page-bg-color: transparent; }
 
 /* تنبيه: حجوزات تقع خارج أوقات العمل المعروضة */
@@ -305,13 +318,8 @@
 .cal-hint { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-tertiary); }
 .cal-hint svg.lucide, .cal-hint i[data-lucide] { width: 14px; height: 14px; }
 
-/* جوال */
+/* جوال (الشريط نفسه يتكيّف عبر container query أعلاه) */
 @media (max-width: 768px) {
-  .cal-toolbar { gap: var(--space-2); padding: var(--space-3); }
-  .cal-title { order: -1; flex-basis: 100%; margin-bottom: var(--space-1); }
-  .cal-nav { flex: 0 0 auto; }
-  .cal-views { flex: 1 1 100%; order: 1; justify-content: space-between; }
-  .cal-view { flex: 1; padding: 0 var(--space-2); text-align: center; }
   .cal-subbar { align-items: flex-start; }
   .fc .fc-timegrid-slot { height: 2.4em; }
 }

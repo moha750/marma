@@ -13,6 +13,7 @@
       </div>
     </div>
 
+    <div class="cal-toolbar-c">
     <div class="cal-toolbar">
       <div class="cal-nav">
         <button class="cal-nav-btn" data-nav="prev" aria-label="السابق"><i data-lucide="chevron-right"></i></button>
@@ -26,6 +27,7 @@
         <button class="cal-view" data-view="timeGridDay">يوم</button>
         <button class="cal-view" data-view="listWeek">قائمة</button>
       </div>
+    </div>
     </div>
 
     <div class="cal-subbar">
