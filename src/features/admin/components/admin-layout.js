@@ -12,14 +12,20 @@
 
 window.layout = (function () {
   const NAV_ITEMS = [
-    { key: 'admin-overview',      group: 'رئيسي',  label: 'نظرة عامة',     icon: 'layout-dashboard', path: '/admin/overview' },
-    { key: 'admin-subscriptions', group: 'الإدارة', label: 'طلبات الاشتراك', icon: 'credit-card',       path: '/admin/subscriptions' },
-    { key: 'admin-tenants',       group: 'الإدارة', label: 'الملاعب',        icon: 'goal',              path: '/admin/tenants' }
+    { key: 'admin-overview',      group: 'رئيسي',     label: 'نظرة عامة',     icon: 'layout-dashboard', path: '/admin/overview' },
+    { key: 'admin-analytics',     group: 'رئيسي',     label: 'نموّ المنصّة',   icon: 'trending-up',      path: '/admin/analytics' },
+    { key: 'admin-subscriptions', group: 'الاشتراكات', label: 'طلبات الاشتراك', icon: 'credit-card',       path: '/admin/subscriptions' },
+    { key: 'admin-revenue',       group: 'الاشتراكات', label: 'الإيرادات',      icon: 'wallet',            path: '/admin/revenue' },
+    { key: 'admin-tenants',       group: 'الملاعب',    label: 'الملاعب',        icon: 'goal',              path: '/admin/tenants' },
+    { key: 'admin-broadcast',     group: 'النظام',     label: 'بثّ رسالة',      icon: 'megaphone',         path: '/admin/broadcast' },
+    { key: 'admin-admins',        group: 'النظام',     label: 'المشرفون',       icon: 'shield',            path: '/admin/admins' },
+    { key: 'admin-audit',         group: 'النظام',     label: 'سجلّ النشاط',     icon: 'history',           path: '/admin/audit' }
   ];
 
   const BOTTOM_NAV = [
     { key: 'admin-overview',      label: 'نظرة',    icon: 'layout-dashboard', path: '/admin/overview' },
     { key: 'admin-subscriptions', label: 'الطلبات', icon: 'credit-card',       path: '/admin/subscriptions' },
+    { key: 'admin-revenue',       label: 'الإيراد', icon: 'wallet',            path: '/admin/revenue' },
     { key: 'admin-tenants',       label: 'الملاعب', icon: 'goal',              path: '/admin/tenants' }
   ];
 
@@ -94,10 +100,10 @@ window.layout = (function () {
       <div class="app-shell" ${sidebarState ? `data-sidebar="${sidebarState}"` : ''}>
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-brand">
-            <span class="sidebar-brand-logo"><i data-lucide="shield"></i></span>
+            <span class="sidebar-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></span>
             <div class="sidebar-brand-text">
-              <span class="brand-title" style="font-weight:var(--weight-bold)">لوحة المشرف</span>
-              <span class="tenant-name">المشرف العام</span>
+              <img src="${window.utils.path('/assets/logo-wordmark.svg')}" alt="مَرمى" class="brand-title">
+              <span class="tenant-name">لوحة المشرف</span>
             </div>
           </div>
 

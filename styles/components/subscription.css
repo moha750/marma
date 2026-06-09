@@ -1,3 +1,53 @@
+/* شاشة الإيقاف الإداري المستقلّة (تُعرض بدل اللوحة) */
+.suspended-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--surface-0);
+}
+.suspended-card {
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-8) var(--space-6);
+}
+.suspended-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--danger-tint);
+  color: var(--danger);
+  font-size: 2rem;
+}
+.suspended-icon i { width: 50px; height: 50px;}
+.suspended-card h1 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+}
+.suspended-card p {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin: 0 0 var(--space-5);
+}
+.suspended-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* صفحة الاشتراك (subscription) */
 .subscription-status-card {
   background: var(--color-card);

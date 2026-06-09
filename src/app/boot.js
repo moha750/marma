@@ -41,7 +41,7 @@
 
     window.router.start();
   } catch (err) {
-    if (err && err.message && !['UNAUTHENTICATED', 'SUBSCRIPTION_EXPIRED', 'FORBIDDEN'].includes(err.message)) {
+    if (err && err.message && !['UNAUTHENTICATED', 'SUBSCRIPTION_EXPIRED', 'FORBIDDEN', 'ACCOUNT_SUSPENDED'].includes(err.message)) {
       console.error('فشل إقلاع التطبيق:', err);
       const root = document.getElementById('app-root');
       if (root) {

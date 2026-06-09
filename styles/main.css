@@ -29,6 +29,7 @@
 @import url('./components/calendar.css');
 @import url('./components/timeline.css');
 @import url('./components/utilities.css');
+@import url('./components/broadcast.css');
 @import url('./components/public.css');
 @import url('./components/subscription.css');
 @import url('./components/public-shell.css'); /* أساس مشترك للوجه العام — قبل .lp و.bp */

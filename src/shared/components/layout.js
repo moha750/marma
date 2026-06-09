@@ -46,7 +46,7 @@ window.layout = (function () {
     let kind = '', text = '';
     if (phase === 'trial') {
       kind = 'trial';
-      text = `تجربة مجانية — متبقي ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
+      text = `${status.trial_extended ? 'تجربة ممدّدة' : 'تجربة مجانية'} — متبقي ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
     } else if (phase === 'grace_active') {
       kind = 'grace';
       text = `انتهى الاشتراك — فترة سماح ${daysToLock} ${pluralDays(daysToLock)}، يرجى التجديد`;
@@ -135,6 +135,29 @@ window.layout = (function () {
     `;
   }
 
+  // ─── شاشة الإيقاف الإداري (مستقلّة، بلا لوحة) ─────────────
+
+  function renderSuspendedScreen() {
+    document.body.classList.add('app-body');
+    const root = document.getElementById('app-root') || document.body;
+    root.innerHTML = `
+      <div class="suspended-screen">
+        <div class="suspended-card">
+          <div class="suspended-icon"><i data-lucide="ban"></i></div>
+          <h1>تم إيقاف حسابك</h1>
+          <p>أوقفت إدارة مَرمى وصول هذا الحساب مؤقتًا. للاستفسار أو إعادة التفعيل تواصل مع الدعم.</p>
+          <div class="suspended-actions">
+            <a class="btn btn--primary" href="mailto:marma.apps@gmail.com"><i data-lucide="mail"></i> تواصل مع الدعم</a>
+            <button type="button" class="btn btn--ghost" id="suspended-signout"><i data-lucide="log-out"></i> تسجيل الخروج</button>
+          </div>
+        </div>
+      </div>
+    `;
+    window.utils.renderIcons(root);
+    const so = document.getElementById('suspended-signout');
+    if (so) so.addEventListener('click', () => window.auth.signOut('/auth/login'));
+  }
+
   // ─── تركيب الـ shell ─────────────────────────────────────
 
   async function mountShell({ skipActiveCheck = false } = {}) {
@@ -147,6 +170,13 @@ window.layout = (function () {
         ctx = await window.auth.requireActiveTenant(false);
       } catch (err) {
         if (err && err.message === 'SUBSCRIPTION_EXPIRED') {
+          // ميّز الإيقاف الإداري عن انتهاء الاشتراك ⇒ شاشة مستقلّة
+          let st = null;
+          try { st = await window.auth.loadSubscriptionStatus(); } catch (_) {}
+          if (st && st.phase === 'suspended') {
+            renderSuspendedScreen();
+            throw new Error('ACCOUNT_SUSPENDED');
+          }
           const result = await mountShell({ skipActiveCheck: true });
           history.replaceState(null, '', window.utils.path('/subscription'));
           return result;

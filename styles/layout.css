@@ -883,7 +883,8 @@
 .app-shell[data-sidebar="collapsed"] .sidebar-user-text,
 .app-shell[data-sidebar="collapsed"] .nav-label,
 .app-shell[data-sidebar="collapsed"] .nav-badge,
-.app-shell[data-sidebar="collapsed"] .nav-group-label {
+.app-shell[data-sidebar="collapsed"] .nav-group-label,
+.app-shell[data-sidebar="collapsed"] .sidebar-nav .nav-lock {
   display: none;
 }
 
@@ -933,7 +934,8 @@
   .app-shell:not([data-sidebar="expanded"]) .sidebar-user-text,
   .app-shell:not([data-sidebar="expanded"]) .nav-label,
   .app-shell:not([data-sidebar="expanded"]) .nav-badge,
-  .app-shell:not([data-sidebar="expanded"]) .nav-group-label {
+  .app-shell:not([data-sidebar="expanded"]) .nav-group-label,
+  .app-shell:not([data-sidebar="expanded"]) .sidebar-nav .nav-lock {
     display: none;
   }
   .app-shell:not([data-sidebar="expanded"]) .sidebar-brand,
@@ -984,14 +986,6 @@
   }
   .menu-toggle {
     display: inline-flex !important;
-  }
-  /* أعد عرض كل التسميات حين يفتح الـ drawer */
-  .sidebar.open .sidebar-brand-text,
-  .sidebar.open .sidebar-user-text,
-  .sidebar.open .nav-label,
-  .sidebar.open .nav-badge,
-  .sidebar.open .nav-group-label {
-    display: revert;
   }
   .sidebar.open .sidebar-brand,
   .sidebar.open .sidebar-nav a {

@@ -64,6 +64,9 @@
     const c = d.counts || {};
     const endDate = t.subscription_ends_at || t.trial_ends_at;
     const endLabel = t.subscription_ends_at ? 'نهاية الاشتراك' : 'نهاية التجربة';
+    const dis = t.suspended ? ' disabled title="فعّل الملعب أولًا"' : '';
+    const hasSub = !!t.subscription_ends_at;
+    const trialFuture = t.trial_ends_at && new Date(t.trial_ends_at) > new Date();
     return `
       <a href="${window.utils.path('/admin/tenants')}" class="text-sm text-secondary" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:var(--space-3)">
         <i data-lucide="chevron-right" style="width:16px;height:16px"></i> كل الملاعب
@@ -75,8 +78,10 @@
         </div>
         <div class="actions">
           <button class="btn btn--secondary btn--sm" data-act="toggle">${t.suspended ? 'تفعيل' : 'تعطيل'}</button>
-          <button class="btn btn--secondary btn--sm" data-act="trial">تمديد التجربة</button>
-          <button class="btn btn--primary btn--sm" data-act="grant">منح/تمديد اشتراك</button>
+          <button class="btn btn--secondary btn--sm" data-act="trial"${dis}>تمديد التجربة</button>
+          ${trialFuture ? `<button class="btn btn--ghost btn--sm" data-act="end-trial"${dis}>إنهاء التجربة</button>` : ''}
+          <button class="btn btn--primary btn--sm" data-act="grant"${dis}>منح/تمديد اشتراك</button>
+          ${hasSub ? `<button class="btn btn--ghost btn--sm" data-act="end-sub"${dis}>إنهاء الاشتراك</button>` : ''}
         </div>
       </div>
 
@@ -101,6 +106,9 @@
 
       <h3 style="font-size:var(--text-md);margin:0 0 var(--space-3)">سجلّ الاشتراكات</h3>
       ${renderSubs(d.subscriptions || [])}
+
+      <h3 style="font-size:var(--text-md);margin:var(--space-5) 0 var(--space-3)">سجلّ الإجراءات</h3>
+      ${window.adminAudit.render(d.audit || [], { showTenant: false })}
     `;
   }
 
@@ -125,15 +133,6 @@
         }
       }
 
-      async function runAction(fn, successMsg) {
-        try {
-          await fn();
-          window.utils.toast(successMsg, 'success');
-          await load();
-        } catch (err) {
-          window.utils.toast(window.utils.formatError(err), 'error');
-        }
-      }
 
       // نافذة بحقول رقمية ثم تنفيذ
       function numberModal({ title, intro, fields, submitText, onSubmit }) {
@@ -178,19 +177,82 @@
         const t = d.tenant;
         const byAct = (a) => container.querySelector(`[data-act="${a}"]`);
 
-        byAct('toggle').addEventListener('click', async () => {
-          const activate = t.suspended; // معطّل حالياً ⇒ نفعّل، والعكس
-          const ok = await window.utils.confirm({
-            title: activate ? 'تفعيل الملعب' : 'تعطيل الملعب',
-            message: activate
-              ? `إعادة تفعيل "${t.name}"؟ سيعود وصوله للنظام.`
-              : `تعطيل "${t.name}"؟ سيُمنع الوصول فوراً (والحجز العام) حتى إعادة التفعيل.`,
-            confirmText: activate ? 'تفعيل' : 'تعطيل',
-            danger: !activate
+        // نافذة إجراء مع سبب اختياري يُسجَّل في سجلّ الإجراءات
+        function reasonModal({ title, intro, reasonLabel, confirmText, danger, run, successMsg }) {
+          const body = `
+            <p class="text-sm text-secondary">${intro}</p>
+            <form id="rsn-form">
+              <div class="form-group">
+                <label class="form-label" for="rsn-reason">${reasonLabel} <span class="optional">اختياري</span></label>
+                <textarea class="form-control" id="rsn-reason" rows="2" maxlength="300" placeholder="يظهر في سجلّ الإجراءات"></textarea>
+              </div>
+            </form>`;
+          const ctrl = window.utils.openModal({
+            title,
+            body,
+            footer: `
+              <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+              <button type="submit" class="btn ${danger ? 'btn--danger' : 'btn--primary'}" form="rsn-form" id="rsn-submit">${confirmText}</button>`
           });
-          if (!ok) return;
-          runAction(() => window.api.adminSetTenantActive(t.id, activate),
-            activate ? 'تم تفعيل الملعب' : 'تم تعطيل الملعب');
+          ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+          ctrl.modal.querySelector('#rsn-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = (ctrl.modal.querySelector('#rsn-reason').value || '').trim();
+            const btn = ctrl.modal.querySelector('#rsn-submit');
+            btn.disabled = true;
+            try {
+              await run(reason || null);
+              ctrl.close();
+              window.utils.toast(successMsg, 'success');
+              await load();
+            } catch (err) {
+              window.utils.toast(window.utils.formatError(err), 'error');
+              btn.disabled = false;
+            }
+          });
+        }
+
+        const nm = window.utils.escapeHtml(t.name);
+
+        byAct('toggle').addEventListener('click', () => {
+          const activate = t.suspended; // معطّل ⇒ نفعّل، والعكس
+          reasonModal({
+            title: activate ? 'تفعيل الملعب' : 'تعطيل الملعب',
+            intro: activate
+              ? `إعادة تفعيل "${nm}"؟ سيعود وصوله للنظام.`
+              : `تعطيل "${nm}"؟ سيُمنع الوصول فوراً (والحجز العام) حتى إعادة التفعيل.`,
+            reasonLabel: activate ? 'سبب التفعيل' : 'سبب التعطيل',
+            confirmText: activate ? 'تفعيل' : 'تعطيل',
+            danger: !activate,
+            run: (r) => window.api.adminSetTenantActive(t.id, activate, r),
+            successMsg: activate ? 'تم تفعيل الملعب' : 'تم تعطيل الملعب'
+          });
+        });
+
+        const endTrialBtn = byAct('end-trial');
+        if (endTrialBtn) endTrialBtn.addEventListener('click', () => {
+          reasonModal({
+            title: 'إنهاء التجربة',
+            intro: `إنهاء تجربة "${nm}" الآن؟ ستنتهي فورًا (يُلغي أي تمديد).`,
+            reasonLabel: 'سبب الإنهاء',
+            confirmText: 'إنهاء التجربة',
+            danger: true,
+            run: (r) => window.api.adminEndTrial(t.id, r),
+            successMsg: 'تم إنهاء التجربة'
+          });
+        });
+
+        const endSubBtn = byAct('end-sub');
+        if (endSubBtn) endSubBtn.addEventListener('click', () => {
+          reasonModal({
+            title: 'إنهاء الاشتراك',
+            intro: `إنهاء اشتراك "${nm}" الآن؟ يُزال الاشتراك المدفوع (يعود الملعب للتجربة إن كانت سارية، وإلا يُقفل). لا يُعطّل الحساب.`,
+            reasonLabel: 'سبب الإنهاء',
+            confirmText: 'إنهاء الاشتراك',
+            danger: true,
+            run: (r) => window.api.adminEndSubscription(t.id, r),
+            successMsg: 'تم إنهاء الاشتراك'
+          });
         });
 
         byAct('trial').addEventListener('click', () => {

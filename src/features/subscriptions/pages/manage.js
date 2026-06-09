@@ -12,23 +12,25 @@
     </div>
   `;
 
-  function phaseLabel(phase) {
+  function phaseLabel(phase, extended) {
+    if (phase === 'trial') return extended ? 'تجربة ممدّدة' : 'تجربة مجانية';
     return ({
-      trial: 'تجربة مجانية',
       active: 'اشتراك نشط',
       grace_active: 'انتهى الاشتراك (فترة سماح)',
       expired: 'منتهي',
+      suspended: 'موقوف من الإدارة',
       none: 'غير معرّف'
     })[phase] || phase;
   }
 
-  function phaseChip(phase) {
+  function phaseChip(phase, extended) {
     const cls = ({
       trial: 'info', active: 'success',
       grace_active: 'warning',
-      expired: 'danger'
+      expired: 'danger',
+      suspended: 'danger'
     })[phase] || 'muted';
-    return `<span class="chip-status chip-status--${cls}">${window.utils.escapeHtml(phaseLabel(phase))}</span>`;
+    return `<span class="chip-status chip-status--${cls}">${window.utils.escapeHtml(phaseLabel(phase, extended))}</span>`;
   }
 
   function reqChip(s) {
@@ -94,10 +96,11 @@
         }
         const phase = status.phase;
         if (phase === 'trial') {
+          const lead = status.trial_extended ? 'تجربتك الممدّدة نشطة' : 'تجربتك المجانية نشطة';
           return `
             <div class="trial-banner trial-banner--trial" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
               <span class="trial-banner-icon"><i data-lucide="info"></i></span>
-              <span>تجربتك المجانية نشطة (أرضية واحدة، بدون موظفين). يمكنك ترقية باقتك في أي وقت.</span>
+              <span>${lead} (أرضية واحدة، بدون موظفين). يمكنك ترقية باقتك في أي وقت.</span>
             </div>`;
         }
         if (phase && phase.startsWith('grace_')) {
@@ -124,7 +127,7 @@
             <div class="card-body" style="display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap">
               <div style="flex:1;min-width:200px">
                 <div class="text-xs text-tertiary fw-medium mb-sm">الحالة الحالية</div>
-                <div>${phaseChip(phase)}</div>
+                <div>${phaseChip(phase, status && status.trial_extended)}</div>
               </div>
               <div style="min-width:180px">
                 <div class="text-xs text-tertiary fw-medium mb-sm">تاريخ الانتهاء</div>
