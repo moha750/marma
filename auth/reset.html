@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
+  <meta name="theme-color" content="#0F9D58">
+  <title>إعادة تعيين كلمة المرور - مَرمى</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card" id="auth-card">
+      <div class="loader-center" style="min-height:200px"><div class="loader loader--lg"></div></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../config.js"></script>
+  <script src="../src/core/supabase-client.js"></script>
+  <script src="../src/core/utils.js"></script>
+  <script>
+    const card = document.getElementById('auth-card');
+
+    function showError(msg) {
+      card.innerHTML = `
+        <div class="logo">
+          <span class="auth-logo" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--danger-tint);color:var(--danger)"><i data-lucide="triangle-alert" style="width:34px;height:34px"></i></span>
+          <h1>رابط غير صالح</h1>
+          <p class="subtitle">${window.utils.escapeHtml(msg)}</p>
+        </div>
+        <a class="btn btn--primary btn--block" href="/auth/forgot">طلب رابط جديد</a>
+        <div class="auth-footer"><a href="/auth/login">العودة لتسجيل الدخول</a></div>
+      `;
+      window.utils.renderIcons(card);
+    }
+
+    function showForm() {
+      card.innerHTML = `
+        <div class="logo">
+          <img src="../assets/logo.svg" alt="مَرمى" class="auth-logo" width="64" height="64">
+          <h1>كلمة مرور جديدة</h1>
+          <p class="subtitle">اختر كلمة مرور جديدة لحسابك</p>
+        </div>
+        <form id="reset-form" autocomplete="on">
+          <div class="form-group">
+            <label class="form-label" for="pass">كلمة المرور الجديدة <span class="required">*</span></label>
+            <input type="password" class="form-control" id="pass" minlength="6" required autofocus autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pass2">تأكيد كلمة المرور <span class="required">*</span></label>
+            <input type="password" class="form-control" id="pass2" minlength="6" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn--primary btn--block" id="submit-btn">
+            <span class="btn-text">تحديث كلمة المرور</span>
+          </button>
+        </form>
+      `;
+      window.utils.renderIcons(card);
+
+      const form = document.getElementById('reset-form');
+      const submitBtn = document.getElementById('submit-btn');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const p1 = document.getElementById('pass').value;
+        const p2 = document.getElementById('pass2').value;
+        if (p1.length < 6) { window.utils.toast('كلمة المرور قصيرة (٦ أحرف على الأقل)', 'error'); return; }
+        if (p1 !== p2) { window.utils.toast('كلمتا المرور غير متطابقتين', 'error'); return; }
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.btn-text').textContent = 'جارٍ التحديث...';
+        try {
+          const { error } = await window.sb.auth.updateUser({ password: p1 });
+          if (error) throw error;
+          await window.sb.auth.signOut();
+          card.innerHTML = `
+            <div class="logo">
+              <span class="auth-logo" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--accent-50);color:var(--accent-600)"><i data-lucide="circle-check-big" style="width:34px;height:34px"></i></span>
+              <h1>تم التحديث</h1>
+              <p class="subtitle">تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بكلمتك الجديدة.</p>
+            </div>
+            <a class="btn btn--primary btn--block" href="/auth/login">تسجيل الدخول</a>
+          `;
+          window.utils.renderIcons(card);
+        } catch (err) {
+          window.utils.toast(window.utils.formatError(err), 'error');
+          submitBtn.disabled = false;
+          submitBtn.querySelector('.btn-text').textContent = 'تحديث كلمة المرور';
+        }
+      });
+    }
+
+    (async () => {
+      const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+      const errDesc = hash.get('error_description') || hash.get('error');
+      const at = hash.get('access_token');
+      const rt = hash.get('refresh_token');
+      const type = hash.get('type');
+
+      if (errDesc) { showError('انتهت صلاحية الرابط أو أنه غير صالح. اطلب رابطاً جديداً.'); return; }
+      if (!at || !rt) { showError('الرابط غير مكتمل. افتح الرابط من رسالة البريد كاملاً، أو اطلب رابطاً جديداً.'); return; }
+
+      try {
+        const { error } = await window.sb.auth.setSession({ access_token: at, refresh_token: rt });
+        if (error) throw error;
+        // نظّف الـ hash حتى لا تبقى الرموز في شريط العنوان
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        if (type && type !== 'recovery') {
+          // ليس رابط استعادة — مع ذلك نسمح بتغيير كلمة المرور بأمان
+        }
+        showForm();
+      } catch (err) {
+        showError('تعذّر التحقّق من الرابط. اطلب رابطاً جديداً.');
+      }
+    })();
+  </script>
+</body>
+</html>

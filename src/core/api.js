@@ -17,6 +17,7 @@ window.api = Object.assign({},
   window.scheduleApi      || {},
   window.subscriptionsApi || {},
   window.tenantApi        || {},
+  window.offersApi        || {},
   window.adminApi         || {}
 );
 

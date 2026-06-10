@@ -76,6 +76,15 @@
     return `<span class="wh-hint"><i data-lucide="calendar-check"></i> ${info.count} ${word}</span>${moon}`;
   }
 
+  // السعر: فارغ ⇒ null (عند التواصل) · رقم ⇒ ≥ 0 (0 = مجاني)
+  function parsePrice(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (s === '') return null;
+    return Math.max(0, parseFloat(s) || 0);
+  }
+  // قيمة input للسعر (فارغ عند null)
+  function priceInputVal(v) { return v == null ? '' : v; }
+
   const page = {
     async mount(container, ctx) {
       container.innerHTML = TEMPLATE;
@@ -102,7 +111,7 @@
             open:  (r.open_time  || '').substring(0, 5),
             close: (r.close_time || '').substring(0, 5),
             duration: Number(r.slot_duration_minutes) || 60,
-            price:    Number(r.hourly_price) || 0
+            price:    (r.hourly_price === null || r.hourly_price === undefined) ? null : (Number(r.hourly_price) || 0)
           });
         });
         Object.keys(periodsByDay).forEach((dow) =>
@@ -129,7 +138,7 @@
       function setPeriodField(dow, idx, field, raw) {
         const p = periodsByDay[dow][idx];
         if (!p) return;
-        if (field === 'price') p.price = Math.max(0, parseFloat(raw) || 0);
+        if (field === 'price') p.price = parsePrice(raw);
         else if (field === 'duration') p.duration = parseInt(raw, 10) || 60;
         else p[field] = raw; // open / close
         // حدّث التلميح بلا إعادة رسم (للحفاظ على التركيز)
@@ -230,11 +239,11 @@
                       <select id="q-dur" class="form-control">${DURATION_OPTS.map((m) => `<option value="${m}" ${m === 60 ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}</select>
                     </label>
                     <label class="wh-q-field"><span>سعر الساعة</span>
-                      <div class="input-group"><input type="number" min="0" step="0.01" id="q-price" class="form-control" value="0"><span class="input-addon">ر.س</span></div>
+                      <div class="input-group"><input type="number" min="0" step="0.01" id="q-price" class="form-control" value="0" placeholder="عند التواصل"><span class="input-addon">ر.س</span></div>
                     </label>
                   </div>
                   <button class="btn btn--primary" id="q-apply"><i data-lucide="copy-check"></i> طبّق على كل الأيام</button>
-                  <p class="wh-quick-note">سيُستبدل جدول كل الأيام بهذه الفترة الواحدة.</p>
+                  <p class="wh-quick-note">سيُستبدل جدول كل الأيام بهذه الفترة الواحدة. اترك السعر فارغًا = عند التواصل · 0 = مجاني.</p>
                 </div>
               </details>` : ''}
           </div>
@@ -322,7 +331,7 @@
             <div class="wh-period wh-period--ro">
               <span class="wh-ro-time">${window.utils.formatTimeOfDay(p.open)} → ${window.utils.formatTimeOfDay(p.close)}</span>
               <span class="wh-ro-meta"><i data-lucide="timer"></i> ${formatDuration(p.duration)}</span>
-              <span class="wh-ro-meta"><i data-lucide="banknote"></i> ${window.utils.formatCurrency(p.price)}<span class="text-tertiary">/س</span></span>
+              <span class="wh-ro-meta"><i data-lucide="banknote"></i> ${p.price > 0 ? window.utils.formatCurrency(p.price) + '<span class="text-tertiary">/س</span>' : window.utils.formatPrice(p.price)}</span>
             </div>`).join('')}</div>`;
           window.utils.renderIcons(body);
           return;
@@ -342,8 +351,9 @@
                       ${DURATION_OPTS.map((m) => `<option value="${m}" ${m === p.duration ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}
                     </select></label>
                   <label class="wh-f"><span class="wh-f-label">سعر الساعة</span>
-                    <div class="input-group"><input type="number" min="0" step="0.01" class="form-control" data-f="price" value="${p.price}"><span class="input-addon">ر.س</span></div></label>
+                    <div class="input-group"><input type="number" min="0" step="0.01" class="form-control" data-f="price" value="${priceInputVal(p.price)}" placeholder="عند التواصل"><span class="input-addon">ر.س</span></div></label>
                 </div>
+                <div class="wh-price-note text-tertiary text-xs">اتركه فارغًا = السعر عند التواصل · 0 = مجاني</div>
                 <button class="wh-remove" title="حذف هذه الفترة"><i data-lucide="trash-2"></i><span>حذف هذه الفترة</span></button>
               </div>`).join('')}
           </div>`;
@@ -381,7 +391,7 @@
           const open = root.querySelector('#q-open').value;
           const close = root.querySelector('#q-close').value;
           const duration = parseInt(root.querySelector('#q-dur').value, 10) || 60;
-          const price = Math.max(0, parseFloat(root.querySelector('#q-price').value) || 0);
+          const price = parsePrice(root.querySelector('#q-price').value);
           if (!isValidTimes({ open, close })) { window.utils.toast('أدخل وقتين مختلفين', 'error'); return; }
           const ok = await window.utils.confirm({
             title: 'تطبيق على كل الأيام',
@@ -428,8 +438,10 @@
             <div>الفترة أقصر من مدة الموعد — لن تُنشأ مواعيد</div></div>`;
         }
         const word = info.count === 1 ? 'موعد' : info.count === 2 ? 'موعدان' : (info.count <= 10 ? 'مواعيد' : 'موعداً');
-        const perSlot = Math.round(price * (duration / 60) * 100) / 100;
-        const priceLabel = price > 0 ? ` · <strong>${window.utils.formatCurrency(perSlot)}</strong> للموعد` : ' · مجاني';
+        const perSlot = price == null ? null : Math.round(price * (duration / 60) * 100) / 100;
+        const priceLabel = price == null ? ' · السعر عند التواصل'
+                         : price > 0 ? ` · <strong>${window.utils.formatCurrency(perSlot)}</strong> للموعد`
+                         : ' · مجاني';
         return `<div class="wh-mp wh-mp--ok"><i data-lucide="calendar-check"></i>
           <div>سيُنشأ <strong>${info.count}</strong> ${word}${priceLabel}</div></div>`;
       }
@@ -458,11 +470,12 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">سعر الساعة <span class="required">*</span></label>
+                <label class="form-label">سعر الساعة</label>
                 <div class="input-group">
-                  <input type="number" min="0" step="0.01" class="form-control" name="price" required placeholder="0">
+                  <input type="number" min="0" step="0.01" class="form-control" name="price" placeholder="عند التواصل">
                   <span class="input-addon">ر.س</span>
                 </div>
+                <span class="form-help">اتركه فارغًا = السعر عند التواصل |0 0 = مجاني</span>
               </div>
             </div>
             <div id="wh-add-slots"></div>
@@ -480,7 +493,7 @@
         const slotsEl = ctrl.modal.querySelector('#wh-add-slots');
         const update = () => {
           const duration = parseInt(form.duration.value, 10) || 0;
-          const price = Math.max(0, parseFloat(form.price.value) || 0);
+          const price = parsePrice(form.price.value);
           durEl.innerHTML = modalDurationPreview(form.open.value, form.close.value);
           slotsEl.innerHTML = modalSlotsPreview(form.open.value, form.close.value, duration, price);
           window.utils.renderIcons(durEl);
@@ -496,7 +509,7 @@
           e.preventDefault();
           const open = form.open.value, close = form.close.value;
           const duration = parseInt(form.duration.value, 10) || 60;
-          const price = Math.max(0, parseFloat(form.price.value) || 0);
+          const price = parsePrice(form.price.value);
           if (!isValidTimes({ open, close })) { window.utils.toast('أدخل وقتين مختلفين', 'error'); return; }
           if (detectOverlap([...periodsByDay[dow], { open, close, duration, price }])) {
             window.utils.toast('الفترة تتداخل مع فترة موجودة في هذا اليوم', 'error'); return;

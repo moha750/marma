@@ -283,6 +283,83 @@ select.form-control {
   cursor: pointer;
 }
 
+/* ─── منتقي فترات العرض (شرائح، اختيار متعدّد عبر الملاعب) ─── */
+.offer-periods {
+  display: flex;
+  flex-direction: column;
+}
+.offer-periods-note { padding: var(--space-2); }
+.offer-field-group + .offer-field-group {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+.offer-field-name {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.offer-field-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-700);
+  background: color-mix(in srgb, var(--accent-500) 12%, transparent);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  font-weight: var(--weight-bold);
+}
+.offer-field-tag svg.lucide { width: 13px; height: 13px; }
+.offer-field-nm { color: var(--text-primary); }
+.offer-rows { display: flex; flex-direction: column; gap: var(--space-1); }
+.offer-prow {
+  display: grid;
+  grid-template-columns: 22px 64px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 9px 12px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: var(--surface-1);
+  user-select: none;
+  transition: border-color .12s, background .12s;
+}
+.offer-prow:hover { border-color: var(--border-strong); }
+.offer-ck {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.offer-ck-ic { width: 13px; height: 13px; opacity: 0; transition: opacity .12s; }
+.offer-day {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 3px 0;
+  text-align: center;
+}
+.offer-tm { font-variant-numeric: tabular-nums; color: var(--text-primary); text-align: left; }
+.offer-prow--all .offer-tm { color: var(--text-secondary); }
+.offer-prow[aria-pressed="true"] {
+  border-color: var(--accent-500);
+  background: color-mix(in srgb, var(--accent-500) 7%, transparent);
+}
+.offer-prow[aria-pressed="true"] .offer-ck { background: var(--accent-500); border-color: var(--accent-500); }
+.offer-prow[aria-pressed="true"] .offer-ck-ic { opacity: 1; }
+.offer-prow[aria-pressed="true"] .offer-day { background: var(--accent-500); color: #fff; }
+
 /* ─── معرض صور الأرضية (admin) ─── */
 
 .form-help-inline {

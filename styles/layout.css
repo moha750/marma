@@ -788,6 +788,7 @@
 
 .trial-banner-cta:hover {
   background: rgba(0, 0, 0, 0.12);
+  color: inherit;                              /* يمنع لون a:hover العام (الأخضر) من التسرّب */
 }
 
 [data-theme="dark"] .trial-banner-cta {
@@ -808,6 +809,15 @@
 .trial-banner--soon {
   background: var(--surface-2);
   color: var(--text-primary);
+}
+.trial-banner--lifetime {
+  background: #FBEFC8;
+  color: #8A6D00;
+  font-weight: var(--weight-semibold);
+}
+[data-theme="dark"] .trial-banner--lifetime {
+  background: rgba(212, 175, 55, 0.18);
+  color: #E6C24A;
 }
 
 /* ─────────────────────────────────────────────

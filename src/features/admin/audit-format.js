@@ -7,6 +7,8 @@ window.adminAudit = (function () {
     grant_subscription: { label: 'منح/تمديد اشتراك',  icon: 'badge-check',  cls: 'active'  },
     end_subscription:   { label: 'إنهاء الاشتراك',    icon: 'circle-x',     cls: 'expired' },
     end_trial:          { label: 'إنهاء التجربة',     icon: 'calendar-x',   cls: 'expired' },
+    grant_lifetime:     { label: 'منح وصول دائم',     icon: 'gem',          cls: 'active'  },
+    revoke_lifetime:    { label: 'إلغاء الوصول الدائم', icon: 'gem',        cls: 'expired' },
     set_limits:         { label: 'تعديل الحدود',      icon: 'sliders-horizontal', cls: 'grace' }
   };
 
@@ -29,6 +31,8 @@ window.adminAudit = (function () {
       case 'activate':
       case 'end_trial':
       case 'end_subscription':
+      case 'grant_lifetime':
+      case 'revoke_lifetime':
         return d.reason ? `السبب: ${d.reason}` : '—';
       default:
         return '—';

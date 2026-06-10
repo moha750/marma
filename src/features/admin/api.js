@@ -72,6 +72,15 @@ window.adminApi = (function () {
     if (error) throw error;
   }
 
+  async function adminGrantLifetime(tenantId, reason) {
+    const { error } = await sb().rpc('admin_grant_lifetime', { p_tenant_id: tenantId, p_reason: reason || null });
+    if (error) throw error;
+  }
+  async function adminRevokeLifetime(tenantId, reason) {
+    const { error } = await sb().rpc('admin_revoke_lifetime', { p_tenant_id: tenantId, p_reason: reason || null });
+    if (error) throw error;
+  }
+
   // ── الإيرادات + سجلّ الاشتراكات ──
   async function adminListSubscriptions(status) {
     const { data, error } = await sb().rpc('admin_list_subscriptions', { p_status: status || null });
@@ -147,7 +156,7 @@ window.adminApi = (function () {
   return {
     adminListPendingSubscriptions, adminListTenants, approveSubscription, rejectSubscription,
     adminTenantDetail, adminSetTenantActive, adminExtendTrial, adminGrantSubscription, adminSetLimits,
-    adminEndTrial, adminEndSubscription,
+    adminEndTrial, adminEndSubscription, adminGrantLifetime, adminRevokeLifetime,
     adminListSubscriptions, adminRevenueStats, adminGrowthStats,
     adminListAdmins, adminAddAdmin, adminRemoveAdmin,
     adminBroadcastAudience, adminListBroadcasts, adminBroadcastOwners, adminBroadcast,

@@ -129,6 +129,32 @@ export function signupConfirmation({ fullName, verifyUrl }: SignupConfirmationPa
   };
 }
 
+// ─── 1ب) إعادة تعيين كلمة المرور ─────────────────────────────
+
+export interface PasswordResetParams {
+  fullName: string;
+  resetUrl: string;
+}
+
+export function passwordReset({ fullName, resetUrl }: PasswordResetParams) {
+  const greeting = fullName ? `أهلاً ${fullName}،` : "أهلاً،";
+  const bodyHtml = `
+    <h1 style="margin:0 0 16px;font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.3;">إعادة تعيين كلمة المرور</h1>
+    <p style="margin:0 0 12px;">${escapeHtml(greeting)}</p>
+    <p style="margin:0 0 16px;">وصلنا طلب لإعادة تعيين كلمة مرور حسابك في مَرمى. اضغط الزر أدناه لاختيار كلمة مرور جديدة.</p>
+    ${ctaButton("إعادة تعيين كلمة المرور", resetUrl)}
+    <div style="margin-top:24px;padding:14px 16px;background:${SURFACE_BODY};border-radius:8px;border:1px solid ${BORDER_SUBTLE};font-size:13px;color:${TEXT_SECONDARY};">
+      <strong style="color:${TEXT_PRIMARY};">لم تطلب ذلك؟</strong> تجاهل هذه الرسالة بأمان — لن تتغيّر كلمة مرورك.
+    </div>
+    <p style="margin:24px 0 0;font-size:13px;color:${TEXT_SECONDARY};">إن لم يعمل الزر، انسخ الرابط التالي والصقه في المتصفح:</p>
+    <p style="margin:8px 0 0;font-size:12px;color:${ACCENT_DARK};word-break:break-all;direction:ltr;text-align:left;">${escapeHtml(resetUrl)}</p>`;
+
+  return {
+    subject: "إعادة تعيين كلمة المرور — مَرمى",
+    html: shell({ preheader: "رابط إعادة تعيين كلمة مرور حسابك في مَرمى", bodyHtml }),
+  };
+}
+
 // ─── 2) إشعار حجز جديد للمالك ────────────────────────────────
 
 export interface NewBookingNotificationParams {

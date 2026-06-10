@@ -19,6 +19,7 @@
       grace_active: 'انتهى الاشتراك (فترة سماح)',
       expired: 'منتهي',
       suspended: 'موقوف من الإدارة',
+      lifetime: 'وصول دائم',
       none: 'غير معرّف'
     })[phase] || phase;
   }
@@ -28,7 +29,8 @@
       trial: 'info', active: 'success',
       grace_active: 'warning',
       expired: 'danger',
-      suspended: 'danger'
+      suspended: 'danger',
+      lifetime: 'success'
     })[phase] || 'muted';
     return `<span class="chip-status chip-status--${cls}">${window.utils.escapeHtml(phaseLabel(phase, extended))}</span>`;
   }
@@ -87,6 +89,13 @@
       }
 
       function renderCallout(status, days) {
+        if (status && status.phase === 'lifetime') {
+          return `
+            <div class="trial-banner trial-banner--lifetime" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
+              <span class="trial-banner-icon"><i data-lucide="gem"></i></span>
+              <span>حسابك يتمتّع بوصول دائم — كل المميزات مفتوحة بلا حدود.</span>
+            </div>`;
+        }
         if (!status || !status.is_active) {
           return `
             <div class="trial-banner trial-banner--grace" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
@@ -115,10 +124,11 @@
 
       function renderStatusCard(status) {
         const phase  = status ? status.phase : 'none';
+        const lifetime = phase === 'lifetime';
         const days   = status ? Math.max(0, Number(status.days_until_expiry) || 0) : 0;
-        const effEnd = status && status.effective_end ? window.utils.formatDateTime(status.effective_end) : '—';
-        const allowedFields = status ? (status.allowed_fields || 1) : 1;
-        const allowedStaff  = status ? (status.allowed_staff  || 0) : 0;
+        const effEnd = lifetime ? 'دائم' : (status && status.effective_end ? window.utils.formatDateTime(status.effective_end) : '—');
+        const allowedFields = lifetime ? '∞' : (status ? (status.allowed_fields || 1) : 1);
+        const allowedStaff  = lifetime ? '∞' : (status ? (status.allowed_staff  || 0) : 0);
         const currentFields = status ? (status.current_fields || 0) : 0;
         const currentStaff  = status ? (status.current_staff  || 0) : 0;
 
@@ -133,7 +143,7 @@
                 <div class="text-xs text-tertiary fw-medium mb-sm">تاريخ الانتهاء</div>
                 <div class="fw-semibold tabular-nums">${window.utils.escapeHtml(effEnd)}</div>
               </div>
-              ${status && status.is_active ? `
+              ${status && status.is_active && !lifetime ? `
                 <div style="min-width:120px">
                   <div class="text-xs text-tertiary fw-medium mb-sm">المتبقي</div>
                   <div class="fw-bold tabular-nums" style="font-size:var(--text-lg)">${days} ${days === 1 ? 'يوم' : 'أيام'}</div>
@@ -282,10 +292,12 @@
 
       function renderPage(status, history) {
         const days = status ? Math.max(0, Number(status.days_remaining) || 0) : 0;
+        // الوصول الدائم لا يحتاج باقة/تجديد — نخفي بطاقة الطلب
+        const lifetime = status && status.phase === 'lifetime';
         return `
           ${renderCallout(status, days)}
           ${renderStatusCard(status)}
-          ${renderConfigCard(status)}
+          ${lifetime ? '' : renderConfigCard(status)}
           ${renderHistoryCard(history)}
         `;
       }

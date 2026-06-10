@@ -229,7 +229,7 @@
                           ${b.customers && b.customers.phone ? `<div class="text-xs text-tertiary">${window.utils.escapeHtml(b.customers.phone)}</div>` : ''}
                         </td>
                         <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
-                        <td data-label="السعر" class="tabular-nums">${fmtMoney(b.total_price)}</td>
+                        <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
                         <td data-label="المدفوع" class="tabular-nums">
                           ${fmtMoney(b.paid_amount)}
                           ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}

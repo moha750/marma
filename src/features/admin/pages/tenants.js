@@ -1,6 +1,8 @@
 // لوحة المشرف العام — قائمة الملاعب وحالاتها (نمط SPA: mount/unmount)
 (function () {
   function statusInfo(t) {
+    if (t.suspended) return { cls: 'expired', label: 'موقوف' };
+    if (t.lifetime) return { cls: 'lifetime', label: 'دائم' };
     if (!t.is_active) return { cls: 'expired', label: 'مغلق' };
     if (t.subscription_ends_at && new Date(t.subscription_ends_at) < new Date()) return { cls: 'grace', label: 'سماح (انتهى الاشتراك)' };
     if (t.trial_ends_at && new Date(t.trial_ends_at) < new Date() && !t.subscription_ends_at) return { cls: 'grace', label: 'سماح (انتهت التجربة)' };
@@ -13,6 +15,7 @@
     { key: 'active',  label: 'مشترك' },
     { key: 'trial',   label: 'تجربة' },
     { key: 'grace',   label: 'سماح' },
+    { key: 'lifetime', label: 'دائم' },
     { key: 'expired', label: 'منتهٍ' }
   ];
 

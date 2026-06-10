@@ -7,6 +7,7 @@
     { key: 'extend_trial',       label: 'تمديد تجربة' },
     { key: 'end_trial',          label: 'إنهاء تجربة' },
     { key: 'set_limits',         label: 'تعديل الحدود' },
+    { key: 'grant_lifetime',     label: 'وصول دائم' },
     { key: 'suspend',            label: 'تعطيل' },
     { key: 'activate',           label: 'تفعيل' }
   ];

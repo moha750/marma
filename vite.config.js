@@ -10,9 +10,11 @@ const APP_ROUTES = [
   'customers',
   'fields',
   'schedule',
+  'offers',
   'reports',
   'staff',
   'subscription',
+  'account',
   'settings'
 ];
 
@@ -56,6 +58,8 @@ export default defineConfig(({ mode }) => {
           landing: resolve(__dirname, 'index.html'),
           login: resolve(__dirname, 'auth/login.html'),
           signup: resolve(__dirname, 'auth/signup.html'),
+          forgot: resolve(__dirname, 'auth/forgot.html'),
+          reset: resolve(__dirname, 'auth/reset.html'),
           book: resolve(__dirname, 'book.html'),
           app: resolve(__dirname, 'app.html'),
           admin: resolve(__dirname, 'admin.html')

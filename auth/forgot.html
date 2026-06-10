@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
+  <meta name="theme-color" content="#0F9D58">
+  <title>نسيت كلمة المرور - مَرمى</title>
+  <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card" id="auth-card">
+      <div class="logo">
+        <img src="../assets/logo.svg" alt="مَرمى" class="auth-logo" width="64" height="64">
+        <h1>نسيت كلمة المرور؟</h1>
+        <p class="subtitle">أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة التعيين</p>
+      </div>
+
+      <form id="forgot-form" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="email">البريد الإلكتروني <span class="required">*</span></label>
+          <input type="email" class="form-control" id="email" name="email" required autofocus autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn--primary btn--block" id="submit-btn">
+          <span class="btn-text">إرسال الرابط</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        تذكّرت كلمة المرور؟ <a href="/auth/login">تسجيل الدخول</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../config.js"></script>
+  <script src="../src/core/supabase-client.js"></script>
+  <script src="../src/core/utils.js"></script>
+  <script>
+    window.utils.renderIcons();
+    const form = document.getElementById('forgot-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const card = document.getElementById('auth-card');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = form.email.value.trim();
+      if (!email) return;
+      submitBtn.disabled = true;
+      submitBtn.querySelector('.btn-text').textContent = 'جارٍ الإرسال...';
+
+      const redirectTo = window.location.origin + window.utils.path('/auth/reset.html');
+      try {
+        const { error } = await window.sb.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+      } catch (err) {
+        // لا نكشف ما إذا كان البريد مسجّلاً — نعرض نفس رسالة النجاح دائماً
+        console.warn('reset request:', err);
+      }
+      // شاشة تأكيد ثابتة (لا توست عابر)
+      card.innerHTML = `
+        <div class="logo">
+          <span class="auth-logo" style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--accent-50);color:var(--accent-600)"><i data-lucide="mail-check" style="width:34px;height:34px"></i></span>
+          <h1>تفقّد بريدك</h1>
+          <p class="subtitle">إن كان <strong>${window.utils.escapeHtml(email)}</strong> مسجّلاً لدينا، فستصلك رسالة فيها رابط لإعادة تعيين كلمة المرور. تحقّق من صندوق الوارد (والبريد المزعج).</p>
+        </div>
+        <div class="auth-footer"><a href="/auth/login">العودة لتسجيل الدخول</a></div>
+      `;
+      window.utils.renderIcons(card);
+    });
+  </script>
+</body>
+</html>

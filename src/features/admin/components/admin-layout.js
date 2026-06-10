@@ -19,7 +19,8 @@ window.layout = (function () {
     { key: 'admin-tenants',       group: 'الملاعب',    label: 'الملاعب',        icon: 'goal',              path: '/admin/tenants' },
     { key: 'admin-broadcast',     group: 'النظام',     label: 'بثّ رسالة',      icon: 'megaphone',         path: '/admin/broadcast' },
     { key: 'admin-admins',        group: 'النظام',     label: 'المشرفون',       icon: 'shield',            path: '/admin/admins' },
-    { key: 'admin-audit',         group: 'النظام',     label: 'سجلّ النشاط',     icon: 'history',           path: '/admin/audit' }
+    { key: 'admin-audit',         group: 'النظام',     label: 'سجلّ النشاط',     icon: 'history',           path: '/admin/audit' },
+    { key: 'admin-account',       group: 'النظام',     label: 'حسابي',           icon: 'user-circle',       path: '/admin/account' }
   ];
 
   const BOTTOM_NAV = [

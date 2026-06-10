@@ -276,7 +276,7 @@
                             <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
                             <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
                             <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
-                            <td data-label="السعر" class="tabular-nums">${fmtMoney(b.total_price)}</td>
+                            <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
                             <td data-label="المدفوع" class="tabular-nums">
                               ${fmtMoney(b.paid_amount)}
                               ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}

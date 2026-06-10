@@ -897,6 +897,26 @@
 }
 .bp-slot.is-selected .bp-slot-price { color: var(--c-brand-d); }
 
+/* عرض/خصم على الشريحة */
+.bp-slot--offer { position: relative; border-color: #E6B800; }
+.bp-slot-old { text-decoration: line-through; color: var(--c-faint); margin-inline-end: 4px; opacity: .8; }
+.bp-slot-offer {
+  position: absolute;
+  top: -8px;
+  inset-inline-start: 50%;
+  transform: translateX(50%);
+  background: #E6B800;
+  color: #4A3B00;
+  font-size: 9px;
+  font-weight: var(--weight-bold);
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    9) CUSTOMER FORM
    ═══════════════════════════════════════════════════════════════════ */

@@ -91,6 +91,13 @@ window.utils = {
     return `${currencyFormatter.format(n)} ر.س`;
   },
 
+  // سعر اختياري: null/undefined = «عند التواصل»، 0 = «مجاني»، غير ذلك = مبلغ
+  formatPrice(value) {
+    if (value === null || value === undefined || value === '') return 'عند التواصل';
+    if (Number(value) === 0) return 'مجاني';
+    return this.formatCurrency(value);
+  },
+
   // قاموس الترجمة للمزايا (مفاتيح كانونية ↔ تسميات عربية)
   AMENITY_LABELS: {
     showers: 'دش',

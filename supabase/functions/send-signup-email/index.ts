@@ -1,6 +1,7 @@
 // Send Email Hook لـ Supabase Auth.
-// يستقبل أحداث التسجيل (signup) ويُرسل بريداً مخصّصاً عبر Resend
-// بدلاً من القالب الافتراضي.
+// يستقبل أحداث المصادقة (signup + recovery) ويُرسل بريداً مخصّصاً عبر Resend
+// بدلاً من القالب الافتراضي. ملاحظة: ما دام الخطّاف مفعّلاً، Supabase يفوّض له
+// كل رسائل المصادقة — فأي نوع لا نعالجه هنا لن تُرسل له رسالة إطلاقاً.
 //
 // إعداد Supabase Dashboard:
 //   Authentication → Hooks → Send Email Hook → Enable
@@ -12,7 +13,7 @@
 
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { sendEmail } from "../_shared/resend.ts";
-import { signupConfirmation } from "../_shared/templates.ts";
+import { signupConfirmation, passwordReset } from "../_shared/templates.ts";
 
 interface SupabaseUser {
   id: string;
@@ -50,9 +51,11 @@ Deno.serve(async (req) => {
       payload = JSON.parse(rawBody) as HookPayload;
     }
 
-    // نتعامل فقط مع رسالة التسجيل (signup). الأنواع الأخرى نتركها لـ Supabase أو لمعالجات لاحقة.
-    if (payload.email_data.email_action_type !== "signup") {
-      return new Response(JSON.stringify({ skipped: true, reason: "not a signup email" }), {
+    const actionType = payload.email_data.email_action_type;
+    // نتعامل مع التسجيل (signup) وإعادة تعيين كلمة المرور (recovery).
+    // الأنواع الأخرى نتركها (لا قالب مخصّص لها بعد).
+    if (actionType !== "signup" && actionType !== "recovery") {
+      return new Response(JSON.stringify({ skipped: true, reason: `unhandled type: ${actionType}` }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -60,15 +63,23 @@ Deno.serve(async (req) => {
 
     const { user, email_data } = payload;
     const fullName = String(user.user_metadata?.full_name ?? "").trim();
-
-    // رابط التأكيد القياسي لـ Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? email_data.site_url;
-    const verifyUrl = `${supabaseUrl}/auth/v1/verify?token=${email_data.token_hash}&type=signup&redirect_to=${encodeURIComponent(email_data.redirect_to || email_data.site_url)}`;
 
-    const { subject, html } = signupConfirmation({ fullName, verifyUrl });
+    // رابط verify القياسي لـ Supabase (يحمل المستخدم بعده إلى redirect_to)
+    const buildVerifyUrl = (type: string) =>
+      `${supabaseUrl}/auth/v1/verify?token=${email_data.token_hash}&type=${type}&redirect_to=${encodeURIComponent(email_data.redirect_to || email_data.site_url)}`;
+
+    let subject: string;
+    let html: string;
+    if (actionType === "recovery") {
+      ({ subject, html } = passwordReset({ fullName, resetUrl: buildVerifyUrl("recovery") }));
+    } else {
+      ({ subject, html } = signupConfirmation({ fullName, verifyUrl: buildVerifyUrl("signup") }));
+    }
+
     await sendEmail({ to: user.email, subject, html });
 
-    return new Response(JSON.stringify({ sent: true }), {
+    return new Response(JSON.stringify({ sent: true, type: actionType }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

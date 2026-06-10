@@ -6,6 +6,7 @@
 
   function statusInfo(t, isActive) {
     if (t.suspended) return { cls: 'expired', label: 'موقوف' };
+    if (t.lifetime) return { cls: 'lifetime', label: 'وصول دائم' };
     if (!isActive) return { cls: 'expired', label: 'منتهٍ' };
     if (t.subscription_ends_at && new Date(t.subscription_ends_at) < new Date()) return { cls: 'grace', label: 'فترة سماح' };
     if (t.subscription_status === 'active') return { cls: 'active', label: 'مشترك' };
@@ -63,7 +64,11 @@
     const o = d.owner || {};
     const c = d.counts || {};
     const endDate = t.subscription_ends_at || t.trial_ends_at;
-    const endLabel = t.subscription_ends_at ? 'نهاية الاشتراك' : 'نهاية التجربة';
+    const endLabel = t.lifetime ? 'الوصول' : (t.subscription_ends_at ? 'نهاية الاشتراك' : 'نهاية التجربة');
+    const endValue = t.lifetime ? 'دائم' : fmtDate(endDate);
+    const endIcon = t.lifetime ? 'gem' : 'calendar-clock';
+    const limFields = t.lifetime ? '∞' : t.allowed_fields;
+    const limStaff  = t.lifetime ? '∞' : t.allowed_staff;
     const dis = t.suspended ? ' disabled title="فعّل الملعب أولًا"' : '';
     const hasSub = !!t.subscription_ends_at;
     const trialFuture = t.trial_ends_at && new Date(t.trial_ends_at) > new Date();
@@ -78,18 +83,23 @@
         </div>
         <div class="actions">
           <button class="btn btn--secondary btn--sm" data-act="toggle">${t.suspended ? 'تفعيل' : 'تعطيل'}</button>
-          <button class="btn btn--secondary btn--sm" data-act="trial"${dis}>تمديد التجربة</button>
-          ${trialFuture ? `<button class="btn btn--ghost btn--sm" data-act="end-trial"${dis}>إنهاء التجربة</button>` : ''}
-          <button class="btn btn--primary btn--sm" data-act="grant"${dis}>منح/تمديد اشتراك</button>
-          ${hasSub ? `<button class="btn btn--ghost btn--sm" data-act="end-sub"${dis}>إنهاء الاشتراك</button>` : ''}
+          ${t.lifetime ? `
+            <button class="btn btn--ghost btn--sm" data-act="revoke-lifetime"${dis}>إلغاء الوصول الدائم</button>
+          ` : `
+            <button class="btn btn--secondary btn--sm" data-act="trial"${dis}>تمديد التجربة</button>
+            ${trialFuture ? `<button class="btn btn--ghost btn--sm" data-act="end-trial"${dis}>إنهاء التجربة</button>` : ''}
+            <button class="btn btn--primary btn--sm" data-act="grant"${dis}>منح/تمديد اشتراك</button>
+            ${hasSub ? `<button class="btn btn--ghost btn--sm" data-act="end-sub"${dis}>إنهاء الاشتراك</button>` : ''}
+            <button class="btn btn--secondary btn--sm" data-act="grant-lifetime"${dis}>منح وصول دائم</button>
+          `}
         </div>
       </div>
 
       <div class="stats-grid">
-        ${statCard('goal', 'الأرضيات', `${c.fields ?? 0} <span class="text-tertiary" style="font-size:var(--text-md)">/ ${t.allowed_fields}</span>`, 'مستخدمة / المسموح')}
-        ${statCard('user', 'الموظفون', `${c.staff ?? 0} <span class="text-tertiary" style="font-size:var(--text-md)">/ ${t.allowed_staff}</span>`, 'مستخدمون / المسموح')}
+        ${statCard('goal', 'الأرضيات', `${c.fields ?? 0} <span class="text-tertiary" style="font-size:var(--text-md)">/ ${limFields}</span>`, t.lifetime ? 'مستخدمة / بلا حدّ' : 'مستخدمة / المسموح')}
+        ${statCard('user', 'الموظفون', `${c.staff ?? 0} <span class="text-tertiary" style="font-size:var(--text-md)">/ ${limStaff}</span>`, t.lifetime ? 'مستخدمون / بلا حدّ' : 'مستخدمون / المسموح')}
         ${statCard('clipboard-list', 'الحجوزات', c.bookings ?? 0, 'إجمالي الحجوزات')}
-        ${statCard('calendar-clock', endLabel, fmtDate(endDate), s.label)}
+        ${statCard(endIcon, endLabel, endValue, s.label)}
       </div>
 
       <div class="card" style="margin-bottom:var(--space-4)">
@@ -99,7 +109,7 @@
               <div><span class="text-secondary">المالك:</span> ${o.full_name ? window.utils.escapeHtml(o.full_name) : '—'}</div>
               <div><span class="text-secondary">البريد:</span> ${o.email ? `<a href="mailto:${window.utils.escapeHtml(o.email)}">${window.utils.escapeHtml(o.email)}</a>` : '—'}</div>
             </div>
-            <button class="btn btn--ghost btn--sm" data-act="limits"><i data-lucide="sliders-horizontal"></i> تعديل الحدود</button>
+            ${t.lifetime ? '' : `<button class="btn btn--ghost btn--sm" data-act="limits"><i data-lucide="sliders-horizontal"></i> تعديل الحدود</button>`}
           </div>
         </div>
       </div>
@@ -255,7 +265,8 @@
           });
         });
 
-        byAct('trial').addEventListener('click', () => {
+        const trialBtn = byAct('trial');
+        if (trialBtn) trialBtn.addEventListener('click', () => {
           numberModal({
             title: 'تمديد التجربة',
             intro: 'تُضاف الأيام إلى نهاية التجربة الحالية (أو من الآن إن انتهت).',
@@ -265,7 +276,8 @@
           });
         });
 
-        byAct('grant').addEventListener('click', () => {
+        const grantBtn = byAct('grant');
+        if (grantBtn) grantBtn.addEventListener('click', () => {
           numberModal({
             title: 'منح / تمديد اشتراك',
             intro: 'يمدّد الاشتراك بعدد الأيام ويضبط الحدود ويُلغي الإيقاف.',
@@ -279,7 +291,8 @@
           });
         });
 
-        byAct('limits').addEventListener('click', () => {
+        const limitsBtn = byAct('limits');
+        if (limitsBtn) limitsBtn.addEventListener('click', () => {
           numberModal({
             title: 'تعديل الحدود',
             fields: [
@@ -288,6 +301,32 @@
             ],
             submitText: 'حفظ',
             onSubmit: (v) => window.api.adminSetLimits(t.id, v.fields, v.staff)
+          });
+        });
+
+        const grantLifeBtn = byAct('grant-lifetime');
+        if (grantLifeBtn) grantLifeBtn.addEventListener('click', () => {
+          reasonModal({
+            title: 'منح وصول دائم',
+            intro: `منح "${nm}" وصولاً دائمًا (مدى الحياة) بكل المميزات بلا حدود؟ يُلغي أي قيود اشتراك.`,
+            reasonLabel: 'سبب المنح',
+            confirmText: 'منح وصول دائم',
+            danger: false,
+            run: (r) => window.api.adminGrantLifetime(t.id, r),
+            successMsg: 'تم منح الوصول الدائم'
+          });
+        });
+
+        const revokeLifeBtn = byAct('revoke-lifetime');
+        if (revokeLifeBtn) revokeLifeBtn.addEventListener('click', () => {
+          reasonModal({
+            title: 'إلغاء الوصول الدائم',
+            intro: `إلغاء الوصول الدائم عن "${nm}"؟ سيعود الملعب لمنطق الاشتراك/التجربة العادي.`,
+            reasonLabel: 'سبب الإلغاء',
+            confirmText: 'إلغاء الوصول الدائم',
+            danger: true,
+            run: (r) => window.api.adminRevokeLifetime(t.id, r),
+            successMsg: 'تم إلغاء الوصول الدائم'
           });
         });
       }

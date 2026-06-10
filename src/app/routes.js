@@ -23,8 +23,10 @@ window.appRoutes = [
   { name: 'customer-details', path: '/customers/:id',    title: 'تفاصيل العميل',     activeNav: 'customers' },
   { name: 'fields',           path: '/fields',           title: 'الأرضيات',          ownerOnly: true },
   { name: 'schedule',         path: '/schedule',         title: 'أيام وفترات العمل', ownerOnly: true },
+  { name: 'offers',           path: '/offers',           title: 'العروض',            ownerOnly: true },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },
   { name: 'staff',            path: '/staff',            title: 'الموظفون',          ownerOnly: true },
   { name: 'subscription',     path: '/subscription',     title: 'الاشتراك',          ownerOnly: true },
+  { name: 'account',          path: '/account',          title: 'حسابي' },
   { name: 'settings',         path: '/settings',         title: 'إعدادات الملعب' }
 ];

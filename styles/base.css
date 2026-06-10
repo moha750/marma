@@ -21,6 +21,14 @@ body {
   min-height: 100vh;
 }
 
+/* ── منع تجاوز النصوص الطويلة لحاوياتها عبر لوحات التحكم والإشراف ──
+   (بريد/روابط/مراجع طويلة بلا مسافات). overflow-wrap وراثيّ فيغطّي كل المحتوى.
+   خلايا الجداول تأخذ "anywhere" لإجبار الكسر داخل العمود بدل توسيعه. */
+.app-body { overflow-wrap: break-word; }
+.app-body .table td,
+.app-body .table th { overflow-wrap: anywhere; }
+.app-body .table td code { overflow-wrap: anywhere; }
+
 /* ── شريط تمرير موحّد ورفيع عبر كل التطبيق (يتكيّف مع الثيم عبر التوكنات) ── */
 * {
   scrollbar-width: thin;                                  /* Firefox */

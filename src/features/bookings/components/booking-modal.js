@@ -169,9 +169,9 @@ window.bookingModal = (function () {
 
         <div class="form-row cols-2">
           <div class="form-group">
-            <label class="form-label">السعر الإجمالي (ر.س) <span class="required">*</span></label>
-            <input type="number" class="form-control" name="total_price" min="0" step="0.01" required value="${editing ? booking.total_price : ''}">
-            <span class="form-help" id="price-help">يُحسب تلقائياً من السعر/ساعة × المدة</span>
+            <label class="form-label">السعر الإجمالي (ر.س)</label>
+            <input type="number" class="form-control" name="total_price" min="0" step="0.01" placeholder="عند التواصل" value="${editing && booking.total_price != null ? booking.total_price : ''}">
+            <span class="form-help" id="price-help">يُحسب تلقائياً من السعر/ساعة × المدة · فارغ = عند التواصل · 0 = مجاني</span>
           </div>
           <div class="form-group">
             <label class="form-label">المدفوع (ر.س)</label>
@@ -304,7 +304,7 @@ window.bookingModal = (function () {
       slots.forEach((s) => {
         const startIso = new Date(s.slot_start).toISOString();
         const endIso = new Date(s.slot_end).toISOString();
-        const slotPrice = s.slot_price !== undefined ? Number(s.slot_price) : null;
+        const slotPrice = (s.slot_price === null || s.slot_price === undefined) ? null : Number(s.slot_price);
         const isSelected = editing && startIso === currentStartIso;
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -317,7 +317,7 @@ window.bookingModal = (function () {
         let statusLabel = '';
         if (s.is_past) statusLabel = 'انتهى';
         else if (!s.is_available) statusLabel = 'محجوز';
-        else statusLabel = slotPrice ? window.utils.formatCurrency(slotPrice) : 'متاح';
+        else statusLabel = window.utils.formatPrice(slotPrice);
 
         btn.innerHTML = `
           <div class="slot-time">${window.utils.formatTime(s.slot_start)} → ${window.utils.formatTime(s.slot_end)}</div>
@@ -427,7 +427,8 @@ window.bookingModal = (function () {
       const startTime = fd.get('start_time');
       const endTime = fd.get('end_time');
       const fieldId = fd.get('field_id');
-      const totalPrice = parseFloat(fd.get('total_price'));
+      const rawPrice = (fd.get('total_price') || '').trim();
+      const totalPrice = rawPrice === '' ? null : Math.max(0, parseFloat(rawPrice) || 0);
       const paidAmount = parseFloat(fd.get('paid_amount')) || 0;
       const notes = fd.get('notes').trim() || null;
       const status = fd.get('status') || 'confirmed';
@@ -440,7 +441,7 @@ window.bookingModal = (function () {
         window.utils.toast('وقت النهاية يجب أن يكون بعد البداية', 'error');
         return;
       }
-      if (paidAmount > totalPrice) {
+      if (totalPrice != null && paidAmount > totalPrice) {
         window.utils.toast('المبلغ المدفوع لا يمكن أن يتجاوز الإجمالي', 'error');
         return;
       }

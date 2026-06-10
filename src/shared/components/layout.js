@@ -18,8 +18,10 @@ window.layout = (function () {
     { key: 'customers',    group: 'تشغيلي', label: 'العملاء',              icon: 'users',            path: '/customers' },
     { key: 'fields',       group: 'إدارة',  label: 'الأرضيات',             icon: 'goal',             path: '/fields',       ownerOnly: true },
     { key: 'schedule',     group: 'إدارة',  label: 'أيام وفترات العمل',    icon: 'clock',            path: '/schedule',     ownerOnly: true },
+    { key: 'offers',       group: 'إدارة',  label: 'العروض',               icon: 'badge-percent',    path: '/offers',       ownerOnly: true },
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
     { key: 'staff',        group: 'إدارة',  label: 'الموظفون',             icon: 'user',             path: '/staff',        ownerOnly: true },
+    { key: 'account',      group: 'حساب',   label: 'حسابي',                icon: 'user-circle',      path: '/account' },
     { key: 'subscription', group: 'حساب',   label: 'الاشتراك',             icon: 'credit-card',      path: '/subscription', ownerOnly: true },
     { key: 'settings',     group: 'حساب',   label: 'إعدادات الملعب',       icon: 'settings',         path: '/settings' }
   ];
@@ -39,6 +41,15 @@ window.layout = (function () {
   function renderTrialBanner(status, activePage) {
     if (!status || activePage === 'subscription') return '';
     const phase = status.phase;
+    // وصول دائم: شارة ذهبية إيجابية بلا دعوة تجديد
+    if (phase === 'lifetime') {
+      return `
+        <div class="trial-banner trial-banner--lifetime">
+          <span class="trial-banner-icon"><i data-lucide="gem"></i></span>
+          <span>وصول دائم — كل المميزات مفتوحة</span>
+        </div>
+      `;
+    }
     // days_until_expiry = أيام حتى نهاية التجربة/الاشتراك (بدون فترة سماح)
     // days_remaining    = أيام حتى القفل الكامل (مع فترة السماح للاشتراك المدفوع)
     const daysToExpiry = Math.max(0, Number(status.days_until_expiry) || 0);

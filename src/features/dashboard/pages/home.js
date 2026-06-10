@@ -328,7 +328,7 @@
               </div>
               <div class="timeline-side">
                 ${statusChip(b.status)}
-                <span class="timeline-price">${fmtMoney(b.total_price)}</span>
+                <span class="timeline-price">${window.utils.formatPrice(b.total_price)}</span>
               </div>
             </div>
           `).join('')}

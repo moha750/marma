@@ -872,16 +872,24 @@
     const html = filtered.map((s) => {
       const startIso = new Date(s.slot_start).toISOString();
       const endIso   = new Date(s.slot_end).toISOString();
-      const price = s.slot_price !== undefined ? Number(s.slot_price) : null;
+      const price = (s.slot_price === null || s.slot_price === undefined) ? null : Number(s.slot_price);
+      const original = (s.original_price === null || s.original_price === undefined) ? null : Number(s.original_price);
+      const hasOffer = !!s.offer_label && original != null && price != null && price < original;
       const isSelected = state.selectedSlot && state.selectedSlot.startIso === startIso;
       const cls = ['bp-slot'];
       if (s.is_past) cls.push('is-past');
       else if (!s.is_available) cls.push('is-busy');
       if (isSelected) cls.push('is-selected');
-      const priceLabel = s.is_past ? 'انتهى' : (!s.is_available ? 'محجوز' : (price ? window.utils.formatCurrency(price) : 'متاح'));
+      if (hasOffer) cls.push('bp-slot--offer');
+      let priceLabel;
+      if (s.is_past) priceLabel = 'انتهى';
+      else if (!s.is_available) priceLabel = 'محجوز';
+      else if (hasOffer) priceLabel = `<span class="bp-slot-old">${window.utils.formatCurrency(original)}</span> ${window.utils.formatPrice(price)}`;
+      else priceLabel = window.utils.formatPrice(price);
       return `
         <button type="button" class="${cls.join(' ')}" ${(s.is_past || !s.is_available) ? 'disabled' : ''}
-                data-start="${startIso}" data-end="${endIso}" data-price="${price || ''}">
+                data-start="${startIso}" data-end="${endIso}" data-price="${price == null ? '' : price}">
+          ${hasOffer ? `<span class="bp-slot-offer">${window.utils.escapeHtml(s.offer_label)}</span>` : ''}
           <span class="bp-slot-time">${window.utils.formatTime(s.slot_start)}</span>
           <span class="bp-slot-price">${priceLabel}</span>
         </button>
@@ -900,7 +908,7 @@
     state.selectedSlot = {
       startIso: btn.dataset.start,
       endIso: btn.dataset.end,
-      price: btn.dataset.price ? Number(btn.dataset.price) : 0
+      price: btn.dataset.price === '' ? null : Number(btn.dataset.price)
     };
     document.querySelectorAll('.bp-slot').forEach((b) => b.classList.toggle('is-selected', b === btn));
     refreshActionBar();
@@ -982,7 +990,12 @@
     cta.disabled = false;
     const start = new Date(state.selectedSlot.startIso);
     const end = new Date(state.selectedSlot.endIso);
-    document.getElementById('bp-action-amt').textContent = window.utils.formatCurrency(state.selectedSlot.price || 0).replace(' ر.س', '');
+    const price = state.selectedSlot.price;
+    const amtEl = document.getElementById('bp-action-amt');
+    const unitEl = bar.querySelector('.bp-action-price small');
+    if (price == null) { amtEl.textContent = 'عند التواصل'; if (unitEl) unitEl.style.display = 'none'; }
+    else if (Number(price) === 0) { amtEl.textContent = 'مجاني'; if (unitEl) unitEl.style.display = 'none'; }
+    else { amtEl.textContent = window.utils.formatCurrency(price).replace(' ر.س', ''); if (unitEl) unitEl.style.display = ''; }
     document.getElementById('bp-action-date').innerHTML = `<i data-lucide="calendar"></i>${window.utils.formatDate(start)}`;
     document.getElementById('bp-action-time').innerHTML = `<i data-lucide="clock"></i>${window.utils.formatTime(start)} → ${window.utils.formatTime(end)}`;
     window.utils.renderIcons(bar);
@@ -1064,7 +1077,7 @@
         </div>
         <div class="bp-summary-total">
           <span>الإجمالي</span>
-          <strong>${window.utils.formatCurrency(state.selectedSlot.price || 0)}</strong>
+          <strong>${window.utils.formatPrice(state.selectedSlot.price)}</strong>
         </div>
         <p class="bp-summary-note">سيتواصل معك الملعب لتأكيد الحجز.</p>
       </div>
@@ -1170,7 +1183,7 @@
             </div>
             <div class="bp-summary-total" style="margin-top:var(--space-2)">
               <span>الإجمالي</span>
-              <strong>${window.utils.formatCurrency(totalPrice)}</strong>
+              <strong>${window.utils.formatPrice(totalPrice)}</strong>
             </div>
           </div>
         </div>
@@ -1328,7 +1341,7 @@
                 ${b.field_city ? `<span><i data-lucide="map-pin"></i>${window.utils.escapeHtml(b.field_city)}</span>` : ''}
               </div>
               <div class="bp-booking-item-foot">
-                <span class="bp-booking-item-price">${window.utils.formatCurrency(b.total_price)}</span>
+                <span class="bp-booking-item-price">${window.utils.formatPrice(b.total_price)}</span>
                 ${b.is_cancellable ? `
                   <button type="button" class="btn btn--danger btn--sm" data-cancel-id="${b.id}">
                     <i data-lucide="x-circle"></i>
