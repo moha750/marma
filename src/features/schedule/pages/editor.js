@@ -1,14 +1,14 @@
-// أيام وفترات العمل — محرّر أسبوعي مضمّن (inline) بحفظ تلقائي لكل يوم. للمالك فقط.
-// إعادة بناء 2026: لا مودالات لتحرير الفترات — كل يوم صف، الأوقات/المدة/السعر تُحرَّر مباشرة،
-// ويُحفظ اليوم تلقائياً عند أي تغيير. شريط "ضبط سريع" لكل الأيام + نسخ يوم لأيام.
+// أيام وفترات العمل — بطاقات أيام + مفتاح فتح/إغلاق، والتحرير عبر نافذة منبثقة تتحقّق من التداخل قبل الحفظ.
+// المبدأ: لا يُحفظ يومٌ فيه فترتان متداخلتان أو وقت ناقص — النافذة لا تُغلق على حالة فاسدة. للمالك فقط (الموظّف: قراءة).
 
 (function () {
   const TEMPLATE = `
     <div class="page-header">
       <div>
         <h2>أيام وفترات العمل</h2>
-        <div class="page-subtitle">حدّد أوقات كل أرضية ومدة الموعد وسعر الساعة — تُحفظ تلقائياً</div>
+        <div class="page-subtitle">حدّد أوقات كل أرضية ومدة الموعد وسعره</div>
       </div>
+      <div class="actions" id="sch-actions"></div>
     </div>
     <div id="schedule-container">
       <div class="loader-center"><div class="loader loader--lg"></div></div>
@@ -26,7 +26,7 @@
   ];
 
   const DURATION_OPTS = [30, 45, 60, 75, 90, 105, 120, 150, 180];
-  const DEFAULT_PERIOD = { open: '16:00', close: '23:00', duration: 60, price: 0 };
+  const NEW_PERIOD = () => ({ open: '16:00', close: '23:00', duration: 60, price: 0 });
 
   function formatDuration(mins) {
     const m = Number(mins) || 60;
@@ -51,39 +51,70 @@
         if (rangesOverlap(r[i], r[j])) return true;
     return false;
   }
-
   function isValidTimes(p) { return p.open && p.close && p.open !== p.close; }
+  function addMinutes(t, mins) {
+    let [h, m] = t.split(':').map(Number);
+    let tot = ((h * 60 + m + mins) % 1440 + 1440) % 1440;
+    return `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`;
+  }
+  const openMin = (p) => { const [h, m] = (p.open || '0:0').split(':').map(Number); return h * 60 + m; };
+  // ترتيب الفترات حسب تسلسل التشغيل الفعلي (يدعم الامتداد بعد منتصف الليل):
+  // نرتّب بوقت البدء ثم نُدوّر القائمة لتبدأ من الفترة التي تلي أطول فجوة — أي بداية جلسة العمل،
+  // فلا تقفز فترة ما بعد منتصف الليل إلى المقدمة.
+  function sortPeriods(periods) {
+    const list = periods.map((p) => ({ ...p }));
+    if (list.length <= 1 || list.some((p) => !isValidTimes(p))) {
+      return list.sort((a, b) => (a.open || '').localeCompare(b.open || ''));
+    }
+    list.sort((a, b) => openMin(a) - openMin(b));
+    let maxGap = -1, rot = 0;
+    for (let i = 0; i < list.length; i++) {
+      const nextIdx = (i + 1) % list.length;
+      const gap = openMin(list[nextIdx]) + (nextIdx === 0 ? 1440 : 0) - openMin(list[i]);
+      if (gap > maxGap) { maxGap = gap; rot = nextIdx; }
+    }
+    return list.slice(rot).concat(list.slice(0, rot));
+  }
 
   function slotInfo(p) {
     if (!isValidTimes(p)) return { valid: false, count: 0, overnight: false };
     const [start, end] = toMinuteRange(p);
     const overnight = end - start > 0 && (p.close <= p.open);
-    const total = end - start;
-    const count = Math.floor(total / (Number(p.duration) || 60));
+    const count = Math.floor((end - start) / (Number(p.duration) || 60));
     return { valid: true, count, overnight };
   }
 
   function periodHint(p) {
     const info = slotInfo(p);
     if (!info.valid)
-      return `<span class="wh-hint wh-hint--bad"><i data-lucide="triangle-alert"></i> أدخل وقتين مختلفين</span>`;
+      return `<span class="sch-hint sch-hint--bad"><i data-lucide="triangle-alert"></i> أدخل وقتين مختلفين</span>`;
     if (info.count <= 0)
-      return `<span class="wh-hint wh-hint--bad"><i data-lucide="triangle-alert"></i> الفترة أقصر من مدة الموعد</span>`;
+      return `<span class="sch-hint sch-hint--bad"><i data-lucide="triangle-alert"></i> الفترة أقصر من مدة الموعد</span>`;
     const word = info.count === 1 ? 'موعد' : info.count === 2 ? 'موعدان' : (info.count <= 10 ? 'مواعيد' : 'موعداً');
     const moon = info.overnight
-      ? `<span class="wh-hint wh-hint--moon"><i data-lucide="moon"></i> يمتد لليوم التالي</span>`
+      ? `<span class="sch-hint sch-hint--moon"><i data-lucide="moon"></i> يمتد لليوم التالي</span>`
       : '';
-    return `<span class="wh-hint"><i data-lucide="calendar-check"></i> ${info.count} ${word}</span>${moon}`;
+    return `<span class="sch-hint"><i data-lucide="calendar-check"></i> ${info.count} ${word}</span>${moon}`;
   }
 
-  // السعر: فارغ ⇒ null (عند التواصل) · رقم ⇒ ≥ 0 (0 = مجاني)
-  function parsePrice(raw) {
-    const s = String(raw == null ? '' : raw).trim();
-    if (s === '') return null;
-    return Math.max(0, parseFloat(s) || 0);
+  // السعر ثابت لكل موعد: «سعر ثابت» (رقم ≥ 0، و0 = مجاني) أو «عند التواصل» (null)
+  function parseAmount(raw) {
+    const n = parseFloat(String(raw == null ? '' : raw).trim());
+    return isNaN(n) ? 0 : Math.max(0, n);
   }
-  // قيمة input للسعر (فارغ عند null)
   function priceInputVal(v) { return v == null ? '' : v; }
+  function priceControlHtml(price) {
+    const isContact = price == null;
+    return `
+      <select class="form-control sch-price-mode" data-f="price-mode">
+        <option value="fixed" ${isContact ? '' : 'selected'}>سعر ثابت</option>
+        <option value="contact" ${isContact ? 'selected' : ''}>عند التواصل</option>
+      </select>
+      <div class="input-group sch-price-amt"${isContact ? ' hidden' : ''}>
+        <input type="number" min="0" step="0.01" class="form-control" data-f="price" value="${priceInputVal(price)}" placeholder="0 = مجاني">
+        <span class="input-addon">ر.س</span>
+      </div>`;
+  }
 
   const page = {
     async mount(container, ctx) {
@@ -91,6 +122,9 @@
       const isOwner = ctx.profile.role === 'owner';
       const root = container.querySelector('#schedule-container');
       const fieldsHref = window.utils.path('/fields');
+      const esc = (v) => window.utils.escapeHtml(v);
+      const fmtT = (v) => window.utils.formatTimeOfDay(v);
+      const dayName = (dow) => (DAYS.find((d) => d.dow === dow) || {}).name || '';
 
       let fields = [];
       let selectedFieldId = null;
@@ -108,70 +142,28 @@
         const rows = await window.api.listWorkingPeriods(selectedFieldId);
         rows.forEach((r) => {
           periodsByDay[r.day_of_week].push({
-            open:  (r.open_time  || '').substring(0, 5),
+            open: (r.open_time || '').substring(0, 5),
             close: (r.close_time || '').substring(0, 5),
             duration: Number(r.slot_duration_minutes) || 60,
-            price:    (r.hourly_price === null || r.hourly_price === undefined) ? null : (Number(r.hourly_price) || 0)
+            price: (r.hourly_price === null || r.hourly_price === undefined) ? null : (Number(r.hourly_price) || 0)
           });
         });
-        Object.keys(periodsByDay).forEach((dow) =>
-          periodsByDay[dow].sort((a, b) => a.open.localeCompare(b.open)));
+        Object.keys(periodsByDay).forEach((dow) => {
+          periodsByDay[dow] = sortPeriods(periodsByDay[dow]);
+        });
       }
 
-      // ─── حفظ يوم (تلقائي) — موحّد مع نظام التوست مثل بقية الموقع ───
-      async function commitDay(dow, message) {
-        const periods = periodsByDay[dow];
-        if (periods.some((p) => !isValidTimes(p))) { window.utils.toast('أكمل أوقات الفترة قبل الحفظ', 'error'); return; }
-        if (detectOverlap(periods)) { window.utils.toast('فترتان متداخلتان في نفس اليوم', 'error'); return; }
+      // حفظ يوم بعد التحقّق — يُعيد {ok} أو {ok:false, error}
+      async function saveDay(dow, periods) {
+        if (periods.some((p) => !isValidTimes(p))) return { ok: false, error: 'أكمل وقتَي كل فترة (مختلفين)' };
+        if (periods.some((p) => slotInfo(p).count <= 0)) return { ok: false, error: 'هناك فترة أقصر من مدة الموعد' };
+        if (detectOverlap(periods)) return { ok: false, error: 'فترتان متداخلتان في نفس اليوم — صحّح قبل الحفظ' };
         try {
-          const sorted = periods.map((p) => ({ ...p })).sort((a, b) => a.open.localeCompare(b.open));
+          const sorted = sortPeriods(periods);
           await window.api.setDayPeriods(selectedFieldId, dow, sorted);
           periodsByDay[dow] = sorted;
-          updateSummary();
-          window.utils.toast(message || 'تم الحفظ', 'success');
-        } catch (err) {
-          window.utils.toast(window.utils.formatError(err), 'error');
-        }
-      }
-
-      // ─── أفعال على الحالة ───
-      function setPeriodField(dow, idx, field, raw) {
-        const p = periodsByDay[dow][idx];
-        if (!p) return;
-        if (field === 'price') p.price = parsePrice(raw);
-        else if (field === 'duration') p.duration = parseInt(raw, 10) || 60;
-        else p[field] = raw; // open / close
-        // حدّث التلميح بلا إعادة رسم (للحفاظ على التركيز)
-        const hintEl = root.querySelector(`.wh-day[data-dow="${dow}"] .wh-period[data-idx="${idx}"] .wh-period-hint`);
-        if (hintEl) { hintEl.innerHTML = periodHint(p); window.utils.renderIcons(hintEl); }
-        const msg = field === 'price' ? 'تم تحديث السعر'
-                  : field === 'duration' ? 'تم تحديث مدة الموعد'
-                  : 'تم تحديث وقت الفترة';
-        commitDay(dow, msg);
-      }
-
-      function removePeriod(dow, idx) {
-        periodsByDay[dow].splice(idx, 1);
-        renderDayBody(dow);
-        const msg = periodsByDay[dow].length === 0
-          ? `تم حذف الفترة وإغلاق يوم ${DAYS.find((d) => d.dow === dow).name}`
-          : 'تم حذف الفترة';
-        commitDay(dow, msg);
-      }
-      function toggleDay(dow, open) {
-        if (!open) {
-          periodsByDay[dow] = [];
-          renderDayBody(dow);
-          commitDay(dow, `تم إغلاق يوم ${DAYS.find((d) => d.dow === dow).name}`);
-        } else if (periodsByDay[dow].length === 0) {
-          // فتح يوم مغلق = تعريف أول فترة عبر المودال؛ الإلغاء يُعيد المفتاح مغلقاً
-          openAddPeriodModal(dow, {
-            onCancel: () => {
-              const t = root.querySelector(`.wh-day[data-dow="${dow}"] [data-toggle]`);
-              if (t) t.checked = false;
-            }
-          });
-        }
+          return { ok: true };
+        } catch (err) { return { ok: false, error: window.utils.formatError(err) }; }
       }
 
       // ─── الرسم ───
@@ -201,61 +193,35 @@
           root.innerHTML = `
             <div class="card"><div class="empty-state">
               <div class="empty-icon"><i data-lucide="triangle-alert"></i></div>
-              <p class="text-danger">${window.utils.escapeHtml(window.utils.formatError(err))}</p>
+              <p class="text-danger">${esc(window.utils.formatError(err))}</p>
             </div></div>`;
           window.utils.renderIcons(root);
         }
       }
 
       function render() {
-        const field = fields.find((f) => f.id === selectedFieldId) || fields[0];
-
         root.innerHTML = `
-          ${fields.length > 1 ? `
-            <div class="chip-rail mb-md" id="wh-fields">
-              ${fields.map((f) => `
-                <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}" data-field-id="${f.id}">
-                  <i data-lucide="goal" style="width:12px;height:12px"></i>
-                  <span>${window.utils.escapeHtml(f.name)}</span>
-                  ${!f.is_active ? '<span class="text-tertiary text-xs">معطّلة</span>' : ''}
-                </button>`).join('')}
-            </div>` : ''}
-
-          <div class="wh-bar">
-            <div class="wh-bar-head">
-              <div>
-                <div class="wh-bar-title">${window.utils.escapeHtml(field.name)}</div>
-                <div class="wh-bar-sub" id="wh-summary"></div>
-              </div>
-            </div>
-            ${isOwner ? `
-              <details class="wh-quick">
-                <summary><i data-lucide="wand-sparkles"></i> ضبط سريع لكل الأيام</summary>
-                <div class="wh-quick-body">
-                  <div class="wh-quick-grid">
-                    <label class="wh-q-field"><span>من</span><input type="time" id="q-open" class="form-control" value="16:00"></label>
-                    <label class="wh-q-field"><span>إلى</span><input type="time" id="q-close" class="form-control" value="23:00"></label>
-                    <label class="wh-q-field"><span>مدة الموعد</span>
-                      <select id="q-dur" class="form-control">${DURATION_OPTS.map((m) => `<option value="${m}" ${m === 60 ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}</select>
-                    </label>
-                    <label class="wh-q-field"><span>سعر الساعة</span>
-                      <div class="input-group"><input type="number" min="0" step="0.01" id="q-price" class="form-control" value="0" placeholder="عند التواصل"><span class="input-addon">ر.س</span></div>
-                    </label>
-                  </div>
-                  <button class="btn btn--primary" id="q-apply"><i data-lucide="copy-check"></i> طبّق على كل الأيام</button>
-                  <p class="wh-quick-note">سيُستبدل جدول كل الأيام بهذه الفترة الواحدة. اترك السعر فارغًا = عند التواصل · 0 = مجاني.</p>
-                </div>
-              </details>` : ''}
+          <div class="chip-rail mb-md" id="sch-fields">
+            ${fields.map((f) => `
+              <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}" data-field-id="${f.id}">
+                <i data-lucide="goal" style="width:12px;height:12px"></i>
+                <span>${esc(f.name)}</span>
+                ${!f.is_active ? '<span class="text-tertiary text-xs">معطّلة</span>' : ''}
+              </button>`).join('')}
           </div>
-
-          <div class="wh-week" id="wh-week"></div>
+          <div class="sch-summary" id="sch-summary"></div>
+          <div class="sch-week" id="sch-week"></div>
         `;
 
-        const week = root.querySelector('#wh-week');
-        DAYS.forEach((day) => week.appendChild(buildDayRow(day)));
+        const acts = container.querySelector('#sch-actions');
+        if (acts) {
+          acts.innerHTML = isOwner ? `<button class="btn btn--ghost" id="sch-apply-all"><i data-lucide="copy-check"></i> تطبيق على كل الأيام</button>` : '';
+          const ab = acts.querySelector('#sch-apply-all');
+          if (ab) ab.addEventListener('click', openApplyAllModal);
+          window.utils.renderIcons(acts);
+        }
 
-        // تبديل الأرضية
-        root.querySelectorAll('#wh-fields [data-field-id]').forEach((chip) => {
+        root.querySelectorAll('#sch-fields [data-field-id]').forEach((chip) => {
           chip.addEventListener('click', async () => {
             if (chip.dataset.fieldId === selectedFieldId) return;
             selectedFieldId = chip.dataset.fieldId;
@@ -265,134 +231,263 @@
           });
         });
 
-        if (isOwner) bindQuickBar();
-        bindWeek(week);
+        bindWeek(root.querySelector('#sch-week'));
+        renderWeek();
         updateSummary();
         window.utils.renderIcons(root);
       }
 
       function updateSummary() {
-        const el = root.querySelector('#wh-summary');
+        const el = root.querySelector('#sch-summary');
         if (!el) return;
         const total = Object.values(periodsByDay).reduce((s, a) => s + a.length, 0);
         const open = Object.values(periodsByDay).filter((a) => a.length).length;
-        el.textContent = open === 0
-          ? 'كل الأيام مغلقة'
-          : `${open} ${open === 1 ? 'يوم مفتوح' : 'أيام مفتوحة'} · ${total} ${total === 1 ? 'فترة' : 'فترات'}`;
+        el.innerHTML = open === 0
+          ? `<i data-lucide="info"></i> كل الأيام مغلقة`
+          : `<i data-lucide="info"></i> <b>${open}</b> ${open === 1 ? 'يوم مفتوح' : 'أيام مفتوحة'} · <b>${total}</b> ${total === 1 ? 'فترة' : 'فترات'}`;
+        window.utils.renderIcons(el);
       }
 
-      function buildDayRow(day) {
+      function lineHtml(p) {
+        return `<span class="sch-line">
+          <i data-lucide="clock"></i>
+          <span class="sch-line-time"><bdi>${esc(fmtT(p.open))}</bdi> – <bdi>${esc(fmtT(p.close))}</bdi></span>
+          <span class="sch-line-sep">·</span>
+          <span class="sch-line-dur">${formatDuration(p.duration)}</span>
+          <span class="sch-price">${esc(window.utils.formatPrice(p.price))}</span>
+        </span>`;
+      }
+
+      function buildDayCard(day) {
+        const dow = day.dow;
+        const periods = periodsByDay[dow] || [];
+        const isOpen = periods.length > 0;
         const el = document.createElement('div');
-        el.className = 'wh-day';
-        el.dataset.dow = day.dow;
-        const isOpen = (periodsByDay[day.dow] || []).length > 0;
+        el.className = ['sch-day', isOpen ? 'is-open' : 'is-closed'].join(' ');
+        el.dataset.dow = dow;
         el.innerHTML = `
-          <div class="wh-day-head">
-            <div class="wh-day-head-start">
-              ${isOwner ? `
-                <label class="wh-switch" title="${isOpen ? 'مفتوح' : 'مغلق'}">
-                  <input type="checkbox" data-toggle ${isOpen ? 'checked' : ''}>
-                  <span class="wh-switch-track"></span>
-                </label>` : ''}
-              <span class="wh-day-name">${day.name}</span>
-              ${!isOwner ? `<span class="chip-status ${isOpen ? 'chip-status--success' : 'chip-status--muted'}">${isOpen ? 'مفتوح' : 'مغلق'}</span>` : ''}
-            </div>
-            <div class="wh-day-tools">
-              ${isOwner ? `
-                <button class="wh-add" title="إضافة فترة" ${isOpen ? '' : 'hidden'}><i data-lucide="plus"></i><span>فترة</span></button>
-                <button class="wh-copy" data-copy title="نسخ هذا اليوم إلى أيام أخرى" ${isOpen ? '' : 'hidden'}><i data-lucide="copy"></i><span>نسخ</span></button>` : ''}
-            </div>
+          <div class="sch-day-head">
+            ${isOwner ? `
+              <label class="sch-switch" title="${isOpen ? 'مفتوح' : 'مغلق'}">
+                <input type="checkbox" data-toggle ${isOpen ? 'checked' : ''}>
+                <span class="sch-switch-track"></span>
+              </label>` : ''}
+            <span class="sch-day-name">${day.name}</span>
+            <span class="status-badge ${isOpen ? 'status-badge--active' : 'status-badge--muted'}">${isOpen ? 'مفتوح' : 'مغلق'}</span>
+            ${!isOpen ? `<span class="sch-closed-label"><i data-lucide="moon-star"></i> لا مواعيد حجز</span>` : ''}
           </div>
-          <div class="wh-day-body" data-body></div>`;
-        renderDayBodyInto(el.querySelector('[data-body]'), day.dow);
+          ${isOpen ? `<div class="sch-day-body">${periods.map(lineHtml).join('')}</div>` : ''}
+          ${isOwner && isOpen ? `
+            <div class="sch-day-acts">
+              <button class="btn btn--ghost btn--sm" data-edit title="تعديل فترات اليوم"><i data-lucide="pencil"></i> تعديل</button>
+              <button class="btn btn--ghost btn--sm" data-copy title="نسخ هذا اليوم لأيام"><i data-lucide="copy"></i> نسخ</button>
+            </div>` : ''}`;
         return el;
       }
 
-      function renderDayBody(dow) {
-        const dayEl = root.querySelector(`.wh-day[data-dow="${dow}"]`);
-        if (!dayEl) return;
-        renderDayBodyInto(dayEl.querySelector('[data-body]'), dow);
-        // حدّث المفتاح وأزرار الإضافة/النسخ حسب حالة الفتح
-        const isOpen = periodsByDay[dow].length > 0;
-        const toggle = dayEl.querySelector('[data-toggle]');
-        if (toggle) toggle.checked = isOpen;
-        dayEl.querySelectorAll('.wh-add, [data-copy]').forEach((b) => { b.hidden = !isOpen; });
+      function renderWeek() {
+        const week = root.querySelector('#sch-week');
+        if (!week) return;
+        week.innerHTML = '';
+        DAYS.forEach((d) => week.appendChild(buildDayCard(d)));
+        window.utils.renderIcons(week);
       }
 
-      function renderDayBodyInto(body, dow) {
-        const periods = periodsByDay[dow] || [];
-        if (!periods.length) {
-          body.innerHTML = `<div class="wh-closed"><i data-lucide="moon-star"></i><span>مغلق — لا مواعيد حجز</span></div>`;
-          window.utils.renderIcons(body);
-          return;
-        }
-        if (!isOwner) {
-          body.innerHTML = `<div class="wh-period-list">${periods.map((p) => `
-            <div class="wh-period wh-period--ro">
-              <span class="wh-ro-time">${window.utils.formatTimeOfDay(p.open)} → ${window.utils.formatTimeOfDay(p.close)}</span>
-              <span class="wh-ro-meta"><i data-lucide="timer"></i> ${formatDuration(p.duration)}</span>
-              <span class="wh-ro-meta"><i data-lucide="banknote"></i> ${p.price > 0 ? window.utils.formatCurrency(p.price) + '<span class="text-tertiary">/س</span>' : window.utils.formatPrice(p.price)}</span>
-            </div>`).join('')}</div>`;
-          window.utils.renderIcons(body);
-          return;
-        }
-        body.innerHTML = `
-          <div class="wh-period-list">
-            ${periods.map((p, idx) => `
-              <div class="wh-period" data-idx="${idx}">
-                <div class="wh-period-hint">${periodHint(p)}</div>
-                <div class="wh-period-grid">
-                  <label class="wh-f"><span class="wh-f-label">من</span>
-                    <input type="time" class="form-control" data-f="open" value="${p.open}"></label>
-                  <label class="wh-f"><span class="wh-f-label">إلى</span>
-                    <input type="time" class="form-control" data-f="close" value="${p.close}"></label>
-                  <label class="wh-f"><span class="wh-f-label">مدة الموعد</span>
-                    <select class="form-control" data-f="duration">
-                      ${DURATION_OPTS.map((m) => `<option value="${m}" ${m === p.duration ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}
-                    </select></label>
-                  <label class="wh-f"><span class="wh-f-label">سعر الساعة</span>
-                    <div class="input-group"><input type="number" min="0" step="0.01" class="form-control" data-f="price" value="${priceInputVal(p.price)}" placeholder="عند التواصل"><span class="input-addon">ر.س</span></div></label>
-                </div>
-                <div class="wh-price-note text-tertiary text-xs">اتركه فارغًا = السعر عند التواصل · 0 = مجاني</div>
-                <button class="wh-remove" title="حذف هذه الفترة"><i data-lucide="trash-2"></i><span>حذف هذه الفترة</span></button>
-              </div>`).join('')}
-          </div>`;
-        window.utils.renderIcons(body);
-      }
-
-      // ─── ربط أحداث الأسبوع (تفويض) ───
       function bindWeek(week) {
+        if (!week) return;
         week.addEventListener('change', (e) => {
-          const input = e.target.closest('[data-f]');
-          if (input) {
-            const dow = +input.closest('.wh-day').dataset.dow;
-            const idx = +input.closest('.wh-period').dataset.idx;
-            setPeriodField(dow, idx, input.dataset.f, input.value);
-            return;
-          }
-          const toggle = e.target.closest('[data-toggle]');
-          if (toggle) toggleDay(+toggle.closest('.wh-day').dataset.dow, toggle.checked);
+          const tg = e.target.closest('[data-toggle]');
+          if (tg) toggleDay(+tg.closest('.sch-day').dataset.dow, tg.checked);
         });
         week.addEventListener('click', (e) => {
-          const rm = e.target.closest('.wh-remove');
-          if (rm) { removePeriod(+rm.closest('.wh-day').dataset.dow, +rm.closest('.wh-period').dataset.idx); return; }
-          const add = e.target.closest('.wh-add');
-          if (add) { openAddPeriodModal(+add.closest('.wh-day').dataset.dow); return; }
+          const ed = e.target.closest('[data-edit]');
+          if (ed) { openDayModal(+ed.closest('.sch-day').dataset.dow); return; }
           const cp = e.target.closest('[data-copy]');
-          if (cp && !cp.disabled) { openCopyModal(+cp.closest('.wh-day').dataset.dow); }
+          if (cp) { openCopyModal(+cp.closest('.sch-day').dataset.dow); return; }
         });
       }
 
-      // ─── شريط الضبط السريع ───
-      function bindQuickBar() {
-        const apply = root.querySelector('#q-apply');
-        if (!apply) return;
-        apply.addEventListener('click', async () => {
-          const open = root.querySelector('#q-open').value;
-          const close = root.querySelector('#q-close').value;
-          const duration = parseInt(root.querySelector('#q-dur').value, 10) || 60;
-          const price = parsePrice(root.querySelector('#q-price').value);
+      // ─── المفتاح: فتح/إغلاق اليوم ───
+      function toggleDay(dow, open) {
+        if (open) {
+          // فتح يوم مغلق عبر نافذة؛ الإلغاء يُعيد المفتاح مغلقاً
+          openDayModal(dow, {
+            seed: true,
+            onCancel: () => { const t = root.querySelector(`.sch-day[data-dow="${dow}"] [data-toggle]`); if (t) t.checked = false; }
+          });
+        } else {
+          closeDay(dow);
+        }
+      }
+
+      async function closeDay(dow) {
+        const revert = () => { const t = root.querySelector(`.sch-day[data-dow="${dow}"] [data-toggle]`); if (t) t.checked = true; };
+        if (periodsByDay[dow].length) {
+          const ok = await window.utils.confirm({
+            title: `إغلاق ${dayName(dow)}`,
+            message: `سيُغلق اليوم وتُحذف فتراته (${periodsByDay[dow].length}). متابعة؟`,
+            confirmText: 'إغلاق', danger: true
+          });
+          if (!ok) { revert(); return; }
+        }
+        const res = await saveDay(dow, []);
+        if (!res.ok) { window.utils.toast(res.error, 'error'); revert(); return; }
+        window.utils.toast(`تم إغلاق ${dayName(dow)}`, 'success');
+        renderWeek();
+        updateSummary();
+      }
+
+      // ─── نافذة تحرير اليوم (إضافة/تعديل/حذف فترات + تحقّق قبل الحفظ) ───
+      function openDayModal(dow, opts) {
+        opts = opts || {};
+        const day = DAYS.find((d) => d.dow === dow);
+        let working = (!opts.seed && periodsByDay[dow].length)
+          ? periodsByDay[dow].map((p) => ({ ...p }))
+          : [NEW_PERIOD()];
+        let submitted = false;
+
+        const winHtml = (p, idx) => `
+          <div class="sch-win" data-idx="${idx}">
+            <div class="sch-win-top">
+              <span class="sch-win-title"><i data-lucide="clock"></i> الفترة ${idx + 1}</span>
+              <button type="button" class="sch-win-del" data-del title="حذف الفترة"><i data-lucide="trash-2"></i> حذف</button>
+            </div>
+            <div class="form-row cols-2">
+              <div class="form-group"><label class="form-label">من</label>
+                <input type="time" class="form-control" data-f="open" value="${p.open}"></div>
+              <div class="form-group"><label class="form-label">إلى</label>
+                <input type="time" class="form-control" data-f="close" value="${p.close}"></div>
+            </div>
+            <div class="form-row cols-2">
+              <div class="form-group"><label class="form-label">مدة الموعد</label>
+                <select class="form-control" data-f="duration">
+                  ${DURATION_OPTS.map((m) => `<option value="${m}" ${m === p.duration ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}
+                </select></div>
+              <div class="form-group"><label class="form-label">سعر الموعد</label>${priceControlHtml(p.price)}</div>
+            </div>
+            <div class="sch-win-hint">${periodHint(p)}</div>
+          </div>`;
+        const bodyHtml = () => `
+          <div id="day-wins">${working.map(winHtml).join('')}</div>
+          <button type="button" class="btn btn--ghost btn--sm btn--block" id="day-add"><i data-lucide="plus"></i> إضافة فترة</button>`;
+
+        const ctrl = window.utils.openModal({
+          title: opts.seed ? `فتح ${day.name} — حدّد الفترات` : `${day.name} — فترات العمل`,
+          body: bodyHtml(),
+          footer: `<button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+                   <button type="button" class="btn btn--primary" id="day-save">حفظ اليوم</button>`,
+          onClose: () => { if (!submitted && opts.onCancel) opts.onCancel(); }
+        });
+        const m = ctrl.modal;
+
+        // اقرأ قيم الحقول إلى working (قبل أي إعادة رسم أو حفظ)
+        function readDom() {
+          m.querySelectorAll('#day-wins .sch-win').forEach((el) => {
+            const w = working[+el.dataset.idx];
+            if (!w) return;
+            w.open = el.querySelector('[data-f="open"]').value;
+            w.close = el.querySelector('[data-f="close"]').value;
+            w.duration = parseInt(el.querySelector('[data-f="duration"]').value, 10) || 60;
+            const mode = el.querySelector('[data-f="price-mode"]').value;
+            w.price = mode === 'contact' ? null : parseAmount(el.querySelector('[data-f="price"]').value);
+          });
+        }
+        function rerenderWins() {
+          const box = m.querySelector('#day-wins');
+          box.innerHTML = working.map(winHtml).join('');
+          window.utils.renderIcons(box);
+        }
+
+        // تحديث التلميح الحيّ أثناء الكتابة
+        m.addEventListener('input', (e) => {
+          if (!e.target.closest('[data-f]')) return;
+          const el = e.target.closest('.sch-win');
+          readDom();
+          const hint = el.querySelector('.sch-win-hint');
+          if (hint) { hint.innerHTML = periodHint(working[+el.dataset.idx]); window.utils.renderIcons(hint); }
+        });
+        // تبديل نوع السعر يُظهر/يُخفي حقل المبلغ
+        m.addEventListener('change', (e) => {
+          const pm = e.target.closest('[data-f="price-mode"]');
+          if (!pm) return;
+          const amt = pm.closest('.sch-win').querySelector('.sch-price-amt');
+          if (amt) amt.hidden = pm.value !== 'fixed';
+          readDom();
+        });
+        m.querySelector('#day-add').addEventListener('click', () => {
+          readDom();
+          const last = working[working.length - 1];
+          working.push(last ? { open: last.close, close: addMinutes(last.close, 120), duration: last.duration, price: last.price } : NEW_PERIOD());
+          rerenderWins();
+        });
+        m.querySelector('#day-wins').addEventListener('click', (e) => {
+          const del = e.target.closest('[data-del]');
+          if (!del) return;
+          readDom();
+          working.splice(+del.closest('.sch-win').dataset.idx, 1);
+          if (!working.length) working.push(NEW_PERIOD()); // الإغلاق يكون بالمفتاح لا بحذف آخر فترة
+          rerenderWins();
+        });
+
+        m.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+        m.querySelector('#day-save').addEventListener('click', async () => {
+          readDom();
+          // التحقّق يمنع الحفظ والإغلاق على حالة فاسدة (تداخل/وقت ناقص)
+          if (working.some((p) => !isValidTimes(p))) { window.utils.toast('أكمل وقتَي كل فترة (مختلفين)', 'error'); return; }
+          if (working.some((p) => slotInfo(p).count <= 0)) { window.utils.toast('هناك فترة أقصر من مدة الموعد', 'error'); return; }
+          if (detectOverlap(working)) { window.utils.toast('فترتان متداخلتان في نفس اليوم — صحّحها قبل الحفظ', 'error'); return; }
+          const btn = m.querySelector('#day-save');
+          btn.disabled = true;
+          const res = await saveDay(dow, working);
+          if (!res.ok) { window.utils.toast(res.error, 'error'); btn.disabled = false; return; }
+          submitted = true;
+          ctrl.close();
+          window.utils.toast(`تم حفظ ${day.name}`, 'success');
+          renderWeek();
+          updateSummary();
+        });
+
+        window.utils.renderIcons(m);
+      }
+
+      // ─── نافذة: تطبيق فترة على كل الأيام ───
+      function openApplyAllModal() {
+        const body = `
+          <form id="sch-apply-form" autocomplete="off">
+            <div class="form-row cols-2">
+              <div class="form-group"><label class="form-label">من الساعة <span class="required">*</span></label>
+                <input type="time" class="form-control" name="open" value="16:00" required></div>
+              <div class="form-group"><label class="form-label">إلى الساعة <span class="required">*</span></label>
+                <input type="time" class="form-control" name="close" value="23:00" required></div>
+            </div>
+            <div class="form-row cols-2">
+              <div class="form-group"><label class="form-label">مدة الموعد</label>
+                <select class="form-control" name="duration">
+                  ${DURATION_OPTS.map((m) => `<option value="${m}" ${m === 60 ? 'selected' : ''}>${formatDuration(m)}</option>`).join('')}
+                </select></div>
+              <div class="form-group"><label class="form-label">سعر الموعد</label>${priceControlHtml(0)}</div>
+            </div>
+            <p class="form-help">سيُستبدل جدول كل أيام الأسبوع بهذه الفترة الواحدة.</p>
+          </form>`;
+        const footer = `
+          <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+          <button type="submit" class="btn btn--primary" form="sch-apply-form">تطبيق على كل الأيام</button>`;
+        const ctrl = window.utils.openModal({ title: 'تطبيق فترة على كل الأيام', body, footer });
+        const form = ctrl.modal.querySelector('#sch-apply-form');
+        ctrl.modal.addEventListener('change', (e) => {
+          const pm = e.target.closest('[data-f="price-mode"]');
+          if (pm) { const amt = ctrl.modal.querySelector('.sch-price-amt'); if (amt) amt.hidden = pm.value !== 'fixed'; }
+        });
+        ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const open = form.open.value, close = form.close.value;
+          const duration = parseInt(form.duration.value, 10) || 60;
+          const mode = form.querySelector('[data-f="price-mode"]').value;
+          const price = mode === 'contact' ? null : parseAmount(form.querySelector('[data-f="price"]').value);
           if (!isValidTimes({ open, close })) { window.utils.toast('أدخل وقتين مختلفين', 'error'); return; }
+          if (slotInfo({ open, close, duration }).count <= 0) { window.utils.toast('الفترة أقصر من مدة الموعد', 'error'); return; }
+          ctrl.close();
           const ok = await window.utils.confirm({
             title: 'تطبيق على كل الأيام',
             message: 'سيُستبدل جدول كل أيام الأسبوع بهذه الفترة الواحدة. متابعة؟',
@@ -400,129 +495,23 @@
           });
           if (!ok) return;
           const period = { open, close, duration, price };
-          apply.disabled = true;
           try {
             for (const d of DAYS) {
               await window.api.setDayPeriods(selectedFieldId, d.dow, [period]);
               periodsByDay[d.dow] = [{ ...period }];
             }
             window.utils.toast('تم تطبيق الفترة على كل الأيام', 'success');
-            render();
+            renderWeek();
+            updateSummary();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
-            await loadPeriodsForField(); render();
+            await loadPeriodsForField(); renderWeek(); updateSummary();
           }
         });
+        window.utils.renderIcons(ctrl.modal);
       }
 
-      // ─── إضافة فترة عبر مودال (مع معاينة حيّة) ───
-      // معاينة 1 (تحت من/إلى): مدة الفترة + امتدادها لليوم التالي
-      function modalDurationPreview(open, close) {
-        if (!isValidTimes({ open, close })) return '';
-        const [start, end] = toMinuteRange({ open, close });
-        const total = end - start;
-        const h = Math.floor(total / 60), m = total % 60;
-        const durLabel = m === 0 ? `${h} ساعة` : (h === 0 ? `${m} دقيقة` : `${h} ساعة و ${m} دقيقة`);
-        const overnight = close <= open;
-        return `<div class="wh-mp ${overnight ? 'wh-mp--warn' : 'wh-mp--ok'}">
-          <i data-lucide="${overnight ? 'moon' : 'clock'}"></i>
-          <div>مدة الفترة <strong>${durLabel}</strong>${overnight ? ' · <strong>تمتد لليوم التالي</strong>' : ' · في نفس اليوم'}</div></div>`;
-      }
-
-      // معاينة 2 (تحت المدة/السعر): عدد المواعيد + سعر الموعد
-      function modalSlotsPreview(open, close, duration, price) {
-        if (!isValidTimes({ open, close }) || !duration) return '';
-        const info = slotInfo({ open, close, duration });
-        if (info.count <= 0) {
-          return `<div class="wh-mp wh-mp--bad"><i data-lucide="triangle-alert"></i>
-            <div>الفترة أقصر من مدة الموعد — لن تُنشأ مواعيد</div></div>`;
-        }
-        const word = info.count === 1 ? 'موعد' : info.count === 2 ? 'موعدان' : (info.count <= 10 ? 'مواعيد' : 'موعداً');
-        const perSlot = price == null ? null : Math.round(price * (duration / 60) * 100) / 100;
-        const priceLabel = price == null ? ' · السعر عند التواصل'
-                         : price > 0 ? ` · <strong>${window.utils.formatCurrency(perSlot)}</strong> للموعد`
-                         : ' · مجاني';
-        return `<div class="wh-mp wh-mp--ok"><i data-lucide="calendar-check"></i>
-          <div>سيُنشأ <strong>${info.count}</strong> ${word}${priceLabel}</div></div>`;
-      }
-
-      function openAddPeriodModal(dow, opts = {}) {
-        const day = DAYS.find((d) => d.dow === dow);
-        const body = `
-          <form id="wh-add-form" autocomplete="off">
-            <div class="form-row cols-2">
-              <div class="form-group">
-                <label class="form-label">من الساعة <span class="required">*</span></label>
-                <input type="time" class="form-control" name="open" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">إلى الساعة <span class="required">*</span></label>
-                <input type="time" class="form-control" name="close" required>
-              </div>
-            </div>
-            <div id="wh-add-dur"></div>
-            <div class="form-row cols-2">
-              <div class="form-group">
-                <label class="form-label">مدة الموعد <span class="required">*</span></label>
-                <select class="form-control" name="duration" required>
-                  <option value="" disabled selected>اختر المدة</option>
-                  ${DURATION_OPTS.map((m) => `<option value="${m}">${formatDuration(m)}</option>`).join('')}
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">سعر الساعة</label>
-                <div class="input-group">
-                  <input type="number" min="0" step="0.01" class="form-control" name="price" placeholder="عند التواصل">
-                  <span class="input-addon">ر.س</span>
-                </div>
-                <span class="form-help">اتركه فارغًا = السعر عند التواصل |0 0 = مجاني</span>
-              </div>
-            </div>
-            <div id="wh-add-slots"></div>
-          </form>`;
-        const footer = `
-          <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
-          <button type="submit" class="btn btn--primary" form="wh-add-form">إضافة الفترة</button>`;
-        let submitted = false;
-        const ctrl = window.utils.openModal({
-          title: `إضافة فترة — ${day.name}`, body, footer,
-          onClose: () => { if (!submitted && opts.onCancel) opts.onCancel(); }
-        });
-        const form = ctrl.modal.querySelector('#wh-add-form');
-        const durEl = ctrl.modal.querySelector('#wh-add-dur');
-        const slotsEl = ctrl.modal.querySelector('#wh-add-slots');
-        const update = () => {
-          const duration = parseInt(form.duration.value, 10) || 0;
-          const price = parsePrice(form.price.value);
-          durEl.innerHTML = modalDurationPreview(form.open.value, form.close.value);
-          slotsEl.innerHTML = modalSlotsPreview(form.open.value, form.close.value, duration, price);
-          window.utils.renderIcons(durEl);
-          window.utils.renderIcons(slotsEl);
-        };
-        form.open.addEventListener('input', update);
-        form.close.addEventListener('input', update);
-        form.duration.addEventListener('change', update);
-        form.price.addEventListener('input', update);
-        update();
-        ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          const open = form.open.value, close = form.close.value;
-          const duration = parseInt(form.duration.value, 10) || 60;
-          const price = parsePrice(form.price.value);
-          if (!isValidTimes({ open, close })) { window.utils.toast('أدخل وقتين مختلفين', 'error'); return; }
-          if (detectOverlap([...periodsByDay[dow], { open, close, duration, price }])) {
-            window.utils.toast('الفترة تتداخل مع فترة موجودة في هذا اليوم', 'error'); return;
-          }
-          submitted = true;
-          ctrl.close();
-          periodsByDay[dow].push({ open, close, duration, price });
-          renderDayBody(dow);
-          commitDay(dow, `تم إضافة فترة ليوم ${day.name}`);
-        });
-      }
-
-      // ─── نسخ يوم إلى أيام (مودال مُصغّر — فعل عرضي) ───
+      // ─── نافذة: نسخ يوم إلى أيام ───
       function openCopyModal(sourceDow) {
         const source = DAYS.find((d) => d.dow === sourceDow);
         const sourcePeriods = periodsByDay[sourceDow] || [];
@@ -530,7 +519,7 @@
         const body = `
           <p class="text-muted text-sm mb-md">انسخ فترات <strong class="text-accent">${source.name}</strong>
             (${sourcePeriods.length} ${sourcePeriods.length === 1 ? 'فترة' : 'فترات'}) إلى:</p>
-          <div class="wh-copy-days">
+          <div class="sch-copy-days">
             ${DAYS.filter((d) => d.dow !== sourceDow).map((d) => `
               <label class="form-check"><input type="checkbox" value="${d.dow}"><span>${d.name}</span></label>`).join('')}
           </div>
@@ -541,7 +530,7 @@
         const ctrl = window.utils.openModal({ title: `نسخ فترات ${source.name}`, body, footer });
         ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
         ctrl.modal.querySelector('#copy-go').addEventListener('click', async () => {
-          const targets = [...ctrl.modal.querySelectorAll('.wh-copy-days input:checked')].map((i) => +i.value);
+          const targets = [...ctrl.modal.querySelectorAll('.sch-copy-days input:checked')].map((i) => +i.value);
           if (!targets.length) { window.utils.toast('اختر يوماً واحداً على الأقل', 'error'); return; }
           ctrl.close();
           try {
@@ -551,16 +540,16 @@
               periodsByDay[dow] = copy;
             }
             window.utils.toast(
-              targets.length === 1
-                ? `تم النسخ إلى يوم ${DAYS.find((d) => d.dow === targets[0]).name}`
-                : `تم النسخ إلى ${targets.length} أيام`,
+              targets.length === 1 ? `تم النسخ إلى يوم ${dayName(targets[0])}` : `تم النسخ إلى ${targets.length} أيام`,
               'success');
-            render();
+            renderWeek();
+            updateSummary();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
-            await loadPeriodsForField(); render();
+            await loadPeriodsForField(); renderWeek(); updateSummary();
           }
         });
+        window.utils.renderIcons(ctrl.modal);
       }
 
       if (window.realtime) {

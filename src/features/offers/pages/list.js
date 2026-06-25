@@ -7,7 +7,7 @@
   const keyOf = (fid, w, o, c) => `${fid || ''}|${w == null ? '' : w}|${o || ''}|${c || ''}`;
 
   function effectLabel(o) {
-    if (o.fixed_price != null) return `سعر ثابت ${window.utils.formatCurrency(o.fixed_price)}/س`;
+    if (o.fixed_price != null) return `سعر ثابت ${window.utils.formatCurrency(o.fixed_price)}`;
     return `خصم ${Number(o.discount_percent)}%`;
   }
 
@@ -132,7 +132,8 @@
         rows.forEach((r) => {
           const o = t5(r.open_time), c = t5(r.close_time), w = r.day_of_week;
           const k = `${w}|${o}|${c}`;
-          if (!seen.has(k)) { seen.add(k); list.push({ w, o, c }); }
+          const p = (r.hourly_price == null || r.hourly_price === '') ? null : Number(r.hourly_price);
+          if (!seen.has(k)) { seen.add(k); list.push({ w, o, c, p }); }
         });
         list.sort((a, b) => (a.w - b.w) || a.o.localeCompare(b.o));
         return list;
@@ -144,6 +145,12 @@
         const kind = e.fixed_price != null ? 'fixed' : 'percent';
         const selectedKeys = new Set((e.targets || []).map((t) =>
           keyOf(t.field_id, t.weekday, t5(t.start_time), t5(t.end_time))));
+        // خرائط الأسعار (ر.س للموعد) لمقارنة السعر الثابت بأسعار المواعيد المستهدفة
+        const periodPriceByKey = new Map();   // مفتاح فترة محدّدة → سعر الموعد (أو null)
+        const fieldPricesById = new Map();    // معرّف ملعب → [أسعار فتراته المعروفة]
+        const fieldHasOpenById = new Map();   // معرّف ملعب → هل فيه فترة مفتوحة السعر؟
+        const allPrices = [];                 // كل الأسعار المعروفة عبر الملاعب
+        let anyOpenAll = false;               // وجود أي موعد مفتوح السعر عبر كل الملاعب
 
         const body = `
           <form id="offer-form">
@@ -157,7 +164,7 @@
                 <label class="form-label" for="o-kind">نوع العرض</label>
                 <select class="form-control" id="o-kind">
                   <option value="percent" ${kind === 'percent' ? 'selected' : ''}>نسبة خصم %</option>
-                  <option value="fixed" ${kind === 'fixed' ? 'selected' : ''}>سعر ثابت/ساعة</option>
+                  <option value="fixed" ${kind === 'fixed' ? 'selected' : ''}>سعر ثابت للموعد</option>
                 </select>
               </div>
               <div class="form-group">
@@ -166,6 +173,7 @@
                   <input type="number" class="form-control" id="o-value" min="0" step="0.01" required value="${e.fixed_price != null ? e.fixed_price : (e.discount_percent != null ? e.discount_percent : '')}">
                   <span class="input-addon" id="o-addon">${kind === 'fixed' ? 'ر.س' : '%'}</span>
                 </div>
+                <span class="form-error" id="o-value-err" style="display:none"></span>
               </div>
             </div>
 
@@ -193,27 +201,98 @@
         const m = ctrl.modal;
         const kindEl = m.querySelector('#o-kind');
         const addonEl = m.querySelector('#o-addon');
+        const valEl = m.querySelector('#o-value');
+        const valErrEl = m.querySelector('#o-value-err');
         const periodsEl = m.querySelector('#o-periods');
-        kindEl.addEventListener('change', () => { addonEl.textContent = kindEl.value === 'fixed' ? 'ر.س' : '%'; });
+        // حدود الحقل تتبع النوع: النسبة (0، 100]، السعر الثابت ≥ 0 بلا حدّ أعلى
+        const applyBounds = () => {
+          if (kindEl.value === 'percent') { valEl.min = '0.01'; valEl.max = '100'; }
+          else { valEl.min = '0'; valEl.removeAttribute('max'); }
+        };
+        // إحصاء أسعار المواعيد المختارة: مدى المسعّرة + وجود مواعيد مفتوحة السعر («عند التواصل»)
+        const selectedPriceStats = () => {
+          let min = Infinity, max = -Infinity, hasKnown = false, hasOpen = false;
+          const add = (p) => { hasKnown = true; if (p < min) min = p; if (p > max) max = p; };
+          selectedKeys.forEach((key) => {
+            if (key === GLOBAL_KEY) { allPrices.forEach(add); if (anyOpenAll) hasOpen = true; return; }
+            const [fid, , o] = key.split('|');
+            if (o === '') {                                                   // كل مواعيد الملعب
+              (fieldPricesById.get(fid) || []).forEach(add);
+              if (fieldHasOpenById.get(fid)) hasOpen = true;
+            } else {                                                          // فترة محدّدة
+              const p = periodPriceByKey.get(key);
+              if (p == null) hasOpen = true; else add(p);
+            }
+          });
+          return { min, max, hasKnown, hasOpen };
+        };
+        const fmtSar = (n) => window.utils.formatCurrency(n);
+        // تحقّق حيّ: يُظهر رسالة تحت الحقل دون تغيير ما كتبه المستخدم. يُعيد true إن كان الحفظ مسموحًا (التنبيه/الإرشاد لا يمنع)
+        const validateValue = () => {
+          const raw = valEl.value.trim();
+          let msg = '', level = '';   // '' | 'error' | 'warn' | 'info'
+          if (raw !== '') {
+            const v = parseFloat(raw);
+            const st = selectedPriceStats();
+            if (isNaN(v)) { msg = 'أدخل رقمًا صالحًا'; level = 'error'; }
+            else if (kindEl.value === 'percent') {
+              if (v <= 0) { msg = 'نسبة الخصم يجب أن تكون أكبر من 0'; level = 'error'; }
+              else if (v > 100) { msg = 'نسبة الخصم لا تتجاوز 100%'; level = 'error'; }
+              else if (st.hasOpen && !st.hasKnown) { level = 'warn'; msg = 'النسبة لا تُطبَّق على مواعيد مفتوحة السعر («عند التواصل»). حدِّد سعرًا للملعب، أو استخدم «سعر ثابت».'; }
+              else if (st.hasOpen) { level = 'warn'; msg = 'بعض المواعيد المختارة مفتوحة السعر؛ لن تُطبَّق النسبة عليها — فقط على المسعّرة.'; }
+            } else if (v < 0) {
+              msg = 'السعر لا يكون سالبًا'; level = 'error';
+            } else if (st.hasKnown && v > st.max) {
+              level = 'error';
+              msg = st.min === st.max
+                ? `السعر (${fmtSar(v)}) أعلى من سعر الموعد المختار (${fmtSar(st.max)}) — لن يُطبَّق العرض. اجعله أقلّ من ${fmtSar(st.max)} ليكون خصمًا.`
+                : `السعر (${fmtSar(v)}) أعلى من سعر كل المواعيد المختارة (أعلاها ${fmtSar(st.max)}) — لن يُطبَّق العرض على أيّها. اجعله أقلّ ليكون خصمًا.`;
+            } else if (st.hasKnown && v > st.min) {
+              level = 'warn';
+              msg = `تنبيه: السعر أعلى من سعر بعض المواعيد المختارة (أدناها ${fmtSar(st.min)})؛ في تلك المواعيد لن يُطبَّق العرض — لا نرفع السعر أبدًا.`;
+            } else if (st.hasOpen) {
+              level = 'info';
+              msg = st.hasKnown
+                ? 'بعض المواعيد المختارة مفتوحة السعر؛ سيُحدِّد لها هذا السعر الثابت.'
+                : 'هذه المواعيد مفتوحة السعر («عند التواصل»)؛ سيُحدِّد لها هذا السعر الثابت.';
+            }
+          }
+          valErrEl.textContent = msg;
+          valErrEl.style.display = msg ? 'block' : 'none';
+          valErrEl.classList.toggle('form-error', level === 'error');
+          valErrEl.classList.toggle('form-warn', level === 'warn');
+          valErrEl.classList.toggle('form-help', level === 'info');
+          valEl.setAttribute('aria-invalid', level === 'error' ? 'true' : 'false');
+          return level !== 'error';
+        };
+        applyBounds();
+        kindEl.addEventListener('change', () => {
+          addonEl.textContent = kindEl.value === 'fixed' ? 'ر.س' : '%';
+          applyBounds();
+          validateValue();
+        });
+        valEl.addEventListener('input', validateValue);
 
         const GLOBAL_KEY = '|||'; // كل المواعيد · كل الملاعب
+        // يعكس حالة «الكل»: يُعطّل بصريًّا بقية الصفوف ويُظهر تنبيهًا
+        const syncAllLock = () => periodsEl.classList.toggle('offer-periods--all', selectedKeys.has(GLOBAL_KEY));
         periodsEl.addEventListener('click', (ev) => {
           const row = ev.target.closest('.offer-prow');
           if (!row) return;
           const key = row.dataset.key;
+          // ما دام «الكل» مفعّلًا، لا يُسمح باختيار موعد فردي حتى يُلغى «الكل»
+          if (key !== GLOBAL_KEY && selectedKeys.has(GLOBAL_KEY)) return;
           const on = row.getAttribute('aria-pressed') === 'true';
-          if (on) { row.setAttribute('aria-pressed', 'false'); selectedKeys.delete(key); return; }
-          // عند الاختيار: «الكل» يُلغي الباقي، وأي تحديد آخر يُلغي «الكل» (تنافٍ)
+          if (on) { row.setAttribute('aria-pressed', 'false'); selectedKeys.delete(key); syncAllLock(); validateValue(); return; }
+          // عند تفعيل «الكل»: يُلغي أي تحديد آخر
           if (key === GLOBAL_KEY) {
             selectedKeys.clear();
             periodsEl.querySelectorAll('.offer-prow[aria-pressed="true"]').forEach((r) => r.setAttribute('aria-pressed', 'false'));
-          } else if (selectedKeys.has(GLOBAL_KEY)) {
-            selectedKeys.delete(GLOBAL_KEY);
-            const g = periodsEl.querySelector(`.offer-prow[data-key="${GLOBAL_KEY}"]`);
-            if (g) g.setAttribute('aria-pressed', 'false');
           }
           row.setAttribute('aria-pressed', 'true');
           selectedKeys.add(key);
+          syncAllLock();
+          validateValue();
         });
 
         const fmtT = (v) => window.utils.formatTimeOfDay(v);
@@ -222,7 +301,7 @@
         const rangeHtml = (o, c) => `<bdi>${esc(o)}</bdi> – <bdi>${esc(c)}</bdi>`;
         // timeHtml: HTML موثوق (مبنيّ داخليًّا)
         const rowHtml = (key, dayLabel, timeHtml, isAll) =>
-          `<div class="offer-prow${isAll ? ' offer-prow--all' : ''}" role="button" data-key="${key}" aria-pressed="${selectedKeys.has(key) ? 'true' : 'false'}">
+          `<div class="offer-prow${isAll ? ' offer-prow--all' : ''}${key === GLOBAL_KEY ? ' offer-prow--global' : ''}" role="button" data-key="${key}" aria-pressed="${selectedKeys.has(key) ? 'true' : 'false'}">
             <span class="offer-ck"><i class="offer-ck-ic" data-lucide="check"></i></span>
             <span class="offer-day">${esc(dayLabel)}</span>
             <span class="offer-tm">${timeHtml}</span>
@@ -238,7 +317,7 @@
           // زرّ صريح: كل المواعيد · كل الملاعب
           let html = `<div class="offer-field-group"><div class="offer-rows">`
             + rowHtml(GLOBAL_KEY, 'الكل', esc('كل المواعيد · كل الملاعب'), true)
-            + `</div></div>`;
+            + `</div><div class="offer-all-note"><i data-lucide="info"></i> «الكل» مُحدَّد، وسيُطبَّق العرض على جميع المواعيد تلقائيًا. لاختيار مواعيد بعينها، ألغِ تحديد «الكل» أولاً.</div></div>`;
           for (const f of fields) {
             let periods = [];
             try { periods = await fetchPeriods(f.id); } catch (_) {}
@@ -246,11 +325,18 @@
             built.add(wholeKey);
             html += `<div class="offer-field-group"><div class="offer-field-name"><span class="offer-field-tag"><i data-lucide="goal"></i> ملعب ${window.utils.escapeHtml(f.name)}</span></div><div class="offer-rows">`;
             html += rowHtml(wholeKey, 'الكل', esc('كل مواعيد الملعب'), true);
+            const fPrices = [];
+            let fOpen = false;
             periods.forEach((p) => {
               const k = keyOf(f.id, p.w, p.o, p.c);
               built.add(k);
+              periodPriceByKey.set(k, p.p);
+              if (p.p != null) { fPrices.push(p.p); allPrices.push(p.p); }
+              else { fOpen = true; anyOpenAll = true; }
               html += rowHtml(k, DAYS[p.w], rangeHtml(fmtT(p.o), fmtT(p.c)), false);
             });
+            fieldPricesById.set(f.id, fPrices);
+            fieldHasOpenById.set(f.id, fOpen);
             html += `</div></div>`;
           }
           // أهداف محفوظة لا تطابق فترات حالية (مخصّصة)
@@ -266,6 +352,8 @@
             html += `</div></div>`;
           }
           periodsEl.innerHTML = html;
+          syncAllLock();
+          validateValue();
           window.utils.renderIcons(periodsEl);
         })();
 
@@ -273,10 +361,14 @@
         m.querySelector('#offer-form').addEventListener('submit', async (ev) => {
           ev.preventDefault();
           const label = m.querySelector('#o-label').value.trim();
-          const val = parseFloat(m.querySelector('#o-value').value);
+          const val = parseFloat(valEl.value);
           if (!label) { window.utils.toast('اسم العرض مطلوب', 'error'); return; }
-          if (isNaN(val) || val < 0) { window.utils.toast('قيمة غير صالحة', 'error'); return; }
-          if (kindEl.value === 'percent' && (val <= 0 || val > 100)) { window.utils.toast('النسبة بين 1 و 100', 'error'); return; }
+          if (valEl.value.trim() === '') {
+            valErrEl.textContent = 'القيمة مطلوبة'; valErrEl.style.display = 'block';
+            valErrEl.classList.add('form-error'); valErrEl.classList.remove('form-warn');
+            valEl.setAttribute('aria-invalid', 'true'); valEl.focus(); return;
+          }
+          if (!validateValue()) { valEl.focus(); return; }
           const targets = Array.from(periodsEl.querySelectorAll('.offer-prow[aria-pressed="true"]')).map((el) => {
             const [fid, w, o, c] = el.dataset.key.split('|');
             return { field_id: fid || null, weekday: w === '' ? null : Number(w), start_time: o || null, end_time: c || null };

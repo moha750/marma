@@ -36,7 +36,10 @@
       const addBtn = container.querySelector('#add-field-btn');
       if (!isOwner) addBtn.style.display = 'none';
 
-      const allowedFields = (ctx.status && ctx.status.allowed_fields) || 1;
+      const isLifetime = !!(ctx.status && ctx.status.lifetime);
+      const allowedFields = isLifetime
+        ? Infinity
+        : ((ctx.status && ctx.status.allowed_fields) || 1);
 
       function applyLimitToAddBtn(currentCount) {
         if (!isOwner) return;
@@ -117,7 +120,7 @@
                   <span class="stat-icon-chip"><i data-lucide="goal"></i></span>
                   <span class="stat-label">الأرضيات النشطة</span>
                 </div>
-                <div class="stat-value tabular-nums">${active} <span class="text-tertiary" style="font-size:var(--text-lg)">/ ${allowedFields}</span></div>
+                <div class="stat-value tabular-nums">${active} <span class="text-tertiary" style="font-size:var(--text-lg)">/ ${isLifetime ? '∞' : allowedFields}</span></div>
                 <div class="stat-sub">${fields.length} إجمالي · ${fields.length - active} معطّلة</div>
               </div>
             </div>

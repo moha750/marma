@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0F9D58">
+<link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
+<title>إعلان مَرمى — 45 ثانية (موشن جرافيك 9:16)</title>
+<style>
+/* ============ الخط ============ */
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('../assets/fonts/ALFONT_COM_IBMPLEXSANSARABIC-LIGHT.TTF') format('truetype');font-weight:300;font-display:block}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('../assets/fonts/ALFONT_COM_IBMPLEXSANSARABIC-REGULAR.TTF') format('truetype');font-weight:400;font-display:block}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('../assets/fonts/ALFONT_COM_IBMPLEXSANSARABIC-SEMIBOLD.TTF') format('truetype');font-weight:600;font-display:block}
+@font-face{font-family:'IBM Plex Sans Arabic';src:url('../assets/fonts/IBMPLEXSANSARABIC-BOLD.TTF') format('truetype');font-weight:700;font-display:block}
+
+/* ============ متغيرات الهوية (منسوخة من styles/tokens.css) ============ */
+:root{
+  --bg:#FAFAF7; --card:#FFFFFF; --field:#F4F4EF; --ink:#14160F; --muted:#555651;
+  --green:#0F9D58; --green-dark:#075E33; --tint:#E8F6EE; --logo-green:#2E994F;
+  --night:#0E1112; --night-2:#272D2E; --night-ink:#ECEDE8; --green-bright:#33C77A;
+  --danger:#C8362C; --danger-bright:#E8645A; --border:#DCDCD3;
+  --ease-out:cubic-bezier(.2,0,0,1); --ease-spring:cubic-bezier(.34,1.3,.64,1);
+  --ease-whip:cubic-bezier(.8,0,.18,1);
+  --shadow-card:0 16px 32px -8px rgba(20,22,18,.16), 0 0 0 1px var(--border);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#000;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* ============ المسرح ============ */
+#viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden}
+#stage{width:1080px;height:1920px;flex:none;position:relative;overflow:hidden;background:var(--bg);transform-origin:center center}
+
+/* نظام انتقالات مختلط — النوع يُختار حسب علاقة المشهدين بدل تلاشٍ موحّد يشبه عرض الشرائح:
+   · قطع حاد (الافتراضي): المشهد الجديد يظهر فورًا فوق القديم — للقفزات الفكرية/الزمنية.
+   · push-up / push-side: الجديد يدفع القديم باتجاهٍ واحد مع پارالاكس خفيف — لتسلسل القصة.
+   · fade: تلاشٍ قصير — فقط عند حد s5→s6 لأن الرقم الطائر (Match Cut) يربط المشهدين.
+   · punch: المشهد الختامي يهبط من تكبير 1.12 بضربة سريعة.
+   أثناء التداخل (HOLD) يحمل الخارجُ صنف is-leaving فيلعب حركة خروجه تحت الداخل (z-index أدنى). */
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden}
+.scene.is-active{opacity:1;visibility:visible;z-index:2}
+.scene.is-leaving{z-index:1}
+
+/* Whip Pan: الخارج والداخل يتحركان كشريط واحد متصل — نفس المدة ونفس المنحنى (--ease-whip)
+   فلا فجوة ولا تفكك، وضبابية الحركة تبلغ ذروتها في منتصف المسافة (أقصى سرعة) كمحاكاة Motion Blur */
+@keyframes scnPushUpIn{0%{transform:translateY(102%);filter:blur(0)}45%{filter:blur(14px)}100%{transform:none;filter:blur(0)}}
+@keyframes scnPushUpOut{0%{transform:none;filter:blur(0)}45%{filter:blur(14px)}100%{transform:translateY(-102%);filter:blur(0)}}
+@keyframes scnPushSideIn{0%{transform:translateX(-102%);filter:blur(0)}45%{filter:blur(14px)}100%{transform:none;filter:blur(0)}}
+@keyframes scnPushSideOut{0%{transform:none;filter:blur(0)}45%{filter:blur(14px)}100%{transform:translateX(102%);filter:blur(0)}}
+/* ضربة الختام: يهبط من تكبير كبير مع وميض وضبابية تنقشع — إحساس Impact */
+@keyframes scnPunchIn{0%{transform:scale(1.22);filter:brightness(1.7) blur(8px)}55%{filter:brightness(1.04) blur(0)}100%{transform:scale(1);filter:none}}
+/* قطعة Micro-Zoom للقطع الحاد: المشهد يظهر فورًا لكن بهبوط تكبير خاطف يعطي القطعَ وزنًا */
+@keyframes scnSnapIn{from{transform:scale(1.06)}to{transform:scale(1)}}
+@keyframes scnFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scnFadeOut{to{opacity:0}}
+
+.enter-pushup.is-active{animation:scnPushUpIn .55s var(--ease-whip) both}
+.enter-pushside.is-active{animation:scnPushSideIn .55s var(--ease-whip) both}
+.enter-punch.is-active{animation:scnPunchIn .5s var(--ease-out) both}
+.enter-snap.is-active{animation:scnSnapIn .4s var(--ease-out) both}
+.enter-fade.is-active{animation:scnFadeIn .45s var(--ease-out) both}
+/* حركات الخروج تأتي بعد حركات الدخول لتغلبها في التعاقب على المشهد الخارج */
+.exit-up.is-leaving{animation:scnPushUpOut .55s var(--ease-whip) both}
+.exit-side.is-leaving{animation:scnPushSideOut .55s var(--ease-whip) both}
+.exit-fade.is-leaving{animation:scnFadeOut .45s var(--ease-out) both}
+/* اختراق الكاميرا: الخارج يكبر نحو العدسة ويتلاشى بضبابية بينما الداخل يهبط من تكبيره (Punch-Through) */
+@keyframes scnZoomThru{from{transform:scale(1);opacity:1;filter:blur(0)}to{transform:scale(1.3);opacity:0;filter:blur(12px)}}
+.exit-zoom.is-leaving{animation:scnZoomThru .45s var(--ease-out) both}
+/* عند القطع الحاد: الخارج يختفي فورًا (المشاهد شفافة فلا خلفية تحجبه) */
+.exit-cut.is-leaving{opacity:0}
+/* تمهيد طبقات الحركة لسلاسة العرض أثناء الانزلاق والضبابية */
+.scene{will-change:transform,opacity,filter}
+
+/* الرقم الطائر للـ Match Cut المالي (إشعار +200 ← إيراد اللوحة، يقوده JS) */
+/* الرقم وحده يطير ويهبط فوق #rev تمامًا (لا «ر.س» معه كي لا يُزاح مركز الرقم داخل الصندوق).
+   tabular-nums ليطابق رسم الأرقام في .kpi-val فيكون الهبوط بلا أي قفزة */
+#moneyfly{position:absolute;left:0;top:0;z-index:6;opacity:0;pointer-events:none;font-weight:700;
+  color:var(--green-bright);font-size:46px;line-height:1.25;white-space:nowrap;transform-origin:center;
+  font-variant-numeric:tabular-nums;transform:translate(-50%,-50%);will-change:transform,opacity,font-size,color}
+
+/* ستارة خضراء قديمة — غير مستخدمة الآن (أُبقيت احتياطًا)، يقودها JS عند الحاجة */
+#sweep{position:absolute;inset:-12% -30%;z-index:7;pointer-events:none;opacity:0;will-change:transform;
+  background:linear-gradient(100deg,
+    transparent 4%, rgba(51,199,122,.9) 8%,
+    var(--green) 14%, var(--green) 86%,
+    var(--green-dark) 92%, transparent 96%)}
+
+/* خلفية ثابتة مشتركة لكل المشاهد الفاتحة: توهّجان أخضران + شبكة صفحة الهبوط (lp-bg-grid).
+   منفصلة عن المشاهد كي تبقى ساكنة تمامًا أثناء انتقالات الدفع — يتحرك المحتوى فقط. */
+#backdrop{position:absolute;inset:0;background:
+    radial-gradient(780px 620px at 76% 12%, rgba(15,157,88,.14), transparent 70%),
+    radial-gradient(620px 500px at 18% 76%, rgba(15,157,88,.11), transparent 70%),
+    var(--bg)}
+/* مقتبسة من .lp-bg-grid في styles/components/landing.css — مكبّرة لتظهر بوضوح بعد تصغير المسرح (1080×1920) */
+#backdrop::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 12%, transparent) 2px, transparent 2px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 12%, transparent) 2px, transparent 2px);
+  background-size:104px 104px;
+  -webkit-mask-image:radial-gradient(ellipse at top, #000 30%, transparent 75%);
+          mask-image:radial-gradient(ellipse at top, #000 30%, transparent 75%);
+  opacity:.37;
+}
+/* المشاهد الفاتحة شفافة — الخلفية تأتي من #backdrop الثابت خلفها */
+.scene--grid{background:transparent}
+
+/* ============ حركات عامة ============ */
+@keyframes aUp{from{opacity:0;transform:translateY(46px)}to{opacity:1;transform:none}}
+@keyframes aPop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
+@keyframes aIn{from{opacity:0}to{opacity:1}}
+@keyframes aRight{from{opacity:0;transform:translateX(110px)}to{opacity:1;transform:none}}
+@keyframes growY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes growX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px) rotate(-.5deg)}40%{transform:translateX(7px) rotate(.4deg)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes vanish{to{opacity:0}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pulseRing{from{transform:scale(.55);opacity:.85}to{transform:scale(2);opacity:0}}
+@keyframes flipIn{from{opacity:0;transform:perspective(700px) rotateX(75deg)}to{opacity:1;transform:none}}
+
+.is-active .a-up{animation:aUp .65s var(--ease-out) var(--d,0s) both}
+.is-active .a-pop{animation:aPop .6s var(--ease-spring) var(--d,0s) both}
+.is-active .a-in{animation:aIn .5s var(--ease-out) var(--d,0s) both}
+.is-active .a-right{animation:aRight .6s var(--ease-out) var(--d,0s) both}
+
+/* ============ نصوص حركية ============ */
+.k{font-size:78px;font-weight:700;color:var(--ink);text-align:center;line-height:1.4}
+.k em{font-style:normal;color:var(--green)}
+.k--sub{font-size:52px;font-weight:600;color:var(--muted)}
+.k--sub em{font-style:normal;color:var(--green-dark)}
+
+/* ============ مكوّن الجوال ============ */
+.phone{width:620px;background:#1B2122;border-radius:64px;padding:16px;box-shadow:0 44px 90px -28px rgba(0,0,0,.5), 0 0 0 1.5px rgba(255,255,255,.09);position:relative}
+.phone-screen{background:var(--bg);border-radius:48px;overflow:hidden;position:relative}
+/* خلفية جوال بهوية مَرمى: عشب ملعب + توهج أخضر */
+.phone--dark .phone-screen{
+  background:
+    radial-gradient(480px 340px at 50% -80px, rgba(51,199,122,.30), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 72px, transparent 72px 144px),
+    linear-gradient(180deg, #0C4A2E 0%, #08301F 52%, #051D13 100%);
+  color:var(--night-ink);
+}
+.phone-notch{position:absolute;top:28px;left:50%;transform:translateX(-50%);width:160px;height:34px;background:var(--night);border-radius:999px;z-index:3}
+/* مؤشر فتح الآيفون (Home Indicator) */
+.phone-home{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);width:230px;height:9px;border-radius:999px;background:rgba(20,22,18,.22);z-index:5}
+.phone--dark .phone-home{background:rgba(255,255,255,.92)}
+
+/* ============ S1 — المشكلة (ليل) ============ */
+.s1{isolation:isolate;background:
+    radial-gradient(780px 620px at 76% 14%, rgba(51,199,122,.13), transparent 70%),
+    radial-gradient(620px 500px at 16% 80%, rgba(51,199,122,.10), transparent 70%),
+    radial-gradient(900px 720px at 50% 16%, #161B1C 0%, #0A0D0E 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 80px;gap:36px}
+/* شبكة بخطوط بيضاء خفيفة تظهر على الخلفية الليلية الداكنة */
+.s1::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.08) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(255,255,255,.08) 2px, transparent 2px);
+  background-size:104px 104px;
+  -webkit-mask-image:radial-gradient(ellipse at top, #000 30%, transparent 75%);
+          mask-image:radial-gradient(ellipse at top, #000 30%, transparent 75%);
+}
+.s1 .k{color:var(--night-ink)}
+.s1 .k em{color:var(--danger-bright)}
+.s1-phone .phone-screen{height:1010px;padding:120px 36px 0;display:flex;flex-direction:column;align-items:center;gap:26px}
+.s1-clock{font-size:150px;font-weight:300;color:var(--night-ink);letter-spacing:2px;line-height:1}
+.s1-clock small{font-size:54px;font-weight:400;color:#9aa09b}
+.s1-date{font-size:32px;color:#9aa09b;font-weight:400;margin-top:-8px}
+.s1-card{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:24px 26px;display:flex;align-items:center;gap:20px;color:var(--night-ink)}
+.s1-card-ic{width:64px;height:64px;border-radius:18px;flex:none;display:flex;align-items:center;justify-content:center}
+.s1-card-ic--call{background:rgba(232,100,90,.18);color:var(--danger-bright)}
+.s1-card-ic--wa{background:rgba(51,199,122,.16);color:var(--green-bright)}
+.s1-card-ic svg{width:34px;height:34px}
+.s1-card-tt{font-size:30px;font-weight:600;line-height:1.3}
+.s1-card-sb{font-size:24px;color:#9aa09b;font-weight:400}
+.s1-card time{margin-inline-start:auto;font-size:24px;color:#9aa09b}
+.s1-badge{margin-inline-start:auto;min-width:56px;height:56px;padding:0 14px;border-radius:999px;background:var(--danger);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.is-active .s1-ring{animation:aPop .6s var(--ease-spring) .1s both, shake .55s var(--ease-out) 1.15s 2}
+.is-active .s1-card--ring .s1-card-ic svg{animation:ringIcon 1s ease-in-out 1.4s infinite}
+
+/* ============ S2 — التحوّل ============ */
+/* s1 يبقى ظاهرًا تحت s2 الشفاف، والدائرة الخضراء تبتلعه وهي تتمدد ثم تنقشع عن المحتوى */
+.s2-wipe{position:absolute;top:50%;left:50%;width:1080px;height:1080px;border-radius:50%;background:var(--green);transform:translate(-50%,-50%) scale(0)}
+@keyframes wipeUp{from{transform:translate(-50%,-50%) scale(0)}to{transform:translate(-50%,-50%) scale(3.4)}}
+.is-active .s2-wipe{animation:wipeUp .75s var(--ease-out) .12s both, vanish .5s var(--ease-out) .78s both}
+.s2-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:0 70px}
+.s2-mark{width:200px;height:248px;color:var(--logo-green)}
+.s2-word{width:330px;height:148px;color:var(--logo-green);margin-bottom:46px}
+.s2-content .k{font-size:88px}
+.s2-l2{font-size:104px;color:var(--green);display:block;margin-top:10px}
+.s2-content .w{display:inline-block}
+
+/* ============ S3 — رابط الحجز ============ */
+.s3{display:flex;flex-direction:column;align-items:center;padding:110px 70px 0;gap:42px}
+.s3-phone .phone-screen{height:1190px;padding:96px 30px 30px;display:flex;flex-direction:column;gap:24px}
+.url-pill{display:flex;align-items:center;gap:14px;background:var(--field);border:1.5px solid var(--border);border-radius:999px;padding:18px 28px;font-size:30px;font-weight:600;color:var(--ink);justify-content:center;min-height:74px}
+.url-pill svg{width:28px;height:28px;color:var(--green);flex:none}
+.url-pill bdi{font-variant-numeric:tabular-nums;unicode-bidi:isolate}
+.url-typed{display:inline-flex;align-items:center;gap:6px}
+.caret{width:3px;height:36px;background:var(--green);border-radius:2px;flex:none}
+.is-active .caret{animation:blink .65s steps(1) 4, vanish .2s var(--ease-out) 2.6s both}
+.slot-head{display:flex;justify-content:space-between;align-items:center;font-size:28px;font-weight:600;color:var(--ink);padding:0 6px}
+.slot-head small{font-size:24px;color:var(--muted);font-weight:400}
+.slot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.slot{background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:18px 10px;text-align:center;color:var(--ink)}
+.slot b{display:block;font-size:29px;font-weight:600}
+.slot small{display:block;font-size:23px;font-weight:400;color:inherit;opacity:.7;margin-top:6px}
+.slot--busy{background:var(--field);color:#B8B8AC;border-style:dashed}
+@keyframes pickSlot{to{background:var(--green);border-color:var(--green);color:#fff}}
+.is-active .slot--pick{animation:aUp .65s var(--ease-out) var(--d,0s) both, pickSlot .25s var(--ease-out) 4.15s both}
+.tap-dot{position:absolute;width:64px;height:64px;border-radius:50%;border:4px solid var(--green);background:rgba(15,157,88,.22);left:50%;top:427px;transform:translateX(-50%);opacity:0;pointer-events:none}
+@keyframes tap{0%{opacity:0;transform:translateX(-50%) scale(.4)}30%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1.6)}}
+.is-active .tap-dot{animation:tap .7s var(--ease-out) 3.9s both}
+.confirm-btn{margin-top:auto;height:84px;border:0;border-radius:20px;background:var(--green);color:#fff;font-family:inherit;font-size:32px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+@keyframes press{0%,100%{transform:scale(1)}50%{transform:scale(.96)}}
+.is-active .confirm-btn{animation:press .35s var(--ease-out) 4.6s 1}
+.s3-check{position:absolute;inset:0;background:rgba(250,250,247,.97);z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;opacity:0}
+.is-active .s3-check{animation:aIn .3s var(--ease-out) 5s both}
+.s3-check svg{width:170px;height:170px}
+.s3-check circle{fill:none;stroke:var(--green);stroke-width:7;stroke-dasharray:480;stroke-dashoffset:480}
+.s3-check path{fill:none;stroke:var(--green);stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:120;stroke-dashoffset:120}
+.is-active .s3-check circle{animation:draw .55s var(--ease-out) 5.1s both}
+.is-active .s3-check path{animation:draw .4s var(--ease-out) 5.55s both}
+.s3-check b{font-size:42px;font-weight:700;color:var(--green-dark)}
+
+/* ============ S4 — منع التعارض ============ */
+.s4{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 70px;gap:56px}
+.s4-board{width:900px;background:var(--card);border-radius:24px;box-shadow:var(--shadow-card);padding:36px}
+.s4-head{display:flex;justify-content:space-between;font-size:30px;font-weight:600;color:var(--ink);margin-bottom:24px}
+.s4-head small{font-size:26px;color:var(--muted);font-weight:400}
+.s4-zone{position:relative;background:var(--field);border-radius:18px;height:170px;padding:14px}
+.s4-card{display:flex;align-items:center;gap:18px;border-radius:14px;padding:0 26px;font-size:30px;font-weight:600}
+.s4-card--1{position:absolute;inset:14px;background:var(--tint);border:1.5px solid var(--green);color:var(--green-dark)}
+.is-active .s4-card--1{animation:aRight .55s var(--ease-out) .9s both}
+.s4-ok{margin-inline-start:auto;background:var(--green);color:#fff;font-size:24px;border-radius:999px;padding:8px 20px;display:flex;align-items:center;gap:8px}
+.s4-ok svg{width:24px;height:24px}
+.s4-card--2{position:relative;margin-top:28px;height:140px;background:var(--card);border:1.5px solid var(--border);color:var(--ink);box-shadow:0 10px 24px -10px rgba(20,22,18,.18)}
+@keyframes s4Try{0%{opacity:0;transform:translateY(290px)}20%{opacity:1}48%{transform:translateY(-92px)}64%{transform:translateY(26px)}82%{transform:translateY(-8px)}100%{opacity:1;transform:translateY(0)}}
+.is-active .s4-card--2{animation:s4Try 1.8s var(--ease-out) 1.5s both}
+.is-active .s4-zone{animation:shake .45s var(--ease-out) 2.35s 1}
+.s4-deny{margin-inline-start:auto;background:#FBE7E5;color:var(--danger);font-size:24px;font-weight:600;border-radius:999px;padding:8px 20px;opacity:0}
+.is-active .s4-deny{animation:aPop .45s var(--ease-spring) 2.8s both}
+.s4-shield{position:absolute;left:50%;bottom:-66px;transform:translateX(-50%);width:104px;height:104px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(15,157,88,.22);z-index:5;opacity:0}
+.s4-shield svg{width:54px;height:54px}
+@keyframes shieldPop{from{opacity:0;transform:translateX(-50%) scale(.3)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.is-active .s4-shield{animation:shieldPop .5s var(--ease-spring) 2.5s both}
+
+/* ============ S5 — الإشعار الفوري ============ */
+.s5{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 70px;gap:46px}
+.s5-phone .phone-screen{height:1080px;padding:130px 28px 0;display:flex;flex-direction:column;align-items:center}
+@keyframes dblPulse{0%,100%{transform:scale(1)}30%{transform:scale(1.022)}55%{transform:scale(1)}75%{transform:scale(1.013)}}
+.is-active .s5-phone{animation:aPop .6s var(--ease-spring) .4s both, dblPulse .85s var(--ease-out) 2s 1}
+.s5-clock{font-size:140px;font-weight:300;color:var(--night-ink);line-height:1}
+.s5-clock small{font-size:50px;color:#9aa09b;font-weight:400}
+.s5-date{font-size:30px;color:#9aa09b;margin-top:4px}
+.toast{position:absolute;top:400px;right:26px;left:26px;background:var(--card);border-radius:26px;box-shadow:var(--shadow-card);padding:24px 26px;color:var(--ink)}
+@keyframes toastIn{0%{opacity:0;transform:translateY(-170%)}65%{opacity:1;transform:translateY(5%)}100%{opacity:1;transform:translateY(0)}}
+.is-active .toast{animation:toastIn .9s var(--ease-out) 1.3s both}
+.toast-app{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--muted);margin-bottom:12px}
+.toast-app svg{width:26px;height:32px;color:var(--logo-green);order:2;margin-inline-start:auto}
+.toast-row{display:flex;align-items:center;gap:20px}
+.toast-ic{width:72px;height:72px;border-radius:18px;background:var(--tint);color:var(--green);display:flex;align-items:center;justify-content:center;flex:none}
+.toast-ic svg{width:38px;height:38px}
+.toast-bd b{display:block;font-size:32px;font-weight:700}
+.toast-bd span{font-size:26px;color:var(--muted)}
+.toast-amt{margin-inline-start:auto;font-size:36px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;text-align:center}
+.toast-amt small{display:block;font-size:22px;font-weight:600;color:var(--green-dark)}
+.s5-punch{font-size:46px;font-weight:600;color:var(--green-dark)}
+
+/* ============ S6 — التقارير + العملاء ============ */
+.s6{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 70px;gap:44px}
+.dash{width:920px;background:var(--card);border-radius:26px;box-shadow:var(--shadow-card);padding:34px 38px}
+.dash-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px}
+.dash-title{font-size:30px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:12px}
+.dash-title svg{width:30px;height:38px;color:var(--logo-green)}
+.dash-live{display:flex;align-items:center;gap:10px;font-size:24px;color:var(--green-dark);font-weight:600}
+.dash-live i{width:14px;height:14px;border-radius:50%;background:var(--green);display:block}
+.is-active .dash-live i{animation:blink 1.2s steps(1) infinite}
+.dash-kpis{display:flex;gap:24px}
+.kpi{flex:1;background:var(--field);border-radius:18px;padding:24px 26px}
+.kpi-lbl{font-size:25px;color:var(--muted);font-weight:400}
+.kpi-val{font-size:62px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.25}
+.kpi-val small{font-size:28px;color:var(--muted);font-weight:600}
+.kpi-delta{display:inline-block;font-size:23px;font-weight:600;color:var(--green-dark);background:var(--tint);border-radius:999px;padding:4px 16px;margin-top:6px}
+.spark{display:flex;align-items:flex-end;gap:14px;height:150px;margin-top:28px;padding:0 8px}
+.spark span{flex:1;background:var(--tint);border-radius:8px 8px 4px 4px;height:var(--h);transform-origin:bottom}
+.spark span.is-today{background:var(--green)}
+.is-active .spark span{animation:growY .65s var(--ease-out) calc(1.1s + var(--i)*.12s) both}
+.cust{width:920px;background:var(--card);border-radius:26px;box-shadow:var(--shadow-card);padding:28px 34px;display:flex;align-items:center;gap:24px}
+.cust-av{width:84px;height:84px;border-radius:50%;background:var(--tint);color:var(--green-dark);font-size:38px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.cust-bd b{display:block;font-size:32px;font-weight:700;color:var(--ink)}
+.cust-bd span{font-size:25px;color:var(--muted)}
+.offer-chip{margin-inline-start:auto;background:var(--tint);color:var(--green-dark);border:1.5px dashed var(--green);font-size:25px;font-weight:600;border-radius:999px;padding:12px 24px;opacity:0}
+.is-active .offer-chip{animation:flipIn .55s var(--ease-spring) 4.3s both}
+.wa-btn{width:92px;height:92px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.wa-btn svg{width:48px;height:48px}
+.wa-btn::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:4px solid var(--green);opacity:0}
+.is-active .wa-btn::after{animation:pulseRing .9s var(--ease-out) 3.9s 2}
+
+/* ============ S7 — لماذا مَرمى ============ */
+.s7{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 90px;gap:60px}
+.s7 .k{font-size:90px}
+.vals{list-style:none;display:flex;flex-direction:column;gap:34px;width:100%}
+.vals li{display:flex;align-items:center;gap:26px;background:var(--card);border-radius:24px;box-shadow:var(--shadow-card);padding:34px 38px;font-size:42px;font-weight:600;color:var(--ink)}
+.vals li b{color:var(--green-dark);font-weight:700}
+.val-ic{width:68px;height:68px;border-radius:50%;background:var(--tint);color:var(--green);display:flex;align-items:center;justify-content:center;flex:none}
+.val-ic svg{width:36px;height:36px}
+
+/* ============ S8 — الختام ============ */
+.s8{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+.s8-mark{width:230px;height:286px;color:var(--logo-green);margin-bottom:34px}
+.s8-slogan{text-align:center;line-height:1.45}
+.s8-slogan span{display:block;font-size:86px;font-weight:700;color:var(--ink)}
+.s8-slogan em{font-style:normal;color:var(--green)}
+.s8-cta{position:relative;overflow:hidden;margin-top:54px;background:var(--green);color:#fff;font-size:44px;font-weight:700;border-radius:999px;padding:34px 70px;box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 20px 44px -14px rgba(15,157,88,.55)}
+/* لمعة (shine) تمسح الزر قطريًا ثم تتوقف قبل أن تتكرر */
+.s8-cta::after{content:"";position:absolute;top:-50%;left:-75%;width:45%;height:200%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);pointer-events:none}
+@keyframes ctaShine{0%{left:-75%}32%{left:155%}100%{left:155%}}
+@keyframes ctaIdle{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.is-active .s8-cta{animation:aPop .6s var(--ease-spring) 2.7s both, ctaIdle 2s ease-in-out 3.7s infinite}
+.is-active .s8-cta::after{animation:ctaShine 3.2s ease-out 4s infinite}
+.s8-domain{position:relative;margin-top:2px;font-size:56px;font-weight:700;color:var(--ink);text-align:center}
+.s8-domain-link{display:inline-flex;align-items:center;gap:16px}
+.s8-globe{width:50px;height:50px;color:var(--green);flex:none}
+.s8-domain bdi{unicode-bidi:isolate}
+.s8-underline{display:block;height:8px;border-radius:4px;background:var(--green);margin-top:10px;transform-origin:center}
+.is-active .s8-underline{animation:growX .5s var(--ease-out) 3.6s both}
+/* شارة «زيارة الموقع» ملاصقة للرابط أسفلها مباشرة */
+.s8-visit{margin-top:40px;display:inline-block;background:var(--tint);color:var(--green-dark);font-size:30px;font-weight:700;border-radius:999px;padding:12px 32px;border:1.5px solid color-mix(in srgb, var(--green) 35%, transparent)}
+/* مؤشر الماوس يأتي من خارج الشاشة (أسفل اليمين) بمسار انسيابي ثم ينقر على الرابط بشكل متكرر */
+.s8-cursor{position:absolute;left:calc(50% + 34px);top:46%;width:70px;height:70px;opacity:0;pointer-events:none;z-index:3;transform-origin:6px 6px}
+.s8-cursor svg{width:100%;height:100%;filter:drop-shadow(0 6px 10px rgba(20,22,18,.4))}
+.s8-click{position:absolute;left:calc(50% + 44px);top:50%;width:58px;height:58px;border-radius:50%;border:4px solid var(--green);background:rgba(15,157,88,.16);opacity:0;transform:translate(-50%,-50%) scale(.3);pointer-events:none;z-index:2}
+/* الدخول: من خارج حافة الشاشة (مسافة كبيرة أسفل-يمين) إلى موضع الرابط مع تباطؤ ناعم */
+@keyframes cursorEnter{0%{opacity:0;transform:translate(620px,940px) scale(1.4)}14%{opacity:1}100%{opacity:1;transform:translate(0,0) scale(1)}}
+/* النقر المتكرر: ضغطة لأسفل-يمين بسيطة (اتجاه طبيعي للماوس) */
+@keyframes cursorPress{0%,100%{transform:translate(0,0) scale(1)}38%{transform:translate(5px,5px) scale(.82)}54%{transform:translate(5px,5px) scale(.82)}}
+@keyframes clickRipple{0%,32%{opacity:0;transform:translate(-50%,-50%) scale(.3)}40%{opacity:.85;transform:translate(-50%,-50%) scale(.55)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.85)}}
+.is-active .s8-cursor{animation:cursorEnter 1.7s var(--ease-out) 3.8s both, cursorPress 2s ease-in-out 5.6s infinite}
+.is-active .s8-click{animation:clickRipple 2s ease-out 5.6s infinite}
+.s8-trial{font-size:36px;color:var(--muted);font-weight:400}
+.s8-contact{margin-top:24px;display:flex;align-items:center;gap:18px;background:var(--tint);color:var(--green-dark);font-size:40px;font-weight:600;border-radius:999px;padding:24px 48px;border:1.5px solid var(--green)}
+.s8-contact svg{width:42px;height:42px;color:var(--green);flex:none;order:3}
+@keyframes ringIcon{0%,100%{transform:rotate(0)}12%{transform:rotate(18deg)}26%{transform:rotate(-15deg)}40%{transform:rotate(11deg)}54%{transform:rotate(-7deg)}68%{transform:rotate(4deg)}80%{transform:rotate(0)}}
+.is-active .s8-contact svg{animation:ringIcon 1.1s ease-in-out 5.2s infinite}
+.s8-contact bdi{font-weight:700;font-variant-numeric:tabular-nums;unicode-bidi:isolate;letter-spacing:1px}
+
+/* ============ البوستر + العد التنازلي ============ */
+#poster{position:absolute;inset:0;z-index:8;background:radial-gradient(900px 720px at 50% 16%, #161B1C 0%, #0A0D0E 75%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;transition:opacity .4s var(--ease-out), visibility 0s .4s;color:var(--night-ink)}
+#poster.is-off{opacity:0;visibility:hidden}
+#poster .p-mark{width:180px;height:224px;color:var(--green-bright)}
+#poster .p-tt{font-size:56px;font-weight:700}
+#poster .p-sb{font-size:32px;color:#9aa09b;font-weight:400}
+#cd{font-size:260px;font-weight:700;color:var(--green-bright);line-height:1;display:none;font-variant-numeric:tabular-nums}
+#poster.is-counting .p-sb{display:none}
+#poster.is-counting #cd{display:block}
+@keyframes cdPop{from{transform:scale(1.45);opacity:0}to{transform:scale(1);opacity:1}}
+#cd.tick{animation:cdPop .45s var(--ease-out)}
+
+/* ============ شريط التحكم ============ */
+#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:14px;background:rgba(14,17,18,.93);color:var(--night-ink);border-radius:16px;padding:12px 18px;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#controls button{font-family:inherit;font-size:15px;font-weight:600;border:0;border-radius:10px;padding:9px 18px;cursor:pointer;background:var(--green);color:#fff}
+#controls button.ghost{background:rgba(255,255,255,.12);color:var(--night-ink)}
+#controls button:disabled{opacity:.5;cursor:wait}
+#prog{width:200px;height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+#progFill{height:100%;width:0;background:var(--green-bright);border-radius:3px}
+#timeLbl{font-variant-numeric:tabular-nums;direction:ltr;min-width:86px;text-align:center;color:#9aa09b}
+#ratioLbl{color:#9aa09b}
+#ratioLbl.ok{color:var(--green-bright)}
+body.hud-off #controls,body.hud-off #help{display:none}
+#help{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:49;width:560px;max-width:92vw;background:rgba(14,17,18,.96);color:var(--night-ink);border-radius:16px;padding:22px 26px;font-size:16px;line-height:2;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#help b{color:var(--green-bright)}
+#help[hidden]{display:none}
+</style>
+</head>
+<body>
+
+<!-- شعار مَرمى (رمز يُعاد استخدامه) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-cursor" viewBox="0 0 28 28"><path fill="#fff" stroke="#14160F" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" d="M7 3.5 7 22.2 11.7 17.9 14.7 24.6 17.8 23.2 14.8 16.7 21 16.3 Z"/></symbol>
+    <symbol id="ic-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19"/><path d="M12 2.5a15 15 0 0 1 4 9.5 15 15 0 0 1-4 9.5 15 15 0 0 1-4-9.5 15 15 0 0 1 4-9.5z"/></g></symbol>
+    <symbol id="mark" viewBox="0 0 557 692.3">
+      <path fill="currentColor" d="M554.1,240.8c-12-84.6-54.6-150.7-126.3-197.2C373.7,8.5,313.7-4.8,249.6,1.5C203.8,6,161.8,21.4,123.5,47.1c-32,21.5-58.5,48.3-79.3,80.6C14.8,173.7,0,224.1,0,284.5c-0.1,22.2,4.2,49.5,12.4,76.3c10.8,35.2,29.1,66,52.2,94.7c41,50.9,80.7,102.9,120.9,154.5c15.3,19.7,31.5,38.6,45.6,59.2c17,24.8,49.4,30.6,73.5,12.5c6.1-4.6,9.7-11,14.3-16.6c28.7-34.8,57.5-69.7,86.2-104.5c23.6-28.6,47.3-57.2,70.9-85.9c11.4-13.8,23.8-26.9,33.7-41.7C548.6,374.6,563.9,310.2,554.1,240.8z M320.8,481.1c-1.3-0.4-2.4-1.4-3.4-3c-6.3-10.5-12.7-21-19.2-31.5c-1.5-2.4-1.3-4.3,0.3-6.7c13.2-19.4,26.2-39,39.4-58.4c1.1-1.6,3.9-3.1,5.9-3.1c20.7,0.1,40.9-2.9,60.6-9.2c1.6-0.5,4.1-0.6,5.4,0.3c13.2,8.6,26.2,17.4,39.8,26.5C419.5,439.5,373.3,470.4,320.8,481.1z M71.6,303.1L71.6,303.1c15.9-1.8,31.8-3.6,47.8-5.2c1.4-0.1,3.4,1.1,4.5,2.2c14.5,14.8,30.9,26.8,49.3,36.4c1.6,0.9,3.2,3.2,3.5,5.1c2.8,22.3,5.1,44.7,7.9,67c0.7,5.2-0.3,8.6-5,11.3c-10,5.6-19.8,11.6-29.6,17.6c-1.4,0.8-2.5,1.1-3.6,1C106.4,405.9,78.4,358.4,71.6,303.1z M248.9,70.8c1,0.3,1.7,1.1,2.4,2.4c3.4,6.4,7.1,12.6,10.3,19.1c0.7,1.5,0.6,4.2-0.4,5.7c-13.3,20.2-26.7,40.2-40.3,60.2c-0.9,1.4-3,2.6-4.6,2.8c-24,3.1-46.1,11.5-66.4,24.6c-1.1,0.7-3.3,1.1-4.2,0.5c-13.2-8.7-26.2-17.6-39.6-26.6C138.5,112.1,189.8,79.1,248.9,70.8z M279.5,304c5.5-22.1,11-44.2,16.2-66.4c0.7-3,2-4.3,5-5c23.5-6,46.9-12.3,70.5-18.2c2.2-0.5,5.2,0.1,7.1,1.4c18.6,12.2,32.8,28.6,43.6,48c0.8,1.4,1.1,3.5,0.8,5c-6.4,27-13,53.9-19.4,80.8c-0.7,2.8-2.1,4.1-4.8,4.7c-7.8,1.8-15.5,4.2-23.4,5.6s-15.9,1.9-23.9,2.8c-8.7,1.6-14.8-2.3-21-8.1c-15.8-14.9-32.1-29.2-48.3-43.6C279.6,309.1,278.7,307.2,279.5,304z M264.3,300.7c-0.7,2.7-1.9,4-4.7,4.7c-23.5,5.9-47,12.2-70.5,18c-2.4,0.6-5.5,0.2-7.8-0.9c-17.5-8.6-33.1-20-46.7-34.1c-2.2-2.2-2.9-4.2-2.1-7.3c6.1-24.7,12.1-49.4,18.2-74.1c0.4-1.8,1.4-3.9,2.8-4.8c19.4-13.1,40.4-22.5,63.9-25.4c0.5-0.1,1-0.1,2.9-0.2c0.6,0.3,2.5,0.8,3.8,2c18.4,16.4,36.8,32.8,55,49.3c1.2,1.1,1.8,3.7,1.5,5.4C275.1,255.8,269.6,278.2,264.3,300.7z M366.2,108.5c-1.3,0.8-3.5,1-5,0.6c-26.8-6.4-53.5-12.9-80.2-19.5c-1.3-0.3-3-1-3.6-2.1c-3.3-5.9-6.3-12-9.8-18.6c3.2-0.2,6.3-0.3,9.5-0.3c38.7-0.2,74.9,10,106,28C376.9,101.1,371.7,105,366.2,108.5z M161.7,449.8c7.2-4.4,14.5-7.8,20.3-12.9c9.3-8.1,18.3-8.8,29.9-5.3c21.8,6.4,44.2,11,66.3,16.5c1.7,0.4,3.8,1.5,4.7,2.9c6.2,10.7,12.1,21.5,18.5,33c-7.6,0.8-15.3,1.2-23.1,1.1C235.7,485.5,195.4,472.6,161.7,449.8z M443.1,255.9c-5.2,1.4-7.8-0.3-10.4-4.9c-11.5-19.7-26.9-36-45.8-48.8c-1.8-1.3-3.5-4-3.8-6.2c-2.8-22.5-5.2-45-8-67.5c-0.6-4.6,0.2-7.7,4.4-10.2c5.2-3,10.3-6.5,15.2-10c1.7-1.2,3-1.5,4.4-1.2c46.5,33,78.8,84.5,86,144c-10.4,1.2-20.1,2.3-29.9,3.4C451.3,255,447,254.9,443.1,255.9z"/>
+    </symbol>
+    <symbol id="wordmark" viewBox="0 0 534.9 238.4">
+      <g fill="currentColor">
+        <path d="M88.8,238.4c-13.9,0-26.4-1.6-37.3-4.8s-20.2-7.9-27.9-14.1C15.9,213.3,10.1,205.8,6,197c-4-8.9-6-18.9-6-30.2c0-8,1.1-17,3.4-26.8c2.2-9.8,5.3-19.5,9.3-29l23.1,7c-3.4,7.5-6.2,15.2-8.3,22.9c-2.1,7.8-3.2,14.6-3.2,20.5c0,12.3,4.8,21.9,14.5,28.8c9.7,6.9,23.1,10.3,40.2,10.3h19.8c16.8,0,30.5-2.3,41-7s17.5-11.3,20.9-19.8L99,164.3v-35.1l32.7,4.8c11.3,1.5,21,2.7,29.2,3.4c8.2,0.8,15.6,1.1,22,1.1v15.4l4,5.9c0,12.4-2.2,23.4-6.7,33.2s-10.9,18-19.3,24.7s-18.7,11.8-30.8,15.3C117.9,236.6,104.2,238.4,88.8,238.4z"/>
+        <path d="M214,158.7c-4.1,5.7-9.1,9.7-15,12c-5.9,2.2-13.7,3.4-23.3,3.4v-27.9l7.2-7.2c6.8,0,11.7-1.2,14.7-3.8c3-2.5,5.7-6.8,8-12.9l7.5-18.8c2.1-5.5,4.6-10.7,7.5-15.6c2.9-4.8,6.2-9,9.9-12.5c3.8-3.5,8-6.2,12.9-8.2c4.8-2,10.4-3,16.6-3c15.6,0,27.4,6.4,35.7,19.3c8.2,12.9,12.3,30.7,12.3,53.4v9.4l-22.5,33.5L214,158.7z M227.4,126.3l55.2,16.4V137c0-11.9-2.5-21.1-7.6-27.7c-5.1-6.6-11.9-9.9-20.5-9.9c-6.3,0-11.4,1.7-15.3,5.1c-3.9,3.4-7.1,8.4-9.4,14.9L227.4,126.3z"/>
+        <path d="M302.3,203.3h10.5c17.2,0,29.4-3.9,36.7-11.7s10.9-19.1,10.7-33.9c0-4.5-0.3-9.2-0.8-14.1c-0.5-4.9-1.3-10-2.1-15.2l-5.6-34.1l26-4.3l4,23.6c1.6,8.9,2.7,17.3,3.2,25.2h24.9v27.9l-7.2,7.2h-17.7c-1.3,9.7-3.7,18.4-7.2,26.3c-3.6,7.9-8.3,14.6-14.2,20.2c-5.9,5.6-13.1,10-21.5,13.1s-18.1,4.7-29,4.7h-10.7L302.3,203.3L302.3,203.3z"/>
+        <path d="M521.9,16.1l-64.4,29.5l-7.2-15.8L514.4,0L521.9,16.1z"/>
+        <path d="M440.9,158.7c-4.1,5.7-9.1,9.7-15,12c-5.9,2.2-13.7,3.4-23.3,3.4v-27.9l7.2-7.2c6.8,0,11.7-1.2,14.7-3.8c3-2.5,5.7-6.8,8-12.9l7.5-18.8c2.1-5.5,4.6-10.7,7.5-15.6c2.9-4.8,6.2-9,9.9-12.5c3.8-3.5,8-6.2,12.9-8.2c4.8-2,10.4-3,16.6-3c15.6,0,27.4,6.4,35.7,19.3c8.2,12.9,12.3,30.7,12.3,53.4v9.4l-22.5,33.5L440.9,158.7z M454.3,126.3l55.2,16.4V137c0-11.9-2.5-21.1-7.6-27.7c-5.1-6.6-11.9-9.9-20.5-9.9c-6.3,0-11.4,1.7-15.3,5.1c-3.9,3.4-7.1,8.4-9.4,14.9L454.3,126.3z"/>
+      </g>
+    </symbol>
+    <symbol id="ic-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="ic-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></g></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="ic-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></g></symbol>
+  </defs>
+</svg>
+
+<div id="viewport">
+  <div id="stage">
+
+    <!-- خلفية ثابتة مشتركة (شبكة + توهّجان) — لا تتحرك مع انتقالات المشاهد -->
+    <div id="backdrop"></div>
+
+    <!-- S1: المشكلة -->
+    <section class="scene s1" id="s1">
+      <h2 class="k a-up" style="--d:.4s">مكالمات بعد منتصف الليل؟</h2>
+      <h2 class="k a-up" style="--d:3s">رسائل فائتة..<br><em>وحجزان في موعد واحد!</em></h2>
+      <div class="phone phone--dark s1-phone s1-ring a-pop" style="--d:.1s">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="s1-clock a-in" style="--d:.3s">2:47 <small>ص</small></div>
+          <div class="s1-date a-in" style="--d:.35s">الخميس 11 يونيو</div>
+          <div class="s1-card s1-card--ring a-up" style="--d:1s">
+            <span class="s1-card-ic s1-card-ic--call"><svg><use href="#ic-phone"/></svg></span>
+            <div><div class="s1-card-tt">عميل يتصل…</div><div class="s1-card-sb">يريد حجز يوم الجمعة 8:00 م</div></div>
+            <time>الآن</time>
+          </div>
+          <div class="s1-card a-up" style="--d:1.9s">
+            <span class="s1-card-ic s1-card-ic--call"><svg><use href="#ic-phone"/></svg></span>
+            <div><div class="s1-card-tt">مكالمة فائتة</div><div class="s1-card-sb">رقم غير معروف</div></div>
+            <time>2:13 ص</time>
+          </div>
+          <div class="s1-card a-up" style="--d:2.5s">
+            <span class="s1-card-ic s1-card-ic--wa"><svg><use href="#ic-wa"/></svg></span>
+            <div><div class="s1-card-tt">واتساب</div><div class="s1-card-sb">رسائل حجز غير مقروءة</div></div>
+            <span class="s1-badge" id="waBadge">3</span>
+          </div>
+          <div class="phone-home"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S2: التحوّل -->
+    <section class="scene scene--grid s2 exit-up" id="s2">
+      <div class="s2-content">
+        <svg class="s2-mark a-pop" style="--d:.7s"><use href="#mark"/></svg>
+        <svg class="s2-word a-up" style="--d:.9s" role="img" aria-label="مَرمى"><use href="#wordmark"/></svg>
+        <h2 class="k">
+          <span class="w a-up" style="--d:1.3s">ملعبك</span>
+          <span class="w a-up" style="--d:1.5s">يستقبل</span>
+          <span class="w a-up" style="--d:1.7s">الحجوزات،</span>
+          <em class="s2-l2 a-up" style="--d:2.4s">وأنت في فراشك!</em>
+        </h2>
+      </div>
+      <div class="s2-wipe"></div>
+    </section>
+
+    <!-- S3: رابط الحجز العام -->
+    <section class="scene scene--grid s3 enter-pushup exit-side" id="s3">
+      <h2 class="k a-up" style="--d:.3s">رابط حجز <em>باسم ملعبك</em></h2>
+      <div class="phone s3-phone a-up" style="--d:.45s">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="url-pill"><span class="url-typed" dir="ltr"><bdi id="typeUrl"></bdi><span class="caret"></span></span><svg><use href="#ic-lock"/></svg></div>
+          <div class="slot-head a-up" style="--d:2.6s"><span>اختر موعدك</span><small>الجمعية · أرضية أ</small></div>
+          <div class="slot-grid">
+            <div class="slot a-up" style="--d:2.7s"><b>5:00 م</b><small>200 ر.س</small></div>
+            <div class="slot slot--busy a-up" style="--d:2.78s"><b>6:00 م</b><small>محجوز</small></div>
+            <div class="slot a-up" style="--d:2.86s"><b>7:00 م</b><small>200 ر.س</small></div>
+            <div class="slot slot--busy a-up" style="--d:2.94s"><b>8:00 م</b><small>محجوز</small></div>
+            <div class="slot slot--pick a-up" style="--d:3.02s"><b>9:00 م</b><small>200 ر.س</small></div>
+            <div class="slot a-up" style="--d:3.1s"><b>10:00 م</b><small>200 ر.س</small></div>
+            <div class="slot a-up" style="--d:3.18s"><b>11:00 م</b><small>200 ر.س</small></div>
+            <div class="slot a-up" style="--d:3.26s"><b>12:00 ص</b><small>200 ر.س</small></div>
+            <div class="slot slot--busy a-up" style="--d:3.34s"><b>1:00 ص</b><small>محجوز</small></div>
+          </div>
+          <div class="tap-dot"></div>
+          <button class="confirm-btn a-up" style="--d:3.45s">تأكيد الحجز</button>
+          <div class="s3-check">
+            <svg viewBox="0 0 170 170"><circle cx="85" cy="85" r="74"/><path d="M52 88 l24 24 l44 -50"/></svg>
+            <b>تم تأكيد الحجز!</b>
+          </div>
+          <div class="phone-home"></div>
+        </div>
+      </div>
+      <h2 class="k--sub a-up" style="--d:3.5s">عميلك يحجز في ثوانٍ — <em>بلا تطبيق، بلا حساب</em></h2>
+    </section>
+
+    <!-- S4: منع التعارض -->
+    <section class="scene scene--grid s4 enter-pushside exit-up" id="s4">
+      <h2 class="k a-up" style="--d:.3s">حجزان في وقت واحد؟</h2>
+      <div class="s4-board a-up" style="--d:.45s">
+        <div class="s4-head"><span>الجمعة · 8:00 م</span><small>أرضية أ</small></div>
+        <div class="s4-zone">
+          <div class="s4-card s4-card--1">
+            أحمد علي
+            <span class="s4-ok"><svg><use href="#ic-check"/></svg> حجز مؤكد</span>
+          </div>
+          <div class="s4-shield"><svg><use href="#ic-shield"/></svg></div>
+        </div>
+        <div class="s4-card s4-card--2">
+          سعد ماجد — يحاول الحجز…
+          <span class="s4-deny">الموعد محجوز</span>
+        </div>
+      </div>
+      <h2 class="k--sub a-up" style="--d:3.4s"><em>مستحيل.</em> النظام يمنع التعارض تلقائيًا</h2>
+    </section>
+
+    <!-- S5: الإشعار الفوري -->
+    <section class="scene scene--grid s5 enter-pushup exit-fade" id="s5">
+      <h2 class="k a-up" style="--d:.3s">وأنت؟ <em>يصلك إشعار فوري</em></h2>
+      <div class="phone phone--dark s5-phone a-pop" style="--d:.4s">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="s5-clock">2:48 <small>ص</small></div>
+          <div class="s5-date">الخميس 11 يونيو</div>
+          <div class="toast">
+            <div class="toast-app"><svg><use href="#mark"/></svg> مَرمى · الآن</div>
+            <div class="toast-row">
+              <div class="toast-ic"><svg><use href="#ic-bell"/></svg></div>
+              <div class="toast-bd"><b>حجز جديد ✓</b><span>فيصل محمد · 9:00 م · أرضية أ</span></div>
+              <div class="toast-amt"><bdi dir="ltr">+<span id="amt">0</span></bdi><small>ر.س</small></div>
+            </div>
+          </div>
+          <div class="phone-home"></div>
+        </div>
+      </div>
+      <div class="s5-punch a-up" style="--d:3.3s">بدون مكالمة واحدة.</div>
+    </section>
+
+    <!-- S6: التقارير + العملاء -->
+    <section class="scene scene--grid s6 enter-fade exit-up" id="s6">
+      <h2 class="k a-up" style="--d:.3s">أرقامك أمامك دائمًا</h2>
+      <div class="dash a-up" style="--d:.5s">
+        <div class="dash-head">
+          <span class="dash-title"><svg><use href="#mark"/></svg> لوحة مَرمى</span>
+          <span class="dash-live"><i></i> مباشر</span>
+        </div>
+        <div class="dash-kpis">
+          <div class="kpi">
+            <div class="kpi-lbl">إيراد الشهر</div>
+            <div class="kpi-val"><span id="rev">0</span> <small>ر.س</small></div>
+            <span class="kpi-delta">+18٪ عن الشهر الماضي</span>
+          </div>
+          <div class="kpi">
+            <div class="kpi-lbl">نسبة الإشغال</div>
+            <div class="kpi-val"><span id="occ">0</span><small>٪</small></div>
+            <span class="kpi-delta">ذروة الحجز: 9:00 م</span>
+          </div>
+        </div>
+        <div class="spark">
+          <span style="--h:22%;--i:0"></span>
+          <span style="--h:38%;--i:1"></span>
+          <span style="--h:30%;--i:2"></span>
+          <span style="--h:58%;--i:3"></span>
+          <span style="--h:50%;--i:4"></span>
+          <span style="--h:75%;--i:5"></span>
+          <span class="is-today" style="--h:100%;--i:6"></span>
+        </div>
+      </div>
+      <div class="cust a-up" style="--d:3.2s">
+        <span class="cust-av">س</span>
+        <div class="cust-bd"><b>سعد ماجد</b><span>12 حجزًا هذا الشهر</span></div>
+        <span class="offer-chip">عرض خاص: خصم 20٪</span>
+        <span class="wa-btn"><svg><use href="#ic-wa"/></svg></span>
+      </div>
+      <h2 class="k--sub a-up" style="--d:3.6s">وعملاؤك على بُعد <em>نقرة واتساب</em></h2>
+    </section>
+
+    <!-- S7: لماذا مَرمى -->
+    <section class="scene scene--grid s7 enter-pushup exit-zoom" id="s7">
+      <h2 class="k a-up" style="--d:.3s">لماذا <em>مَرمى</em>؟</h2>
+      <ul class="vals">
+        <li class="a-right" style="--d:.7s"><span class="val-ic"><svg><use href="#ic-check"/></svg></span><span><b>بدون عمولة</b> على حجوزاتك</span></li>
+        <li class="a-right" style="--d:1.7s"><span class="val-ic"><svg><use href="#ic-check"/></svg></span><span>200 ر.س <b>أشتراك شهري فقط</b></span></li>
+        <li class="a-right" style="--d:2.7s"><span class="val-ic"><svg><use href="#ic-check"/></svg></span><span>تجربة <b>3 أيام مجانًا</b>، بدون بطاقة</span></li>
+        <li class="a-right" style="--d:3.7s"><span class="val-ic"><svg><use href="#ic-check"/></svg></span><span>عميلك يحجز خلال <b>30 ثانية</b> فقط</span></li>
+      </ul>
+    </section>
+
+    <!-- S8: الختام -->
+    <section class="scene scene--grid s8 enter-punch" id="s8">
+      <svg class="s8-mark a-pop" style="--d:.2s"><use href="#mark"/></svg>
+      <h2 class="s8-slogan">
+        <span class="a-up" style="--d:.7s">كل حجوزاتك ..</span>
+        <span class="a-up" style="--d:1.7s">في <em>مَرمى</em> واحد</span>
+      </h2>
+      <div class="s8-cta">شغّل ملعبك في 5 دقائق</div>
+      <div class="s8-visit a-up" style="--d:3.1s">تصفّح موقعنا واحجز الآن</div>
+      <div class="s8-domain a-up" style="--d:3.3s"><span class="s8-domain-link" dir="ltr"><svg class="s8-globe"><use href="#ic-globe"/></svg><bdi>www.marma.help</bdi></span><span class="s8-underline"></span><span class="s8-cursor"><svg><use href="#ic-cursor"/></svg></span><span class="s8-click"></span></div>
+      <div class="s8-trial a-up" style="--d:3.9s">٣ أيام تجربة مجانية · بدون بطاقة ائتمانية</div>
+      <div class="s8-contact a-up" style="--d:4.4s">
+        <svg><use href="#ic-phone"/></svg>
+        <span>للتواصل والاستفسار</span>
+        <bdi dir="ltr">0554909663</bdi>
+      </div>
+    </section>
+
+    <!-- ستارة الانتقال القديمة (غير مستخدمة الآن) -->
+    <div id="sweep"></div>
+
+    <!-- الرقم الطائر: Match Cut للمال (إشعار +200 ← إيراد اللوحة) -->
+    <div id="moneyfly" aria-hidden="true"><bdi dir="ltr"><span id="flyNum">+200</span></bdi></div>
+
+    <!-- البوستر / العد التنازلي -->
+    <div id="poster">
+      <svg class="p-mark"><use href="#mark"/></svg>
+      <div class="p-tt">إعلان مَرمى — ٤٥ ثانية</div>
+      <div class="p-sb">اضغط «تشغيل» أو مفتاح المسافة · H لإخفاء الأزرار</div>
+      <div id="cd">٣</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- شريط التحكم -->
+<div id="controls">
+  <button id="playBtn" disabled>جارٍ تحميل الخط…</button>
+  <div id="prog"><div id="progFill"></div></div>
+  <span id="timeLbl">0.0 / 45.0</span>
+  <span id="ratioLbl"></span>
+  <button class="ghost" id="helpBtn">إرشادات التسجيل</button>
+  <button class="ghost" id="hideBtn">إخفاء (H)</button>
+</div>
+<div id="help" hidden>
+  <b>طريقة تسجيل الفيديو:</b><br>
+  ١· اجعل النافذة بنسبة 9:16 (أو اضغط F11 ثم قصّ الفيديو لاحقًا) — زوم المتصفح 100٪.<br>
+  ٢· شغّل المسجل: <b>Win + Alt + R</b> (مسجل ويندوز) أو OBS بكانفس 1080×1920.<br>
+  ٣· اضغط <b>H</b> لإخفاء هذا الشريط، ثم <b>مفتاح المسافة</b> للتشغيل — يبدأ عد تنازلي ٣ ٢ ١ داخل الكادر.<br>
+  ٤· المشهد الأخير يثبت عند الثانية 45 — أوقف التسجيل ثم قصّ الطرفين في أي محرر.
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var DUR = 55, HOLD = 0.6;
+  var CUES = [
+    {t:0,    id:'s1'},
+    {t:4.5,  id:'s2'},
+    {t:8,    id:'s3'},
+    {t:14.5, id:'s4'},
+    {t:20,   id:'s5'},
+    {t:25,   id:'s6'},
+    {t:31,   id:'s7'},ىحة
+    {t:36.5, id:'s8'}
+  ];
+  var COUNTERS = [
+    {id:'waBadge', start:1.4,  dur:2.7, from:3, to:17,    fmt:function(v){return String(v)}},
+    {id:'amt',     start:21.7, dur:1.2, from:0, to:200,   fmt:function(v){return String(v)}},
+    {id:'occ',     start:26.0, dur:2.2, from:0, to:71,    fmt:function(v){return String(v)}}
+  ];
+  /* إيراد اللوحة لم يعد عدّادًا مستقلًا — يصله الرقم الطائر من الإشعار (Match Cut) ثم يستقرّ ثابتًا */
+  var MONEY = {start:24.65, end:26.05, from:200, to:3450, src:null, dst:null};
+  var TYPE = {id:'typeUrl', start:8.7, dur:1.8, text:'marma.help/ملاعب الفهد'};
+  /* الستارة الخضراء معطّلة — الانتقالات صارت مزيجًا: قطع حاد / دفع اتجاهي / Match‑Cut (أُبقي المنطق احتياطًا) */
+  var SWEEPS = [], SW_HALF = 0.38;
+  var CD_DIGITS = ['٣','٢','١'];
+
+  var stage = document.getElementById('stage');
+  var poster = document.getElementById('poster');
+  var cd = document.getElementById('cd');
+  var playBtn = document.getElementById('playBtn');
+  var progFill = document.getElementById('progFill');
+  var timeLbl = document.getElementById('timeLbl');
+  var ratioLbl = document.getElementById('ratioLbl');
+  var scenes = CUES.map(function(c){ return document.getElementById(c.id); });
+  var sweepEl = document.getElementById('sweep');
+  COUNTERS.forEach(function(c){ c.el = document.getElementById(c.id); });
+  TYPE.el = document.getElementById(TYPE.id);
+  var moneyfly = document.getElementById('moneyfly');
+  var flyNum = document.getElementById('flyNum');
+  var revEl = document.getElementById('rev');
+
+  var state = 'idle'; // idle | counting | playing | done
+  var t0 = 0, raf = 0, cdTimers = [];
+
+  /* ---- تحجيم المسرح ---- */
+  function fit(){
+    var s = Math.min(innerWidth/1080, innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    var r = innerWidth/innerHeight, target = 1080/1920;
+    if (Math.abs(r-target)/target < 0.04){ ratioLbl.textContent = '✓ نسبة 9:16'; ratioLbl.classList.add('ok'); }
+    else { ratioLbl.textContent = 'النافذة ليست 9:16'; ratioLbl.classList.remove('ok'); }
+  }
+  addEventListener('resize', fit); fit();
+
+  /* ---- أدوات ---- */
+  function easeOut(p){ return 1 - Math.pow(1-p, 3); }
+  function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+  function resetVisuals(){
+    scenes.forEach(function(s){ s.classList.remove('is-active', 'is-leaving'); });
+    sweepEl.style.opacity = '0';
+    COUNTERS.forEach(function(c){ c.el.textContent = c.fmt(c.from); });
+    TYPE.el.textContent = '';
+    moneyfly.style.opacity = '0'; MONEY.src = null;
+    revEl.textContent = '3,450';
+    var sa = document.querySelector('#s5 .toast-amt'); if (sa) sa.style.opacity = '';
+    progFill.style.width = '0';
+    timeLbl.textContent = '0.0 / 55.0';
+    void stage.offsetWidth; /* إعادة ضبط أنيميشنات CSS */
+  }
+
+  /* مركز عنصر بإحداثيات المسرح اعتمادًا على التخطيط (offset) — يتجاهل تحويلات CSS (تكبير المشهد + تأنيميشن الدخول)
+     فيعطي الموقع المستقرّ الحقيقي بدل الموقع المزاح أثناء الحركة */
+  function stageCenter(el){
+    var x = el.offsetWidth/2, y = el.offsetHeight/2, node = el;
+    while (node && node !== stage){ x += node.offsetLeft; y += node.offsetTop; node = node.offsetParent; }
+    return { x:x, y:y };
+  }
+
+  /* Match Cut للمال: مبلغ الإشعار «+200» يطير ويتحوّل إلى إيراد اللوحة «3,450» */
+  function renderMoney(t){
+    var revVal = revEl.parentNode; /* خانة .kpi-val */
+    /* الرقم الحقيقي في اللوحة يبقى مخفيًا حتى يهبط الرقم الطائر */
+    revVal.style.opacity = (t >= MONEY.end - .02) ? '1' : '0';
+
+    if (t < MONEY.start || t >= MONEY.end){ moneyfly.style.opacity = '0'; return; }
+
+    /* قِس موقعَي المصدر (الإشعار) والهدف مرة واحدة — الهدف هو span الرقم نفسه (#rev) لا الخانة كاملة،
+       لأن الخانة تضم «ر.س» أيضًا فمركزها مُزاح عن مركز الرقم ويسبّب قفزة عند الهبوط */
+    var srcEl = document.querySelector('#s5 .toast-amt');
+    if (!MONEY.src && srcEl && revEl){ MONEY.src = stageCenter(srcEl); MONEY.dst = stageCenter(revEl); }
+    if (!MONEY.src){ moneyfly.style.opacity = '0'; return; }
+    if (srcEl) srcEl.style.opacity = '0'; /* أخفِ المبلغ الأصلي ليبدو كأنه «انتزع» وطار */
+
+    var p = clamp01((t - MONEY.start)/(MONEY.end - MONEY.start));
+    var e = p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2; /* easeInOutCubic للمسار */
+    var x = MONEY.src.x + (MONEY.dst.x - MONEY.src.x)*e;
+    var y = MONEY.src.y + (MONEY.dst.y - MONEY.src.y)*e;
+    var val = Math.round(MONEY.from + (MONEY.to - MONEY.from)*easeOut(p));
+    flyNum.textContent = val < 1000 ? ('+'+val) : val.toLocaleString('en-US');
+    moneyfly.style.left = x + 'px';
+    moneyfly.style.top = y + 'px';
+    moneyfly.style.fontSize = (46 + (62-46)*e) + 'px'; /* يكبر حتى حجم خانة الإيراد */
+    moneyfly.style.color = p < .55 ? 'var(--green-bright)' : 'var(--green-dark)';
+    moneyfly.style.opacity = p < .1 ? String(p/.1) : (p > .92 ? String(Math.max(0,(1-p)/.08)) : '1');
+  }
+
+  function renderFrame(t){
+    /* المشاهد: السابق يبقى تحت الجديد طوال التداخل (HOLD) حاملًا is-leaving ليلعب حركة خروجه */
+    for (var i=0;i<CUES.length;i++){
+      var nxt = (i+1 < CUES.length) ? CUES[i+1].t : DUR + 1;
+      scenes[i].classList.toggle('is-active', t >= CUES[i].t && t < nxt + HOLD);
+      scenes[i].classList.toggle('is-leaving', t >= nxt && t < nxt + HOLD);
+    }
+    /* الستارة الخضراء: تعبر من اليمين لليسار وتغطي الشاشة بالكامل لحظة تبديل المشهد */
+    var sp = null;
+    for (var j=0;j<SWEEPS.length;j++){
+      if (t >= SWEEPS[j]-SW_HALF && t <= SWEEPS[j]+SW_HALF){ sp = (t-(SWEEPS[j]-SW_HALF))/(SW_HALF*2); break; }
+    }
+    if (sp === null){ sweepEl.style.opacity = '0'; }
+    else {
+      var se = sp < .5 ? 4*sp*sp*sp : 1 - Math.pow(-2*sp+2, 3)/2; /* easeInOutCubic */
+      sweepEl.style.opacity = '1';
+      sweepEl.style.transform = 'translateX(' + (130 - 260*se) + '%)';
+    }
+    /* العدّادات */
+    COUNTERS.forEach(function(c){
+      var p = easeOut(clamp01((t - c.start)/c.dur));
+      c.el.textContent = c.fmt(Math.round(c.from + (c.to - c.from)*p));
+    });
+    /* كتابة الرابط */
+    var tp = clamp01((t - TYPE.start)/TYPE.dur);
+    TYPE.el.textContent = TYPE.text.slice(0, Math.round(tp * TYPE.text.length));
+    /* Match Cut للمال (إشعار ← إيراد) */
+    renderMoney(t);
+    /* التقدم */
+    progFill.style.width = (clamp01(t/DUR)*100) + '%';
+    timeLbl.textContent = Math.min(t, DUR).toFixed(1) + ' / 55.0';
+  }
+
+  function frame(now){
+    var t = (now - t0)/1000;
+    renderFrame(t);
+    if (t >= DUR){ finish(); return; }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function finish(){
+    state = 'done';
+    playBtn.textContent = '↻ إعادة التشغيل (مسافة)';
+    playBtn.disabled = false;
+  }
+
+  function clearCountdown(){ cdTimers.forEach(clearTimeout); cdTimers = []; }
+
+  function play(){
+    if (state === 'counting') return;
+    cancelAnimationFrame(raf); clearCountdown();
+    resetVisuals();
+    state = 'counting';
+    playBtn.disabled = true; playBtn.textContent = '… ٣ ٢ ١';
+    poster.classList.remove('is-off');
+    poster.classList.add('is-counting');
+    CD_DIGITS.forEach(function(d, i){
+      cdTimers.push(setTimeout(function(){
+        cd.textContent = d;
+        cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick');
+      }, i*1000));
+    });
+    cdTimers.push(setTimeout(start, CD_DIGITS.length*1000));
+  }
+
+  function start(){
+    poster.classList.add('is-off');
+    poster.classList.remove('is-counting');
+    state = 'playing';
+    playBtn.disabled = false; playBtn.textContent = '↻ من البداية';
+    t0 = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* للمعاينة الآلية: رسم إطار عند زمن محدد، أو تشغيل فوري من ثانية محددة بدون عد تنازلي */
+  window.__frame = function(t){
+    poster.classList.add('is-off'); poster.classList.remove('is-counting');
+    renderFrame(t);
+  };
+  window.__play = function(at){
+    cancelAnimationFrame(raf); clearCountdown();
+    resetVisuals();
+    poster.classList.add('is-off'); poster.classList.remove('is-counting');
+    state = 'playing';
+    t0 = performance.now() - (at||0)*1000;
+    raf = requestAnimationFrame(frame);
+  };
+
+  playBtn.addEventListener('click', play);
+  document.getElementById('hideBtn').addEventListener('click', function(){ document.body.classList.add('hud-off'); });
+  document.getElementById('helpBtn').addEventListener('click', function(){
+    var h = document.getElementById('help'); h.hidden = !h.hidden;
+  });
+  addEventListener('keydown', function(e){
+    if (e.code === 'Space'){ e.preventDefault(); if (!playBtn.disabled || state==='idle' || state==='done') play(); }
+    else if (e.key === 'h' || e.key === 'H' || e.key === 'ا'){ document.body.classList.toggle('hud-off'); }
+    else if (e.key === 'Escape'){ document.body.classList.remove('hud-off'); }
+  });
+
+  /* تفعيل الزر بعد تحميل الخطوط (منع تسجيل خط بديل) */
+  document.fonts.ready.then(function(){
+    playBtn.disabled = false;
+    playBtn.textContent = '▶ تشغيل (مسافة)';
+  });
+})();
+</script>
+</body>
+</html>

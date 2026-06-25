@@ -54,5 +54,6 @@
 .status-badge--pending  { background: var(--warning-tint); color: var(--warning); }
 .status-badge--approved { background: var(--success-tint); color: var(--accent-700); }
 .status-badge--rejected { background: var(--danger-tint);  color: var(--danger); }
+.status-badge--muted    { background: var(--surface-3);    color: var(--text-tertiary); }
 .status-badge--lifetime { background: #FBEFC8; color: #8A6D00; }
 [data-theme="dark"] .status-badge--lifetime { background: rgba(212, 175, 55, 0.18); color: #E6C24A; }

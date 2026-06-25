@@ -81,7 +81,10 @@
       const staffCount  = container.querySelector('#staff-count');
       const invCount    = container.querySelector('#invites-count');
 
-      const allowedStaff = (ctx.status && ctx.status.allowed_staff) || 0;
+      const isLifetime   = !!(ctx.status && ctx.status.lifetime);
+      const allowedStaff = isLifetime
+        ? Infinity
+        : ((ctx.status && ctx.status.allowed_staff) || 0);
       const pageHeader   = container.querySelector('.page-header');
       const limitBannerSlot = document.createElement('div');
       pageHeader.parentNode.insertBefore(limitBannerSlot, pageHeader.nextSibling);
@@ -238,7 +241,7 @@
 
           const pendingInv = invitations.filter((i) => !i.used_at);
           const staffMembers = staff.filter((s) => s.role === 'staff');
-          staffCount.textContent = `${staffMembers.length}/${allowedStaff}`;
+          staffCount.textContent = `${staffMembers.length}/${isLifetime ? '∞' : allowedStaff}`;
           invCount.textContent   = pendingInv.length;
           applyLimitToInviteBtn(staffMembers.length + pendingInv.length);
 

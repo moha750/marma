@@ -171,7 +171,7 @@ window.bookingModal = (function () {
           <div class="form-group">
             <label class="form-label">السعر الإجمالي (ر.س)</label>
             <input type="number" class="form-control" name="total_price" min="0" step="0.01" placeholder="عند التواصل" value="${editing && booking.total_price != null ? booking.total_price : ''}">
-            <span class="form-help" id="price-help">يُحسب تلقائياً من السعر/ساعة × المدة · فارغ = عند التواصل · 0 = مجاني</span>
+            <span class="form-help" id="price-help">يُؤخذ تلقائياً من سعر الموعد · فارغ = عند التواصل · 0 = مجاني</span>
           </div>
           <div class="form-group">
             <label class="form-label">المدفوع (ر.س)</label>

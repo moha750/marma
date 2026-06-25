@@ -2595,7 +2595,7 @@
   margin-bottom: 14px;
 }
 .lp-link-bar svg.lucide { width: 14px; height: 14px; color: var(--c-brand); }
-.lp-link-bar span { flex: 1; }
+.lp-link-bar span { flex: 1; text-align: left; }
 .lp-link-bar b { color: var(--c-brand-d); font-weight: var(--weight-bold); }
 [data-theme="dark"] .lp-link-bar b { color: var(--accent-300); }
 .lp-link-copy {
