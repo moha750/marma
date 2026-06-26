@@ -1427,7 +1427,7 @@
 .bp-hero-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 21 / 9;
+  aspect-ratio: 1200 / 630;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--c-bdr);
@@ -1679,7 +1679,7 @@
 }
 
 @media (max-width: 520px) {
-  .bp-hero-cover { aspect-ratio: 16 / 10; margin-block: var(--space-2) var(--space-3); }
+  .bp-hero-cover { aspect-ratio: 1200 / 630; margin-block: var(--space-2) var(--space-3); }
   .bp-landing-fields { gap: var(--space-3); }
   .bp-landing-field-card__body { padding: var(--space-3); }
   .bp-section-title { font-size: var(--text-md); }

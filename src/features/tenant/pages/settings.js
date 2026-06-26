@@ -431,7 +431,13 @@
       input.value = '';
       if (!file) return;
       withBusy(async () => {
-        const newUrl = await window.api.uploadTenantCover(file);
+        // قصّ على نسبة صورة الرابط/الغلاف (1200×630) قبل الرفع — تطابق تام مع العرض
+        const cropped = await window.cropImage(file, {
+          aspect: 1200 / 630, outWidth: 1200, outHeight: 630,
+          title: 'تعديل صورة الغلاف',
+        });
+        if (!cropped) return; // ألغى المستخدم القصّ
+        const newUrl = await window.api.uploadTenantCover(cropped);
         ctx.tenant.cover_image_url = newUrl;
         renderCoverSlot(slot, newUrl, isOwner);
         window.utils.toast('تم حفظ صورة الغلاف', 'success');
