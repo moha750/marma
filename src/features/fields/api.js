@@ -10,18 +10,38 @@ window.fieldsApi = (function () {
   const MAX_IMAGES_PER_FIELD = 8;
 
   async function listFields(includeInactive = true) {
-    let q = sb().from('fields').select('*').order('name');
+    let q = sb().from('fields').select('*').order('display_order').order('name');
     if (!includeInactive) q = q.eq('is_active', true);
     const { data, error } = await q;
     if (error) throw error;
     return data;
   }
 
+  // حفظ ترتيب الأرضيات: مصفوفة معرّفات بالترتيب المطلوب
+  async function reorderFields(orderedIds) {
+    if (!Array.isArray(orderedIds)) throw new Error('orderedIds must be an array');
+    const { error } = await sb().rpc('reorder_fields', { p_field_ids: orderedIds });
+    if (error) throw error;
+  }
+
   async function createField({ name, city, phone, location_url, latitude, longitude, image_urls, description, surface_type, amenities }) {
     const tenantId = await window.tenantApi.getMyTenantId();
+    // الأرضية الجديدة تذهب لنهاية الترتيب: max(display_order) + 1
+    let nextOrder = 0;
+    {
+      const { data: rows } = await sb()
+        .from('fields')
+        .select('display_order')
+        .order('display_order', { ascending: false })
+        .limit(1);
+      if (rows && rows.length && Number.isFinite(rows[0].display_order)) {
+        nextOrder = rows[0].display_order + 1;
+      }
+    }
     const { data, error } = await sb()
       .from('fields')
       .insert({
+        display_order: nextOrder,
         name,
         city: city || null,
         phone: phone || null,
@@ -159,7 +179,7 @@ window.fieldsApi = (function () {
   }
 
   return {
-    listFields, createField, updateField, deleteField,
+    listFields, reorderFields, createField, updateField, deleteField,
     listFieldImages, addFieldImage, removeFieldImage, reorderFieldImages,
     MAX_IMAGES_PER_FIELD,
     getAvailableSlots
