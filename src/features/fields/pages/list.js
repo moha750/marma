@@ -137,9 +137,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  ${fields.map((f) => `
+                  ${fields.map((f, i) => `
                     <tr data-status="${f.is_active ? 'confirmed' : 'completed'}" data-id="${f.id}">
                       <td data-label="اسم الأرضية" class="fw-semibold">
+                        <span class="row-rank tabular-nums" title="الترتيب">${i + 1}</span>
                         ${(f.image_urls && f.image_urls[0])
                           ? `<img src="${window.utils.escapeHtml(f.image_urls[0])}" class="field-list-thumb" alt="">`
                           : ''}
@@ -151,6 +152,15 @@
                       ${isOwner ? `
                         <td class="actions-cell">
                           <div class="actions-inline">
+                            <button class="btn btn--xs btn--ghost drag-handle" data-action="drag" data-id="${f.id}" title="اسحب لإعادة الترتيب" aria-label="اسحب لإعادة الترتيب">
+                              <i data-lucide="grip-vertical"></i>
+                            </button>
+                            <button class="btn btn--xs btn--ghost" data-action="move-up" data-id="${f.id}" title="تحريك لأعلى" ${i === 0 ? 'disabled' : ''}>
+                              <i data-lucide="arrow-up"></i>
+                            </button>
+                            <button class="btn btn--xs btn--ghost" data-action="move-down" data-id="${f.id}" title="تحريك لأسفل" ${i === fields.length - 1 ? 'disabled' : ''}>
+                              <i data-lucide="arrow-down"></i>
+                            </button>
                             <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${f.id}" title="تعديل">
                               <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
                             </button>
@@ -171,6 +181,105 @@
           `;
 
           if (isOwner) {
+            let reordering = false;
+            // يحفظ ترتيباً جديداً (مصفوفة أرضيات مُعاد ترتيبها) ويعيد التحميل.
+            async function persistOrder(reordered) {
+              if (reordering) return;
+              // لا تحفظ إن لم يتغيّر شيء فعلياً
+              if (reordered.every((f, i) => f.id === fields[i].id)) return;
+              reordering = true;
+              listContainer.querySelectorAll('[data-action="move-up"],[data-action="move-down"],[data-action="drag"]')
+                .forEach((b) => { b.disabled = true; });
+              try {
+                await window.api.reorderFields(reordered.map((f) => f.id));
+                invalidateFieldsCache();
+                refresh();
+              } catch (err) {
+                window.utils.toast(window.utils.formatError(err), 'error');
+                reordering = false;
+                refresh();
+              }
+            }
+
+            // أزرار الأسهم (تعمل على اللمس أيضاً)
+            function moveField(id, dir) {
+              const from = fields.findIndex((f) => f.id === id);
+              const to = from + dir;
+              if (from < 0 || to < 0 || to >= fields.length) return;
+              const reordered = fields.slice();
+              [reordered[from], reordered[to]] = [reordered[to], reordered[from]];
+              persistOrder(reordered);
+            }
+            listContainer.querySelectorAll('[data-action="move-up"]').forEach((btn) => {
+              btn.addEventListener('click', () => moveField(btn.dataset.id, -1));
+            });
+            listContainer.querySelectorAll('[data-action="move-down"]').forEach((btn) => {
+              btn.addEventListener('click', () => moveField(btn.dataset.id, 1));
+            });
+
+            // ── السحب والإفلات (المكتب) ──────────────────────────
+            // السحب يبدأ من المقبض فقط، حتى لا يتعارض مع تحديد النص أو نقر الأزرار.
+            const tbody = listContainer.querySelector('tbody');
+            if (tbody) {
+              let dragId = null;
+              const clearMarkers = () => tbody.querySelectorAll('.row-drop-before,.row-drop-after')
+                .forEach((el) => el.classList.remove('row-drop-before', 'row-drop-after'));
+
+              tbody.querySelectorAll('tr[data-id]').forEach((row) => {
+                const handle = row.querySelector('[data-action="drag"]');
+                if (!handle) return;
+                // فعّل قابلية السحب على الصف فقط أثناء الإمساك بالمقبض
+                handle.addEventListener('mousedown', () => { row.draggable = true; });
+                handle.addEventListener('mouseup', () => { row.draggable = false; });
+
+                row.addEventListener('dragstart', (e) => {
+                  if (reordering) { e.preventDefault(); return; }
+                  dragId = row.dataset.id;
+                  row.classList.add('row-dragging');
+                  e.dataTransfer.effectAllowed = 'move';
+                  try { e.dataTransfer.setData('text/plain', dragId); } catch (_) {}
+                });
+                row.addEventListener('dragend', () => {
+                  row.draggable = false;
+                  row.classList.remove('row-dragging');
+                  clearMarkers();
+                  dragId = null;
+                });
+                row.addEventListener('dragover', (e) => {
+                  if (!dragId || row.dataset.id === dragId) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  const rect = row.getBoundingClientRect();
+                  const after = (e.clientY - rect.top) > rect.height / 2;
+                  clearMarkers();
+                  row.classList.add(after ? 'row-drop-after' : 'row-drop-before');
+                });
+                row.addEventListener('dragleave', (e) => {
+                  // أزل المؤشّر فقط عند مغادرة الصف فعلياً (لا عند الانتقال بين أبنائه)
+                  if (!row.contains(e.relatedTarget)) {
+                    row.classList.remove('row-drop-before', 'row-drop-after');
+                  }
+                });
+                row.addEventListener('drop', (e) => {
+                  e.preventDefault();
+                  const targetId = row.dataset.id;
+                  const after = row.classList.contains('row-drop-after');
+                  clearMarkers();
+                  if (!dragId || targetId === dragId) return;
+                  const from = fields.findIndex((f) => f.id === dragId);
+                  let targetIdx = fields.findIndex((f) => f.id === targetId);
+                  if (from < 0 || targetIdx < 0) return;
+                  const reordered = fields.slice();
+                  const [moved] = reordered.splice(from, 1);
+                  // أعد حساب موضع الهدف بعد الإزالة
+                  let insertAt = reordered.findIndex((f) => f.id === targetId);
+                  if (after) insertAt += 1;
+                  reordered.splice(insertAt, 0, moved);
+                  persistOrder(reordered);
+                });
+              });
+            }
+
             listContainer.querySelectorAll('[data-action="edit"]').forEach((btn) => {
               btn.addEventListener('click', () => {
                 const field = fields.find((f) => f.id === btn.dataset.id);

@@ -120,6 +120,27 @@
   gap: var(--space-1);
 }
 
+/* ─── إعادة الترتيب بالسحب ─── */
+/* مقبض السحب: مؤشّر grab، وعند السحب الفعلي يضيف الصف صفّاً مظلّلاً ومؤشّر إفلات. */
+.table .drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+.table .drag-handle:active { cursor: grabbing; }
+
+.table tbody tr.row-dragging {
+  opacity: 0.55;
+  background: var(--surface-2);
+}
+
+/* مؤشّر موضع الإفلات: خط ملوّن أعلى/أسفل الصف الهدف (يحترم RTL تلقائياً). */
+.table tbody tr.row-drop-before td { box-shadow: inset 0 2px 0 0 var(--accent-500); }
+.table tbody tr.row-drop-after  td { box-shadow: inset 0 -2px 0 0 var(--accent-500); }
+
+/* في عرض البطاقات (الجوال) يكون الإطار حول البطاقة كاملةً أوضح من inset على td. */
+.table-wrapper.as-cards .table--cards tbody tr.row-drop-before { box-shadow: 0 -2px 0 0 var(--accent-500); }
+.table-wrapper.as-cards .table--cards tbody tr.row-drop-after  { box-shadow: 0  2px 0 0 var(--accent-500); }
+
 /* ملاحظة: حالة الصف يحملها شِب الحالة المكتوب في عموده — لا حاجة لشريط
    جانبي مكرّر (أُزيل عمداً للحفاظ على هدوء النظام). */
 
@@ -372,4 +393,21 @@
   vertical-align: middle;
   margin-inline-end: var(--space-2);
   border: 1px solid var(--border-subtle);
+}
+
+/* رقم الترتيب أمام اسم الصف — شارة دائرية هادئة تطابق ترتيب display_order */
+.row-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  vertical-align: middle;
+  margin-inline-end: var(--space-2);
 }
