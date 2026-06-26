@@ -10,49 +10,55 @@
 //
 // لا أسرار جديدة: SUPABASE_URL و SUPABASE_KEY (anon) متوفّران أصلاً في إعدادات
 // Cloudflare Pages وتصل للدالة عبر context.env.
+//
+// مبدأ أساسي: هذه الدالة لا يجوز أن تكسر صفحة الحجز أبداً. أي خطأ → نرجع الصفحة
+// الأصلية كما هي (وسوم عامة). لذا كل المنطق داخل try/catch، ونُرجع نتيجة
+// transform() مباشرةً (HTMLRewriter يضبط الطول تلقائياً — إعادة بناء Response
+// يدوياً مع نسخ Content-Length القديمة تسبّب 500).
 
 const GENERIC_IMAGE = 'https://marma.help/assets/og/booking.png';
 
 export async function onRequest(context) {
   const { request, env, next } = context;
-  const url = new URL(request.url);
-  const tenantId = url.searchParams.get('t');
 
   // الصفحة الثابتة الأصلية (book.html) — next() يتخطّى هذه الدالة للأصل الثابت
   const page = await next();
 
-  // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
-  if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
+  try {
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('t');
 
-  const tenant = await fetchTenant(env, tenantId);
-  if (!tenant || !tenant.id) return page; // ملعب غير موجود أو خطأ → وسوم عامة
+    // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
+    if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
 
-  const name     = String(tenant.name || 'احجز ملعبك');
-  const title    = `${name} — احجز الآن عبر مَرمى`;
-  const desc     = tenant.description
-    ? clip(String(tenant.description), 200)
-    : `احجز ملعبك في ${name} بسهولة عبر مَرمى — اختر اليوم والموعد المناسب.`;
-  const image    = pickImage(tenant) || GENERIC_IMAGE;
-  const canonical = `${url.origin}/book?t=${encodeURIComponent(tenantId)}`;
+    const tenant = await fetchTenant(env, tenantId);
+    if (!tenant || !tenant.id) return page; // ملعب غير موجود أو خطأ → وسوم عامة
 
-  const rewriter = new HTMLRewriter()
-    .on('title',                            new TextSetter(title))
-    .on('meta[name="description"]',         new AttrSetter('content', desc))
-    .on('meta[property="og:title"]',        new AttrSetter('content', title))
-    .on('meta[property="og:description"]',  new AttrSetter('content', desc))
-    .on('meta[property="og:image"]',        new AttrSetter('content', image))
-    .on('meta[property="og:image:alt"]',    new AttrSetter('content', name))
-    .on('meta[property="og:url"]',          new AttrSetter('content', canonical))
-    .on('meta[name="twitter:title"]',       new AttrSetter('content', title))
-    .on('meta[name="twitter:description"]', new AttrSetter('content', desc))
-    .on('meta[name="twitter:image"]',       new AttrSetter('content', image));
+    const name = String(tenant.name || 'احجز ملعبك');
+    const title = `${name} — احجز الآن عبر مَرمى`;
+    const desc = tenant.description
+      ? clip(String(tenant.description), 200)
+      : `احجز ملعبك في ${name} بسهولة عبر مَرمى — اختر اليوم والموعد المناسب.`;
+    const image = pickImage(tenant) || GENERIC_IMAGE;
+    const canonical = `${url.origin}/book?t=${encodeURIComponent(tenantId)}`;
 
-  const out = rewriter.transform(page);
-  // أبقِ الصفحة طازجة (مثل بقية صفحات HTML في _headers) كي تتحدّث المعاينة فور
-  // تغيير صورة الغلاف، ولا يخدم الزاحف نسخة قديمة.
-  const headers = new Headers(out.headers);
-  headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
-  return new Response(out.body, { status: out.status, headers });
+    // نُرجع نتيجة transform مباشرةً (لا نعيد بناء Response يدوياً)
+    return new HTMLRewriter()
+      .on('title',                            new TextSetter(title))
+      .on('meta[name="description"]',         new AttrSetter('content', desc))
+      .on('meta[property="og:title"]',        new AttrSetter('content', title))
+      .on('meta[property="og:description"]',  new AttrSetter('content', desc))
+      .on('meta[property="og:image"]',        new AttrSetter('content', image))
+      .on('meta[property="og:image:alt"]',    new AttrSetter('content', name))
+      .on('meta[property="og:url"]',          new AttrSetter('content', canonical))
+      .on('meta[name="twitter:title"]',       new AttrSetter('content', title))
+      .on('meta[name="twitter:description"]', new AttrSetter('content', desc))
+      .on('meta[name="twitter:image"]',       new AttrSetter('content', image))
+      .transform(page);
+  } catch (_) {
+    // أي خطأ غير متوقّع → الصفحة الأصلية سليمة بوسومها العامة
+    return page;
+  }
 }
 
 // ── جلب بيانات الملعب من Supabase (REST RPC, anon) ──────────────────────────
