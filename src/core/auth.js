@@ -12,22 +12,55 @@ window.auth = (function () {
     return (window.__BASE__ || '') + path;
   }
 
-  // التحقق من الجلسة. ترجع session أو null إذا غير مسجل
-  async function getSession() {
+  // خطأ عابر (شبكة) لا يعني أن الجلسة باطلة — لا يجوز تسجيل الخروج عنده
+  function isTransientError(err) {
+    if (!err) return false;
+    if (typeof err.status === 'number' && err.status !== 0) return false; // رد فعلي من الخادم
+    const m = (err.message || '').toLowerCase();
+    return err.name === 'TypeError' || /failed to fetch|networkerror|network request failed|load failed/.test(m);
+  }
+
+  // يضمن جلسة صالحة: يقرأ المخزّنة ويحدّثها استباقيًا إن انتهت/قاربت الانتهاء.
+  // هذا يمنع «الخروج بعد خمول»: عند فتح التطبيق برمز وصول منتهٍ نحدّثه بدل أن
+  // يفشل أول طلب فيُسجّل الخروج. يُرجع null فقط لو لا جلسة أو رمز التحديث باطل.
+  async function ensureSession() {
     const { data: { session }, error } = await window.sb.auth.getSession();
-    if (error) {
-      console.error('فشل التحقق من الجلسة:', error);
-      return null;
+    if (error) { console.error('فشل قراءة الجلسة:', error); return null; }
+    if (!session) return null;
+    const expMs = (session.expires_at || 0) * 1000;
+    // حدّث لو انتهى أو يقارب (هامش 60 ثانية)
+    if (expMs && expMs < Date.now() + 60000) {
+      const { data, error: rErr } = await window.sb.auth.refreshSession();
+      if (rErr) {
+        // خطأ شبكة عابر → أبقِ الجلسة الحالية (سيُحدَّث لاحقًا)؛ خطأ مصادقة → باطلة
+        return isTransientError(rErr) ? session : null;
+      }
+      return (data && data.session) || session;
     }
     return session;
+  }
+
+  // التحقق من الجلسة. ترجع session (محدَّثة عند اللزوم) أو null إذا غير مسجل
+  async function getSession() {
+    try {
+      return await ensureSession();
+    } catch (err) {
+      // فشل غير متوقّع: لا نُبطل الجلسة — نرجع المخزّنة كما هي إن وُجدت
+      console.error('فشل التحقق من الجلسة:', err);
+      try { const { data } = await window.sb.auth.getSession(); return data.session || null; }
+      catch (_) { return null; }
+    }
   }
 
   // جلب الملف الشخصي مع بيانات الملعب والاشتراك
   async function loadProfile() {
     if (currentProfile) return currentProfile;
-    const { data: { user }, error: userErr } = await window.sb.auth.getUser();
-    if (userErr || !user) {
-      throw userErr || new Error('UNAUTHENTICATED');
+    // نعتمد على جلسة محلية مُتحقَّقة (ومحدَّثة عند اللزوم) بدل طلب getUser() شبكي
+    // يُستدعى في كل تحميل — كان فشله العابر يقود لتسجيل خروج خاطئ بعد الخمول.
+    const session = await ensureSession();
+    const user = session && session.user;
+    if (!user) {
+      throw new Error('UNAUTHENTICATED');
     }
     const { data, error } = await window.sb
       .from('profiles')
@@ -78,6 +111,13 @@ window.auth = (function () {
       const profile = await loadProfile();
       return { user: session.user, profile, tenant: profile.tenants };
     } catch (err) {
+      // خطأ عابر (شبكة): لا تُتلف الجلسة — وجّه للدخول مع الإبقاء عليها ليعود
+      // المستخدم تلقائيًّا عند توفّر الشبكة (redirectIfAuthenticated يُعيده).
+      if (isTransientError(err)) {
+        window.location.replace(withBase(redirectTo));
+        throw err;
+      }
+      // خطأ مصادقة حقيقي أو حساب غير سليم: نظّف وسجّل الخروج
       await window.sb.auth.signOut();
       window.location.replace(withBase(redirectTo));
       throw err;

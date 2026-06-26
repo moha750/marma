@@ -133,6 +133,18 @@
     needsManualInstall
   };
 
+  // تخزين دائم: يطلب من المتصفّح عدم مسح localStorage/IndexedDB أثناء الخمول،
+  // مما يقلّل فقدان جلسة الدخول (سبب شائع لتسجيل الخروج بعد أيام، خاصة على الجوال).
+  async function requestPersistentStorage() {
+    try {
+      if (navigator.storage && navigator.storage.persist && navigator.storage.persisted) {
+        const already = await navigator.storage.persisted();
+        if (!already) await navigator.storage.persist();
+      }
+    } catch (_) { /* غير حرج */ }
+  }
+  requestPersistentStorage();
+
   // تسجيل تلقائي بعد load (لا يحجب الأداء الأولي)
   if (document.readyState === 'complete') {
     register();
