@@ -12,11 +12,11 @@
 // Cloudflare Pages وتصل للدالة عبر context.env.
 //
 // ملاحظتان مهمّتان (مثبَتتان بالتجربة على المعاينة):
-//  1) لا نُرجع نتيجة transform() بثّاً مباشرة — طبقة أصول Cloudflare تتجاوز التعديل
-//     فتصل الوسوم العامة للعميل. بدلاً من ذلك نقرأ HTML المحوَّل عبر .text()
-//     (الصفحة ~٣ ك.ب) ونرجعه كـ Response جديد فيُطبَّق التعديل فعلياً.
-//  2) كل شيء داخل try/catch — هذه الدالة يجب ألّا تكسر صفحة الحجز أبداً؛ أي خطأ
-//     → نرجع الصفحة الأصلية بوسومها العامة.
+//  1) كائن معالِجات HTMLRewriter يحجز الأسماء element/text/comments كدوال؛ فلا
+//     يجوز تسمية أي خاصية فيه `text` (سلسلة) وإلا انهار التحويل بالكامل.
+//  2) نقرأ HTML المحوَّل عبر .text() (الصفحة ~٣ ك.ب) ونرجعه كـ Response جديد كي
+//     يُطبَّق التعديل بثبات. وكل شيء داخل try/catch — هذه الدالة يجب ألّا تكسر
+//     صفحة الحجز أبداً؛ أي خطأ → نرجع الصفحة الأصلية بوسومها العامة.
 
 const GENERIC_IMAGE = 'https://marma.help/assets/og/booking.png';
 
@@ -30,10 +30,10 @@ export async function onRequest(context) {
     const page = await next(); // الصفحة الثابتة الأصلية (book.html)
 
     // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
-    if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return await tag(page, 'no-tenant-or-env');
+    if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
 
     const tenant = await fetchTenant(env, tenantId);
-    if (!tenant || !tenant.id) return await tag(page, 'no-id'); // ملعب غير موجود → وسوم عامة
+    if (!tenant || !tenant.id) return page; // ملعب غير موجود → وسوم عامة
 
     const name = String(tenant.name || 'احجز ملعبك');
     const title = `${name} — احجز الآن عبر مَرمى`;
@@ -56,7 +56,6 @@ export async function onRequest(context) {
       .on('meta[name="twitter:image"]',       new AttrSetter('content', image))
       .transform(page);
 
-    // نقرأ المحتوى المحوَّل فعلياً ثم نرجعه كصفحة جديدة (انظر الملاحظة 1)
     const html = await transformed.text();
     return new Response(html, {
       status: 200,
@@ -64,25 +63,11 @@ export async function onRequest(context) {
         'content-type': 'text/html; charset=utf-8',
         // طازج كي تتحدّث المعاينة فور تغيير صورة الغلاف، ولا يخدم الزاحف نسخة قديمة
         'cache-control': 'public, max-age=0, must-revalidate',
-        'x-og-path': 'inject',
       },
     });
-  } catch (e) {
-    // أي خطأ غير متوقّع → الصفحة الأصلية سليمة بوسومها العامة
-    const r = await next();
-    return await tag(r, 'error', String(e && e.stack || e));
-  }
-}
-
-// يضيف ترويسة تتبّع للرد (يقرأ الجسم في الذاكرة لتفادي عدم تطابق Content-Length)
-async function tag(resp, path, err) {
-  try {
-    const body = await resp.text();
-    const headers = new Headers({ 'content-type': 'text/html; charset=utf-8', 'x-og-path': path });
-    if (err) headers.set('x-og-error', err.slice(0, 300).replace(/\s+/g, ' '));
-    return new Response(body, { status: 200, headers });
   } catch (_) {
-    return resp;
+    // أي خطأ غير متوقّع → الصفحة الأصلية سليمة بوسومها العامة
+    return next();
   }
 }
 
@@ -121,11 +106,12 @@ function clip(text, max) {
 }
 
 // ── معالِجات HTMLRewriter ───────────────────────────────────────────────────
+// مهم: لا تُسمِّ أي خاصية `text` (محجوزة كمعالِج نصّي في HTMLRewriter).
 class AttrSetter {
   constructor(attr, value) { this.attr = attr; this.value = value; }
   element(el) { el.setAttribute(this.attr, this.value); }
 }
 class TextSetter {
-  constructor(text) { this.text = text; }
-  element(el) { el.setInnerContent(this.text); }
+  constructor(value) { this.value = value; }
+  element(el) { el.setInnerContent(this.value); }
 }
