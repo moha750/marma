@@ -1,0 +1,82 @@
+/* أداة قصّ الصور — إطار ثابت النسبة مع صورة قابلة للسحب/التكبير */
+
+.cropper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cropper__stage {
+  position: relative;
+  width: 100%;
+  /* aspect-ratio يُضبط inline حسب النسبة المطلوبة */
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  touch-action: none;       /* يمنع تمرير الصفحة/التكبير الافتراضي أثناء السحب والقرص */
+  cursor: grab;
+  user-select: none;
+}
+.cropper__stage:active { cursor: grabbing; }
+
+/* خلفية ضبابية تملأ الهوامش عند الاحتواء (للصور المربّعة/الطويلة كالشعارات) */
+.cropper__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  filter: blur(18px);
+  transform: scale(1.15);   /* يُخفي حواف التمويه */
+  pointer-events: none;
+  user-select: none;
+}
+
+.cropper__img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;          /* تجاوز قاعدة img{max-width:100%} العامة */
+  pointer-events: none;     /* الأحداث تُلتقط على الـ stage */
+  user-select: none;
+  -webkit-user-drag: none;
+  /* width/height/transform تُضبط بـ JS */
+}
+
+.cropper__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cropper__range {
+  flex: 1;
+  accent-color: var(--accent-500);
+  cursor: pointer;
+}
+
+.cropper__zbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--border-default);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.cropper__zbtn:hover { background: var(--surface-2); }
+.cropper__zbtn i[data-lucide],
+.cropper__zbtn svg.lucide { width: 16px; height: 16px; }
+
+.cropper__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+}

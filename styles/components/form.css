@@ -531,7 +531,7 @@ select.form-control {
 .tenant-cover-slot {
   position: relative;
   width: 100%;
-  aspect-ratio: 21 / 9;
+  aspect-ratio: 1200 / 630;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface-2);
