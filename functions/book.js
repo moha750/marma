@@ -30,16 +30,19 @@ export async function onRequest(context) {
 
     // فرع تشخيص مؤقت — يُزال بعد التأكد من عمل الدالة
     if (url.searchParams.get('og_debug') === '1') {
-      let t = null, err = null;
-      try { t = await fetchTenant(env, tenantId); } catch (e) { err = String(e); }
+      const MARKER = 'OG_TEST_MARKER_123';
+      const transformed = new HTMLRewriter()
+        .on('meta[property="og:title"]', { element(el) { el.setAttribute('content', MARKER); } })
+        .transform(page);
+      const html = await transformed.text();
+      const idx = html.indexOf('og:title');
       return new Response(JSON.stringify({
-        tenantId,
-        SUPABASE_URL: env.SUPABASE_URL ? 'set' : 'MISSING',
-        SUPABASE_KEY: env.SUPABASE_KEY ? 'set' : 'MISSING',
-        tenantOk: !!(t && t.id),
-        tenantName: t && t.name,
-        coverImage: t && t.cover_image_url,
-        err,
+        matched: html.includes(MARKER),
+        contentType: page.headers.get('content-type'),
+        contentEncoding: page.headers.get('content-encoding'),
+        pageStatus: page.status,
+        htmlLen: html.length,
+        snippet: idx >= 0 ? html.slice(Math.max(0, idx - 15), idx + 90) : '(og:title not found)',
       }), { headers: { 'content-type': 'application/json; charset=utf-8' } });
     }
 
