@@ -40,7 +40,7 @@ export async function onRequest(context) {
     const desc = tenant.description
       ? clip(String(tenant.description), 200)
       : `احجز ملعبك في ${name} بسهولة عبر مَرمى — اختر اليوم والموعد المناسب.`;
-    const image = pickImage(tenant) || GENERIC_IMAGE;
+    const image = optimizeImage(pickImage(tenant) || GENERIC_IMAGE);
     const canonical = `${url.origin}/book?t=${encodeURIComponent(tenantId)}`;
 
     const transformed = new HTMLRewriter()
@@ -88,6 +88,18 @@ async function fetchTenant(env, tenantId) {
   } catch (_) {
     return null; // أي فشل شبكة → نرجع للوسوم العامة بدل كسر الصفحة
   }
+}
+
+// تثبيت صورة المعاينة على 1200×630 وضغطها عبر تحويل صور Supabase.
+// واتساب/تويتر قد لا يعرضان الصور الكبيرة (صور الأرضيات حتى 5MB)؛ التحويل يصغّرها
+// إلى ~75KB وبالأبعاد المثالية لـ OG (المطابقة لوسمَي og:image:width/height).
+// يُطبَّق فقط على روابط تخزين Supabase العامة؛ غيرها (الصورة العامة) يمرّ كما هو.
+function optimizeImage(rawUrl) {
+  const MARKER = '/storage/v1/object/public/';
+  if (!rawUrl || rawUrl.indexOf(MARKER) < 0) return rawUrl;
+  const rendered = rawUrl.replace(MARKER, '/storage/v1/render/image/public/');
+  const sep = rendered.indexOf('?') < 0 ? '?' : '&';
+  return `${rendered}${sep}width=1200&height=630&resize=cover&quality=75`;
 }
 
 // أولوية الصورة: غلاف الملعب → أول صورة لأول أرضية → الصورة العامة
