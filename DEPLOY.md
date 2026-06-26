@@ -110,6 +110,11 @@ supabase secrets set MY_NEW_SECRET="..."
 2. لو Service Worker عالق: DevTools → Application → Service Workers → Unregister → reload
 3. لو ما زال: Cloudflare → Deployments → تأكّد آخر deploy نجح
 
+### "دمجت عدة PRs بسرعة وبعضها لم يظهر"
+دمج عدّة PRs خلال ثوانٍ يُنشئ عدّة نشرات متسابقة، وقد يبقى الإنتاج على نشر ليس الأحدث.
+الحل: Cloudflare → Deployments → افتح نشر آخر commit على `main` → `…` → **Retry deployment**
+(أو ادفع commit جديدًا لـ `main` ليُبنى نشر أحدث). **الأفضل: ادمج PRs بتتابع، بانتظار اكتمال نشر كلٍّ قبل التالي.**
+
 ### "Cloudflare build فشل"
 - شِك على log في Cloudflare → Deployments
 - أكثر سبب شائع: متغيّر بيئة ناقص → راجع Cloudflare → Settings → Environment variables
