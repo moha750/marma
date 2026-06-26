@@ -30,10 +30,10 @@ export async function onRequest(context) {
     const page = await next(); // الصفحة الثابتة الأصلية (book.html)
 
     // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
-    if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
+    if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return await tag(page, 'no-tenant-or-env');
 
     const tenant = await fetchTenant(env, tenantId);
-    if (!tenant || !tenant.id) return page; // ملعب غير موجود → وسوم عامة
+    if (!tenant || !tenant.id) return await tag(page, 'no-id'); // ملعب غير موجود → وسوم عامة
 
     const name = String(tenant.name || 'احجز ملعبك');
     const title = `${name} — احجز الآن عبر مَرمى`;
@@ -64,11 +64,25 @@ export async function onRequest(context) {
         'content-type': 'text/html; charset=utf-8',
         // طازج كي تتحدّث المعاينة فور تغيير صورة الغلاف، ولا يخدم الزاحف نسخة قديمة
         'cache-control': 'public, max-age=0, must-revalidate',
+        'x-og-path': 'inject',
       },
     });
-  } catch (_) {
+  } catch (e) {
     // أي خطأ غير متوقّع → الصفحة الأصلية سليمة بوسومها العامة
-    return next();
+    const r = await next();
+    return await tag(r, 'error', String(e && e.stack || e));
+  }
+}
+
+// يضيف ترويسة تتبّع للرد (يقرأ الجسم في الذاكرة لتفادي عدم تطابق Content-Length)
+async function tag(resp, path, err) {
+  try {
+    const body = await resp.text();
+    const headers = new Headers({ 'content-type': 'text/html; charset=utf-8', 'x-og-path': path });
+    if (err) headers.set('x-og-error', err.slice(0, 300).replace(/\s+/g, ' '));
+    return new Response(body, { status: 200, headers });
+  } catch (_) {
+    return resp;
   }
 }
 
