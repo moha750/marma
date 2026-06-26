@@ -28,6 +28,21 @@ export async function onRequest(context) {
     const url = new URL(request.url);
     const tenantId = url.searchParams.get('t');
 
+    // فرع تشخيص مؤقت — يُزال بعد التأكد من عمل الدالة
+    if (url.searchParams.get('og_debug') === '1') {
+      let t = null, err = null;
+      try { t = await fetchTenant(env, tenantId); } catch (e) { err = String(e); }
+      return new Response(JSON.stringify({
+        tenantId,
+        SUPABASE_URL: env.SUPABASE_URL ? 'set' : 'MISSING',
+        SUPABASE_KEY: env.SUPABASE_KEY ? 'set' : 'MISSING',
+        tenantOk: !!(t && t.id),
+        tenantName: t && t.name,
+        coverImage: t && t.cover_image_url,
+        err,
+      }), { headers: { 'content-type': 'application/json; charset=utf-8' } });
+    }
+
     // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
     if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
 
