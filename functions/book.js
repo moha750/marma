@@ -11,46 +11,29 @@
 // لا أسرار جديدة: SUPABASE_URL و SUPABASE_KEY (anon) متوفّران أصلاً في إعدادات
 // Cloudflare Pages وتصل للدالة عبر context.env.
 //
-// مبدأ أساسي: هذه الدالة لا يجوز أن تكسر صفحة الحجز أبداً. أي خطأ → نرجع الصفحة
-// الأصلية كما هي (وسوم عامة). لذا كل المنطق داخل try/catch، ونُرجع نتيجة
-// transform() مباشرةً (HTMLRewriter يضبط الطول تلقائياً — إعادة بناء Response
-// يدوياً مع نسخ Content-Length القديمة تسبّب 500).
+// ملاحظتان مهمّتان (مثبَتتان بالتجربة على المعاينة):
+//  1) لا نُرجع نتيجة transform() بثّاً مباشرة — طبقة أصول Cloudflare تتجاوز التعديل
+//     فتصل الوسوم العامة للعميل. بدلاً من ذلك نقرأ HTML المحوَّل عبر .text()
+//     (الصفحة ~٣ ك.ب) ونرجعه كـ Response جديد فيُطبَّق التعديل فعلياً.
+//  2) كل شيء داخل try/catch — هذه الدالة يجب ألّا تكسر صفحة الحجز أبداً؛ أي خطأ
+//     → نرجع الصفحة الأصلية بوسومها العامة.
 
 const GENERIC_IMAGE = 'https://marma.help/assets/og/booking.png';
 
 export async function onRequest(context) {
   const { request, env, next } = context;
 
-  // الصفحة الثابتة الأصلية (book.html) — next() يتخطّى هذه الدالة للأصل الثابت
-  const page = await next();
-
   try {
     const url = new URL(request.url);
     const tenantId = url.searchParams.get('t');
 
-    // فرع تشخيص مؤقت — يُزال بعد التأكد من عمل الدالة
-    if (url.searchParams.get('og_debug') === '1') {
-      const MARKER = 'OG_TEST_MARKER_123';
-      const transformed = new HTMLRewriter()
-        .on('meta[property="og:title"]', { element(el) { el.setAttribute('content', MARKER); } })
-        .transform(page);
-      const html = await transformed.text();
-      const idx = html.indexOf('og:title');
-      return new Response(JSON.stringify({
-        matched: html.includes(MARKER),
-        contentType: page.headers.get('content-type'),
-        contentEncoding: page.headers.get('content-encoding'),
-        pageStatus: page.status,
-        htmlLen: html.length,
-        snippet: idx >= 0 ? html.slice(Math.max(0, idx - 15), idx + 90) : '(og:title not found)',
-      }), { headers: { 'content-type': 'application/json; charset=utf-8' } });
-    }
+    const page = await next(); // الصفحة الثابتة الأصلية (book.html)
 
     // بلا معرّف ملعب أو بلا إعدادات Supabase → الصفحة كما هي (وسوم عامة)
     if (!tenantId || !env.SUPABASE_URL || !env.SUPABASE_KEY) return page;
 
     const tenant = await fetchTenant(env, tenantId);
-    if (!tenant || !tenant.id) return page; // ملعب غير موجود أو خطأ → وسوم عامة
+    if (!tenant || !tenant.id) return page; // ملعب غير موجود → وسوم عامة
 
     const name = String(tenant.name || 'احجز ملعبك');
     const title = `${name} — احجز الآن عبر مَرمى`;
@@ -60,8 +43,7 @@ export async function onRequest(context) {
     const image = pickImage(tenant) || GENERIC_IMAGE;
     const canonical = `${url.origin}/book?t=${encodeURIComponent(tenantId)}`;
 
-    // نُرجع نتيجة transform مباشرةً (لا نعيد بناء Response يدوياً)
-    return new HTMLRewriter()
+    const transformed = new HTMLRewriter()
       .on('title',                            new TextSetter(title))
       .on('meta[name="description"]',         new AttrSetter('content', desc))
       .on('meta[property="og:title"]',        new AttrSetter('content', title))
@@ -73,9 +55,20 @@ export async function onRequest(context) {
       .on('meta[name="twitter:description"]', new AttrSetter('content', desc))
       .on('meta[name="twitter:image"]',       new AttrSetter('content', image))
       .transform(page);
+
+    // نقرأ المحتوى المحوَّل فعلياً ثم نرجعه كصفحة جديدة (انظر الملاحظة 1)
+    const html = await transformed.text();
+    return new Response(html, {
+      status: 200,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        // طازج كي تتحدّث المعاينة فور تغيير صورة الغلاف، ولا يخدم الزاحف نسخة قديمة
+        'cache-control': 'public, max-age=0, must-revalidate',
+      },
+    });
   } catch (_) {
     // أي خطأ غير متوقّع → الصفحة الأصلية سليمة بوسومها العامة
-    return page;
+    return next();
   }
 }
 
