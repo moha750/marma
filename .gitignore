@@ -34,3 +34,4 @@ node_modules/
 # Temp
 *.tmp
 *.bak
+supabase/.temp/
