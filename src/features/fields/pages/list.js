@@ -156,19 +156,19 @@
                               <i data-lucide="grip-vertical"></i>
                             </button>
                             <button class="btn btn--xs btn--ghost" data-action="move-up" data-id="${f.id}" title="تحريك لأعلى" ${i === 0 ? 'disabled' : ''}>
-                              <i data-lucide="arrow-up"></i>
+                              <i data-lucide="arrow-up"></i><span>أعلى</span>
                             </button>
                             <button class="btn btn--xs btn--ghost" data-action="move-down" data-id="${f.id}" title="تحريك لأسفل" ${i === fields.length - 1 ? 'disabled' : ''}>
-                              <i data-lucide="arrow-down"></i>
+                              <i data-lucide="arrow-down"></i><span>أسفل</span>
                             </button>
                             <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${f.id}" title="تعديل">
-                              <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
+                              <i data-lucide="pencil"></i><span>تعديل</span>
                             </button>
                             <button class="btn btn--xs btn--ghost" data-action="toggle" data-id="${f.id}" title="${f.is_active ? 'تعطيل' : 'تفعيل'}">
-                              <i data-lucide="${f.is_active ? 'eye-off' : 'eye'}"></i>
+                              <i data-lucide="${f.is_active ? 'eye-off' : 'eye'}"></i><span>${f.is_active ? 'تعطيل' : 'تفعيل'}</span>
                             </button>
                             <button class="btn btn--xs btn--danger-quiet" data-action="delete" data-id="${f.id}" title="حذف">
-                              <i data-lucide="trash-2"></i>
+                              <i data-lucide="trash-2"></i><span>حذف</span>
                             </button>
                           </div>
                         </td>
