@@ -98,6 +98,35 @@ window.utils = {
     return this.formatCurrency(value);
   },
 
+  // ====== حالة الحجز المشتقّة ======
+  // المتبقّي على الحجز — null إذا لا يوجد سعر متتبَّع («عند التواصل»)، 0 إذا مجاني
+  bookingOwed(b) {
+    if (b.total_price == null) return null;
+    const total = Number(b.total_price);
+    if (total <= 0) return 0;
+    return Math.round((total - Number(b.paid_amount || 0)) * 100) / 100;
+  },
+
+  // مُسدَّد بالكامل — أو لا يوجد ما يُحصَّل أصلاً (مجاني/عند التواصل)
+  isBookingSettled(b) {
+    const owed = this.bookingOwed(b);
+    return owed == null || owed <= 0;
+  },
+
+  // انتهى وقت الحجز فعلاً
+  isBookingPast(b) {
+    return new Date(b.end_time).getTime() < Date.now();
+  },
+
+  // الحالة الفعلية المعروضة: حجز مؤكد انتهى وقته وسُدِّد بالكامل ⇒ «مكتمل» تلقائياً.
+  // ملاحظة: حجز ماضٍ غير مُسدَّد يبقى «مؤكد» عمداً ليظلّ مطالِباً بالتحصيل.
+  effectiveBookingStatus(b) {
+    if (b.status === 'confirmed' && this.isBookingPast(b) && this.isBookingSettled(b)) {
+      return 'completed';
+    }
+    return b.status;
+  },
+
   // قاموس الترجمة للمزايا (مفاتيح كانونية ↔ تسميات عربية)
   AMENITY_LABELS: {
     showers: 'دش',

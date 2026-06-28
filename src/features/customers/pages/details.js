@@ -272,7 +272,7 @@
                         const hours = window.utils.hoursBetween(b.start_time, b.end_time);
                         const owed  = Number(b.total_price || 0) - Number(b.paid_amount || 0);
                         return `
-                          <tr data-status="${window.utils.escapeHtml(b.status)}" data-id="${b.id}">
+                          <tr data-status="${window.utils.escapeHtml(window.utils.effectiveBookingStatus(b))}" data-id="${b.id}">
                             <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
                             <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
                             <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
@@ -281,7 +281,7 @@
                               ${fmtMoney(b.paid_amount)}
                               ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}
                             </td>
-                            <td data-label="الحالة" class="card-tag">${statusChip(b.status)}</td>
+                            <td data-label="الحالة" class="card-tag">${statusChip(window.utils.effectiveBookingStatus(b))}</td>
                             <td class="actions-cell">
                               <div class="actions-inline">
                                 <button class="btn btn--xs btn--ghost" data-action="open-booking" data-id="${b.id}" title="تعديل">

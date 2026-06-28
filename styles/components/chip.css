@@ -5,35 +5,66 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 24px;
-  padding: 0 var(--space-2);
-  background: var(--surface-2);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
+  justify-content: center;
+  gap: var(--space-2);
+  height: 34px;
+  padding: 0 var(--space-4);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
+  font-family: inherit;          /* الأزرار لا ترث خطّ الموقع افتراضياً */
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.01em;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
-.chip:hover {
-  background: var(--surface-3);
-  border-color: var(--border-default);
+/* أيقونات داخل الرقاقة ترث اللون وبحجم متناسق */
+.chip i[data-lucide],
+.chip svg.lucide {
+  width: 14px;
+  height: 14px;
 }
+
+/* العدّاد داخل الرقاقة: رقم نظيف بلا خلفية يرث لون التبويب */
+.chip .badge {
+  background: transparent;
+  padding-inline: 0;
+  color: inherit;
+  opacity: 0.65;
+}
+
+/* غير محدّدة: تلميح أخضر هادئ عند المرور */
+.chip:hover {
+  color: var(--accent-700);
+  background: var(--accent-50);
+  border-color: var(--accent-300);
+}
+
+.chip:active { transform: translateY(0.5px); }
 
 .chip:focus-visible {
   outline: 0;
   box-shadow: var(--ring-focus);
 }
 
-/* حالة الاختيار */
+.chip:disabled,
+.chip[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* المحدّدة (للحبّة العادية، كالفلاتر/الاختصارات) — تظليل أخضر هادئ */
 .chip[aria-pressed="true"],
 .chip.is-active {
   background: var(--accent-50);
@@ -46,30 +77,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   margin-inline-start: var(--space-1);
-  margin-inline-end: -2px;
+  margin-inline-end: -4px;
   background: transparent;
   border: 0;
   border-radius: 50%;
   color: currentColor;
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
+  transition: opacity var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
 }
 
 .chip-close:hover {
   opacity: 1;
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, currentColor 16%, transparent);
 }
 
-[data-theme="dark"] .chip-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* شريط رقائق (مكدّسة أفقياً، تلتفّ على الجوال) */
+/* شريط الرقائق — مكدّسة أفقياً، تلتفّ بأناقة، بمحاذاة منتظمة */
 .chip-rail {
   display: flex;
   flex-wrap: wrap;
@@ -77,7 +105,43 @@
   align-items: center;
 }
 
-/* نقطة ملوّنة قبل النص (لمفتاح ألوان الأرضيات) */
+/* ─── مسار مقسّم (Segmented) — لرِيلات التبويب/الاختيار المفرد ───
+   المسار حاوية رمادية غائرة، والمحدّد بطاقة بيضاء بظلّ (يبرز كأنه مرفوع). */
+.chip-rail.chip-rail--seg {
+  display: flex;
+  flex-wrap: wrap;          /* عند كثرة الأرضيات تلتفّ لسطر ثانٍ — بلا تمرير، تعمل على كل جهاز */
+  gap: 4px;
+  width: 100%;              /* ممتد بعرض الحاوية */
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);   /* مستدير الزوايا (يناسب الأسطر المتعدّدة، لا حبّة طويلة) */
+}
+
+.chip-rail--seg .chip {
+  height: 30px;
+  flex: 1 1 auto;          /* الأقسام تتمدّد بالتساوي لملء عرض المسار الممتد */
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+.chip-rail--seg .chip:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-700);
+}
+.chip-rail--seg .chip.is-active,
+.chip-rail--seg .chip[aria-pressed="true"],
+.chip-rail--seg .chip.is-active:hover,
+.chip-rail--seg .chip[aria-pressed="true"]:hover {
+  background: var(--surface-1);
+  color: var(--accent-700);
+  border-color: transparent;
+  box-shadow: var(--shadow-1);
+}
+
+/* نقطة ملوّنة قبل النص (مفتاح ألوان الأرضيات) */
 .chip-dot {
   width: 8px;
   height: 8px;
@@ -130,3 +194,10 @@
 .chip-status--completed { background: var(--surface-2); color: var(--text-secondary); }
 .chip-status--muted::before,
 .chip-status--completed::before { background: var(--text-tertiary); }
+
+/* ─── شارات حالة الدفع — مستقلّة عن حالة الحجز ───
+   مدفوع (أخضر، معرّف أعلاه) · جزئي (برتقالي) · غير مدفوع (رمادي هادئ بنقطة حمراء تلفت للتحصيل) */
+.chip-status--partial { background: var(--warning-tint); color: var(--warning); }
+
+.chip-status--unpaid  { background: var(--surface-2); color: var(--text-secondary); }
+.chip-status--unpaid::before { background: var(--danger); }

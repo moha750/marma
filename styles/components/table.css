@@ -120,26 +120,41 @@
   gap: var(--space-1);
 }
 
-/* ─── إعادة الترتيب بالسحب ─── */
-/* مقبض السحب: مؤشّر grab، وعند السحب الفعلي يضيف الصف صفّاً مظلّلاً ومؤشّر إفلات. */
+/* ─── سحب مخصّص سلس لإعادة الترتيب — بهوية مرمى ─── */
 .table .drag-handle {
   cursor: grab;
   touch-action: none;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
 }
+.table .drag-handle:hover { color: var(--accent-500); background: var(--accent-50); }
 .table .drag-handle:active { cursor: grabbing; }
 
-.table tbody tr.row-dragging {
-  opacity: 0.55;
-  background: var(--surface-2);
+/* أثناء السحب: امنع التحديد ووحّد المؤشّر */
+body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+
+/* العنصر المرفوع: يتبع المؤشّر بظلّ ناعم بلون العلامة (يبقى ضمن سياق as-cards
+   فيحافظ على شكل الكرت) */
+.table--cards tbody tr.sortable-dragging {
+  cursor: grabbing;
+  box-shadow: 0 18px 36px -12px color-mix(in srgb, var(--accent-500) 30%, rgba(0, 0, 0, 0.45));
 }
 
-/* مؤشّر موضع الإفلات: خط ملوّن أعلى/أسفل الصف الهدف (يحترم RTL تلقائياً). */
-.table tbody tr.row-drop-before td { box-shadow: inset 0 2px 0 0 var(--accent-500); }
-.table tbody tr.row-drop-after  td { box-shadow: inset 0 -2px 0 0 var(--accent-500); }
-
-/* في عرض البطاقات (الجوال) يكون الإطار حول البطاقة كاملةً أوضح من inset على td. */
-.table-wrapper.as-cards .table--cards tbody tr.row-drop-before { box-shadow: 0 -2px 0 0 var(--accent-500); }
-.table-wrapper.as-cards .table--cards tbody tr.row-drop-after  { box-shadow: 0  2px 0 0 var(--accent-500); }
+/* الشريحة: مكان الإفلات — شريحة خضراء فاتحة بحدّ متقطّع تنزلق بنعومة مع الباقي */
+.table-wrapper.as-cards .table--cards tbody tr.sortable-placeholder {
+  background: var(--accent-50);
+  border: 1.5px dashed color-mix(in srgb, var(--accent-500) 40%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+/* في وضع الجدول (نادر هنا): شريحة بسيطة بنفس الفكرة */
+.table-wrapper:not(.as-cards) tr.sortable-placeholder {
+  display: table-row;
+  background: var(--accent-50);
+  outline: 1.5px dashed color-mix(in srgb, var(--accent-500) 40%, transparent);
+  outline-offset: -2px;
+}
 
 /* ملاحظة: حالة الصف يحملها شِب الحالة المكتوب في عموده — لا حاجة لشريط
    جانبي مكرّر (أُزيل عمداً للحفاظ على هدوء النظام). */
@@ -311,7 +326,19 @@
 .table-wrapper.as-cards .table--cards tbody td.actions-cell .actions-inline {
   opacity: 1;
   width: 100%;
-  justify-content: flex-end;
+  display: flex;
+  flex-wrap: wrap;          /* عند ضيق الكرت تلتفّ الأزرار لسطر ثانٍ بدل أن تُقصّ */
+  gap: var(--space-2);
+}
+/* الأزرار تمتدّ بالتساوي عبر عرض الكرت */
+.table-wrapper.as-cards .table--cards tbody td.actions-cell .actions-inline > .btn {
+  flex: 1 1 auto;
+  min-width: max-content;   /* لا يصغر زرّ تحت محتواه (يلتفّ بدل الانكماش) */
+  justify-content: center;
+}
+/* مقبض السحب يبقى مدمجاً (ليس زرّ فعل) */
+.table-wrapper.as-cards .table--cards tbody td.actions-cell .actions-inline > .drag-handle {
+  flex: 0 0 auto;
 }
 .table-wrapper.as-cards .table--cards .btn-label { display: inline; }
 

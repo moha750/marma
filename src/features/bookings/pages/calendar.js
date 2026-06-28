@@ -551,7 +551,7 @@
             confirmed: 'check', completed: 'check-check',
             pending: 'clock', cancelled: 'x', blocked: 'lock'
           };
-          const icon = STATUS_ICON[arg.event.extendedProps.booking.status];
+          const icon = STATUS_ICON[window.utils.effectiveBookingStatus(arg.event.extendedProps.booking)];
           if (!icon) return;
           const titleEl = arg.el.querySelector('.fc-event-title') || arg.el.querySelector('.fc-list-event-title');
           if (!titleEl || titleEl.querySelector('.fc-ev-icon')) return;

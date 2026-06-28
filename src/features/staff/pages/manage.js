@@ -37,7 +37,7 @@
         </div>
       </div>
 
-      <div class="chip-rail mb-md" id="tabs">
+      <div class="chip-rail chip-rail--seg mb-md" id="tabs">
         <button class="chip is-active" data-tab="staff">
           <i data-lucide="users" style="width:12px;height:12px"></i>
           <span>الموظفون</span>

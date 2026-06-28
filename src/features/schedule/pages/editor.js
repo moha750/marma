@@ -201,7 +201,7 @@
 
       function render() {
         root.innerHTML = `
-          <div class="chip-rail mb-md" id="sch-fields">
+          <div class="chip-rail chip-rail--seg mb-md" id="sch-fields">
             ${fields.map((f) => `
               <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}" data-field-id="${f.id}">
                 <i data-lucide="goal" style="width:12px;height:12px"></i>

@@ -327,7 +327,7 @@
                 <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
               </div>
               <div class="timeline-side">
-                ${statusChip(b.status)}
+                ${statusChip(window.utils.effectiveBookingStatus(b))}
                 <span class="timeline-price">${window.utils.formatPrice(b.total_price)}</span>
               </div>
             </div>
@@ -372,7 +372,7 @@
                 <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
               </div>
               <div class="timeline-side">
-                ${statusChip(b.status)}
+                ${statusChip(window.utils.effectiveBookingStatus(b))}
               </div>
             </div>
           `).join('')}
@@ -446,7 +446,8 @@
   function todayBookingsMix(todayBookings) {
     const mix = { confirmed: 0, pending: 0, completed: 0, cancelled: 0 };
     todayBookings.forEach((b) => {
-      if (mix[b.status] != null) mix[b.status]++;
+      const s = window.utils.effectiveBookingStatus(b);
+      if (mix[s] != null) mix[s]++;
     });
     return mix;
   }

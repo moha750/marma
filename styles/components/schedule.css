@@ -1,7 +1,7 @@
 /* أيام وفترات العمل — بطاقات أيام بمفتاح فتح/إغلاق، والتحرير عبر نافذة منبثقة. إعادة تصميم 2026.
    هوية «Quiet Pitch»: أسطح محايدة دافئة، حدّ رفيع + ظل خفيف + إنارة داخلية، والأخضر بقدر. */
 
-.sch-summary { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-4); }
+.sch-summary { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--accent-700); margin-bottom: var(--space-4); }
 .sch-summary svg.lucide, .sch-summary i[data-lucide] { width: 15px; height: 15px; color: var(--accent-500); }
 .sch-summary b { color: var(--text-primary); font-weight: var(--weight-semibold); }
 

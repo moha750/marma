@@ -217,67 +217,93 @@
               btn.addEventListener('click', () => moveField(btn.dataset.id, 1));
             });
 
-            // ── السحب والإفلات (المكتب) ──────────────────────────
-            // السحب يبدأ من المقبض فقط، حتى لا يتعارض مع تحديد النص أو نقر الأزرار.
+            // ── سحب مخصّص سلس (pointer): يرفع العنصر بظلّ ويتبع المؤشّر،
+            //     وتنزلق بقية العناصر بنعومة (FLIP) لتفسح له المكان. يبدأ من
+            //     المقبض فقط حتى لا يتعارض مع نقر بقية الأزرار. ──
             const tbody = listContainer.querySelector('tbody');
             if (tbody) {
-              let dragId = null;
-              const clearMarkers = () => tbody.querySelectorAll('.row-drop-before,.row-drop-after')
-                .forEach((el) => el.classList.remove('row-drop-before', 'row-drop-after'));
+              let drag = null;
 
-              tbody.querySelectorAll('tr[data-id]').forEach((row) => {
-                const handle = row.querySelector('[data-action="drag"]');
+              function startDrag(e) {
+                if (reordering || drag) return;
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const handle = e.target.closest('[data-action="drag"]');
                 if (!handle) return;
-                // فعّل قابلية السحب على الصف فقط أثناء الإمساك بالمقبض
-                handle.addEventListener('mousedown', () => { row.draggable = true; });
-                handle.addEventListener('mouseup', () => { row.draggable = false; });
+                const row = handle.closest('tr[data-id]');
+                if (!row) return;
+                e.preventDefault();
+                const rect = row.getBoundingClientRect();
 
-                row.addEventListener('dragstart', (e) => {
-                  if (reordering) { e.preventDefault(); return; }
-                  dragId = row.dataset.id;
-                  row.classList.add('row-dragging');
-                  e.dataTransfer.effectAllowed = 'move';
-                  try { e.dataTransfer.setData('text/plain', dragId); } catch (_) {}
+                // شريحة تحجز مكان العنصر أثناء رفعه
+                const ph = document.createElement('tr');
+                ph.className = 'sortable-placeholder';
+                ph.style.height = rect.height + 'px';
+                row.after(ph);
+
+                // ارفع الصف نفسه (يبقى ضمن سياق as-cards فيحافظ على شكل الكرت)
+                row.classList.add('sortable-dragging');
+                Object.assign(row.style, {
+                  position: 'fixed', margin: '0', zIndex: '1000', pointerEvents: 'none',
+                  width: rect.width + 'px', left: rect.left + 'px', top: rect.top + 'px',
                 });
-                row.addEventListener('dragend', () => {
-                  row.draggable = false;
-                  row.classList.remove('row-dragging');
-                  clearMarkers();
-                  dragId = null;
-                });
-                row.addEventListener('dragover', (e) => {
-                  if (!dragId || row.dataset.id === dragId) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  const rect = row.getBoundingClientRect();
-                  const after = (e.clientY - rect.top) > rect.height / 2;
-                  clearMarkers();
-                  row.classList.add(after ? 'row-drop-after' : 'row-drop-before');
-                });
-                row.addEventListener('dragleave', (e) => {
-                  // أزل المؤشّر فقط عند مغادرة الصف فعلياً (لا عند الانتقال بين أبنائه)
-                  if (!row.contains(e.relatedTarget)) {
-                    row.classList.remove('row-drop-before', 'row-drop-after');
-                  }
-                });
-                row.addEventListener('drop', (e) => {
-                  e.preventDefault();
-                  const targetId = row.dataset.id;
-                  const after = row.classList.contains('row-drop-after');
-                  clearMarkers();
-                  if (!dragId || targetId === dragId) return;
-                  const from = fields.findIndex((f) => f.id === dragId);
-                  let targetIdx = fields.findIndex((f) => f.id === targetId);
-                  if (from < 0 || targetIdx < 0) return;
-                  const reordered = fields.slice();
-                  const [moved] = reordered.splice(from, 1);
-                  // أعد حساب موضع الهدف بعد الإزالة
-                  let insertAt = reordered.findIndex((f) => f.id === targetId);
-                  if (after) insertAt += 1;
-                  reordered.splice(insertAt, 0, moved);
-                  persistOrder(reordered);
-                });
-              });
+
+                drag = { row, ph, grabY: e.clientY - rect.top, left: rect.left, lastBefore: ph.nextElementSibling };
+                document.body.classList.add('sortable-active');
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', endDrag, { once: true });
+                window.addEventListener('pointercancel', endDrag, { once: true });
+              }
+
+              function onMove(e) {
+                if (!drag) return;
+                drag.row.style.top = (e.clientY - drag.grabY) + 'px';
+                drag.row.style.left = drag.left + 'px';
+                // الصف الذي يجب وضع الشريحة قبله (حسب منتصف كل صف)
+                const rows = [...tbody.querySelectorAll('tr[data-id]')].filter((r) => r !== drag.row);
+                let before = null;
+                for (const r of rows) {
+                  const rc = r.getBoundingClientRect();
+                  if (e.clientY < rc.top + rc.height / 2) { before = r; break; }
+                }
+                if (before === drag.lastBefore) return; // لم يتغيّر الموضع
+                drag.lastBefore = before;
+                flipMove(before);
+              }
+
+              // FLIP: سجّل المواضع → أعد الترتيب → حرّك من القديم إلى الجديد بنعومة
+              function flipMove(before) {
+                const movers = [...tbody.children].filter((c) => c !== drag.row);
+                const firsts = new Map(movers.map((r) => [r, r.getBoundingClientRect().top]));
+                if (before) tbody.insertBefore(drag.ph, before); else tbody.appendChild(drag.ph);
+                for (const r of movers) {
+                  const dy = firsts.get(r) - r.getBoundingClientRect().top;
+                  if (!dy) continue;
+                  r.style.transition = 'none';
+                  r.style.transform = `translateY(${dy}px)`;
+                  void r.offsetHeight; // أجبر reflow قبل الانتقال
+                  requestAnimationFrame(() => {
+                    r.style.transition = 'transform .18s var(--ease-out, ease)';
+                    r.style.transform = '';
+                  });
+                }
+              }
+
+              function endDrag() {
+                if (!drag) return;
+                const { row, ph } = drag;
+                window.removeEventListener('pointermove', onMove);
+                document.body.classList.remove('sortable-active');
+                ph.replaceWith(row);                 // أعد الصف لمكان الشريحة
+                row.classList.remove('sortable-dragging');
+                row.style.cssText = '';
+                [...tbody.children].forEach((r) => { r.style.transition = ''; r.style.transform = ''; });
+                const order = [...tbody.querySelectorAll('tr[data-id]')].map((r) => r.dataset.id);
+                drag = null;
+                const reordered = order.map((id) => fields.find((f) => f.id === id)).filter(Boolean);
+                persistOrder(reordered);
+              }
+
+              tbody.addEventListener('pointerdown', startDrag);
             }
 
             listContainer.querySelectorAll('[data-action="edit"]').forEach((btn) => {
