@@ -54,10 +54,10 @@
   `;
 
   function statusChip(status) {
-    if (status === 'pending')   return '<span class="chip-status chip-status--pending">معلّق</span>';
-    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">مؤكد</span>';
-    if (status === 'completed') return '<span class="chip-status chip-status--completed">مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">ملغي</span>';
+    if (status === 'pending')   return '<span class="chip-status chip-status--pending">بانتظار تأكيدك</span>';
+    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">حجز مؤكد</span>';
+    if (status === 'completed') return '<span class="chip-status chip-status--completed">حجز مكتمل</span>';
+    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
     return `<span class="chip-status chip-status--muted">${window.utils.escapeHtml(status)}</span>`;
   }
 
@@ -309,6 +309,9 @@
                     const accepted = isAccepted(b);
                     const pay = accepted ? paymentInfo(b) : null;
                     const effStatus = window.utils.effectiveBookingStatus(b);
+                    // المكتمل يتضمّن الدفع الكامل أصلاً → لا نكرّر بادج «مدفوع».
+                    // نُبقيه فقط إن كان مكتملاً وعليه متبقٍّ (حالة شاذّة من ضبط يدوي).
+                    const showPayBadge = pay && !(effStatus === 'completed' && pay.key === 'paid');
                     return `
                       <tr data-id="${b.id}" data-status="${window.utils.escapeHtml(effStatus)}">
                         <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
@@ -319,10 +322,14 @@
                         </td>
                         <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
                         <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
-                        <td data-label="المدفوع" class="tabular-nums">
+                        <td data-label="المدفوع" class="tabular-nums cell-paid">
                           ${fmtMoney(b.paid_amount)}
-                          ${pay ? `<div style="margin-top:4px">${paymentBadge(pay)}</div>` : ''}
-                          ${pay && pay.owed > 0 ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(pay.owed)}</div>` : ''}
+                          ${showPayBadge ? `
+                            <div class="pay-line">
+                              ${paymentBadge(pay)}
+                              ${pay.owed > 0 ? `<span class="text-xs text-warning">يتبقّى ${fmtMoney(pay.owed)}</span>` : ''}
+                            </div>
+                          ` : ''}
                         </td>
                         <td data-label="الحالة" class="card-tag">${statusChip(effStatus)}</td>
                         <td class="actions-cell">

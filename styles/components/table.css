@@ -290,8 +290,9 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
   z-index: 1;
 }
 .table-wrapper.as-cards .table--cards tbody td.card-tag::before { content: none; }
+/* احجز عرضاً للعنوان يتّسع لنص الحالة الوصفي (مثل «بانتظار تأكيدك») دون تداخل */
 .table-wrapper.as-cards .table--cards tbody tr:has(.card-tag) td:first-child {
-  padding-inline-end: 88px;
+  padding-inline-end: 120px;
 }
 
 /* الحقول الثانوية: تسمية هادئة جداً عند البداية + قيمة بارزة عند النهاية */
@@ -309,6 +310,12 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
   font-weight: var(--weight-medium);
   color: var(--text-tertiary);
   line-height: var(--leading-snug);
+}
+
+/* خلية «المدفوع»: تمتدّ بعرض كامل (بلا حصر 40%) كي يقع السطر السفلي
+   (شارة الدفع مقابل المتبقّي) تحت التسمية والرقم على التوالي */
+.table-wrapper.as-cards .table--cards tbody td.cell-paid:not(:first-child):not(.actions-cell):not(.card-tag) {
+  padding-inline-start: var(--space-4);
 }
 
 /* أخفِ ذيل الأفعال إن كان بلا أزرار */

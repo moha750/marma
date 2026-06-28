@@ -190,10 +190,30 @@
 
 .chip-status--info     { background: var(--info-tint); color: var(--info); }
 
-.chip-status--muted,
+.chip-status--muted { background: var(--surface-2); color: var(--text-secondary); }
+.chip-status--muted::before { background: var(--text-tertiary); }
+
+/* مكتمل — خلفية هادئة + علامة ✓ بلون البادج نفسه (بدل الدائرة): «أُنجز» */
 .chip-status--completed { background: var(--surface-2); color: var(--text-secondary); }
-.chip-status--muted::before,
-.chip-status--completed::before { background: var(--text-tertiary); }
+.chip-status--completed::before {
+  content: '✓';
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* صفّ «المدفوع» السفلي: شارة الدفع (جهة البداية) مقابل المتبقّي (جهة النهاية) */
+.pay-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
 
 /* ─── شارات حالة الدفع — مستقلّة عن حالة الحجز ───
    مدفوع (أخضر، معرّف أعلاه) · جزئي (برتقالي) · غير مدفوع (رمادي هادئ بنقطة حمراء تلفت للتحصيل) */

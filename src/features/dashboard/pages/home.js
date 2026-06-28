@@ -38,10 +38,10 @@
   function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
 
   function statusChip(status) {
-    if (status === 'pending')   return '<span class="chip-status chip-status--pending">معلّق</span>';
-    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">مؤكد</span>';
-    if (status === 'completed') return '<span class="chip-status chip-status--completed">مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">ملغي</span>';
+    if (status === 'pending')   return '<span class="chip-status chip-status--pending">بانتظار تأكيدك</span>';
+    if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">حجز مؤكد</span>';
+    if (status === 'completed') return '<span class="chip-status chip-status--completed">حجز مكتمل</span>';
+    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
     return '';
   }
 
