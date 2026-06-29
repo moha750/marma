@@ -275,7 +275,7 @@
                           <tr data-status="${window.utils.escapeHtml(window.utils.effectiveBookingStatus(b))}" data-id="${b.id}">
                             <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
                             <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                            <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
+                            <td data-label="المدة" class="tabular-nums">${window.utils.formatDuration(hours)}</td>
                             <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
                             <td data-label="المدفوع" class="tabular-nums">
                               ${fmtMoney(b.paid_amount)}

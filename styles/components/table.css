@@ -262,6 +262,51 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
 .table-wrapper.as-cards .table--cards tbody tr:last-child { margin-bottom: 0; }
 .table-wrapper.as-cards .table--cards tbody tr:hover { background: var(--surface-1); }
 
+/* ════ نظام كروت الحجوزات — خاصٌّ بتبويب الحجوزات وحده (.cards-only) ════
+   كل ما يلي مقصور على .cards-only فلا يطبّق على أي جدول-كرت آخر (حتى لو فيه data-status).
+   الكرت كله بلون الحالة متدرّجاً: جسم فاتح، هيدر/فوتر أغمق، إطار علوي ناعم — يقوده --card-tint. */
+
+/* لون كل حالة */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="pending"]   { --card-tint: var(--warning); }
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="confirmed"] { --card-tint: var(--accent-500); }
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="completed"] { --card-tint: var(--text-tertiary); }
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="cancelled"] { --card-tint: var(--danger); }
+
+/* جسم الكرت — مسحة فاتحة من لون الحالة */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status],
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status]:hover {
+  background: color-mix(in srgb, var(--card-tint) 6%, var(--surface-1));
+}
+
+/* الهيدر والفوتر — نفس لون الحالة لكن أغمق (تمييز منسجم لا رمادي) */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status] td:first-child,
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status] td.actions-cell {
+  background: color-mix(in srgb, var(--card-tint) 15%, var(--surface-1));
+}
+
+/* الإطار الملوّن كطبقة علوية (::after) فوق كل المحتوى — فلا يُغطّى ولا يقطعه خط الفاصل */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--card-tint) 45%, transparent);
+}
+
+/* في المكتمل حتى الأشرطة الداخلية تأخذ هوية الكرت الرمادية بدل الأخضر (منجز/مؤرشف) */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="completed"] .wa-confirmed,
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="completed"] .pay-band {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+/* كروت الحجوزات (cards-only): بلا خطوط فاصلة بين الهيدر والجسم والفوتر —
+   الخلفيات الملوّنة (هيدر/فوتر أغمق) كافية للفصل بصرياً. */
+.table-wrapper.cards-only.as-cards .table.table--cards tbody td:first-child { border-bottom: none; }
+.table-wrapper.cards-only.as-cards .table.table--cards tbody td.actions-cell { border-top: none; }
+
 /* أعِد ضبط الحدود/الحشو لكل خلية داخل الكرت */
 .table-wrapper.as-cards .table--cards tbody td {
   position: relative;
@@ -318,6 +363,19 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
   padding-inline-start: var(--space-4);
 }
 
+/* تنويه «تم التواصل للتأكيد» — سطر مستقل ممتد بعرض الكرت بالكامل (وضع الكروت فقط).
+   في وضع الجدول العريض نُخفيه (لا يناسب شريطٌ ممتد داخل صفّ جدول).
+   نُطابق سلسلة :not() نفسها التي يستخدمها صفّ الحقول الثانوية لنتجاوز حشوها وتسميتها. */
+.table-wrapper.cards-only:not(.as-cards) .table--cards td.card-note { display: none; }
+.table-wrapper.cards-only.as-cards .table--cards tbody td.card-note:not(:first-child):not(.actions-cell):not(.card-tag) {
+  padding: var(--space-2) var(--space-4);
+  text-align: center;
+}
+.table-wrapper.cards-only.as-cards .table--cards tbody td.card-note:not(:first-child):not(.actions-cell):not(.card-tag)::before {
+  content: none;
+}
+.table-wrapper.cards-only.as-cards .table--cards tbody td.card-note:empty { display: none; }
+
 /* أخفِ ذيل الأفعال إن كان بلا أزرار */
 .table-wrapper.as-cards .table--cards tbody td.actions-cell:not(:has(.actions-inline)) {
   display: none;
@@ -339,7 +397,7 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
 }
 /* الأزرار تمتدّ بالتساوي عبر عرض الكرت */
 .table-wrapper.as-cards .table--cards tbody td.actions-cell .actions-inline > .btn {
-  flex: 1 1 auto;
+  flex: 1 1 0;              /* أساس صفر → كل الأزرار بعرض متساوٍ مهما اختلف طول النص */
   min-width: max-content;   /* لا يصغر زرّ تحت محتواه (يلتفّ بدل الانكماش) */
   justify-content: center;
 }

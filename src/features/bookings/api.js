@@ -8,7 +8,7 @@ window.bookingsApi = (function () {
   async function listBookings({ from, to, fieldId, status, limit, customerId, includeBlocks = false } = {}) {
     let q = sb()
       .from('bookings')
-      .select('id, start_time, end_time, total_price, paid_amount, status, notes, field_id, customer_id, customer_input_name, created_at, fields(id, name), customers(id, full_name, phone)')
+      .select('id, start_time, end_time, total_price, paid_amount, status, notes, field_id, customer_id, customer_input_name, created_at, whatsapp_confirmed_at, fields(id, name), customers(id, full_name, phone)')
       .order('start_time', { ascending: false });
     if (from) q = q.gte('start_time', new Date(from).toISOString());
     if (to) q = q.lte('start_time', new Date(to).toISOString());
@@ -95,6 +95,11 @@ window.bookingsApi = (function () {
     return listBookings({ status: 'pending', limit });
   }
 
+  // تسجيل أن تأكيد الحجز أُرسل عبر واتساب (لإخفاء/تحويل زر الإرسال)
+  async function markWhatsAppConfirmed(id) {
+    return updateBooking(id, { whatsapp_confirmed_at: new Date().toISOString() });
+  }
+
   // حجب موعد لاستخدام خاص/صيانة — صف إشغال بلا عميل (status='blocked')
   async function createBlock({ field_id, start_time, end_time, notes }) {
     const tenantId = await window.tenantApi.getMyTenantId();
@@ -132,6 +137,6 @@ window.bookingsApi = (function () {
   return {
     listBookings, getBooking, createBooking, updateBooking,
     cancelBooking, approveBooking, rejectBooking, listPendingBookings,
-    createBlock, deleteBlock
+    markWhatsAppConfirmed, createBlock, deleteBlock
   };
 })();

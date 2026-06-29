@@ -15,6 +15,11 @@
   padding: 0 var(--btn-px);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
+  /* كل نوع يضع لونه في --btn-bg ونصّه في --btn-fg، فيتولّى الأساس الخلفية واللون */
+  background: var(--btn-bg, transparent);
+  color: var(--btn-fg, inherit);
+  /* إنارة علوية داخلية موحّدة لكل الأزرار — «مُضاء من الأعلى» */
+  box-shadow: var(--ring-inset);
   font: inherit;
   font-size: var(--btn-fs);
   font-weight: var(--weight-semibold);
@@ -54,75 +59,95 @@
   height: 1.05em;
 }
 
-/* ─── الأنواع ─── */
+/* تثبيت لون نص الزر عبر كل الحالات — يمنع a:hover العام من تغيير نص الأزرار-الروابط.
+   نفس تخصيص a:hover وبعده في الترتيب فيتغلّب عليه. */
+.btn:hover,
+.btn:focus,
+.btn:focus-visible,
+.btn:active,
+.btn:visited {
+  color: var(--btn-fg, inherit);
+}
+
+/* ─── الأنواع ───
+   لكل نوع لونُ خلفية في --btn-bg ولونُ نص في --btn-fg، و hover «نفس اللون أغمق»
+   بلونٍ مباشر — لا متداخل ولا filter — فيتدرّج الجميع بنفس سرعة الأساس (--duration-fast).
+   التغميق: المكتوم نحو لونه نفسه (أغنى)، والصلب نحو الأسود الخفيف عبر --text-primary. */
 
 /* primary — الفعل الأساسي */
 .btn--primary {
-  background: var(--accent-500);
-  color: var(--text-on-accent);
+  --btn-bg: var(--accent-500);
+  --btn-fg: var(--text-on-accent);
   box-shadow: var(--ring-inset);
 }
-.btn--primary:hover:not(:disabled) {
-  background: var(--accent-600);
-  color: var(--text-on-accent);
-}
+.btn--primary:hover:not(:disabled) { background: var(--accent-600); }
 
 /* secondary — الفعل البديل */
 .btn--secondary {
-  background: var(--surface-1);
-  color: var(--text-primary);
+  --btn-bg: var(--surface-1);
+  --btn-fg: var(--text-primary);
   border-color: var(--border-default);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-1), var(--ring-inset);
 }
 .btn--secondary:hover:not(:disabled) {
   background: var(--surface-2);
   border-color: var(--border-strong);
 }
 
-/* ghost — تعبئة رمادية ناعمة + نفس اللمعة الداخلية للـ primary، توحيدًا للهوية */
+/* ghost — تعبئة رمادية ناعمة + لمعة داخلية */
 .btn--ghost {
-  background: var(--surface-3);
-  color: var(--text-primary);
+  --btn-bg: var(--surface-3);
+  --btn-fg: var(--text-primary);
   box-shadow: var(--ring-inset);
 }
 .btn--ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--surface-3), var(--text-primary) 8%);
+  background: color-mix(in srgb, var(--surface-3), var(--text-primary) 10%);
 }
 
 /* danger — للحذف والإلغاء */
 .btn--danger {
-  background: var(--danger);
-  color: var(--danger-on);
+  --btn-bg: var(--danger);
+  --btn-fg: var(--danger-on);
   box-shadow: var(--ring-inset);
 }
 .btn--danger:hover:not(:disabled) {
-  filter: brightness(0.92);
-  color: var(--danger-on);
+  background: color-mix(in srgb, var(--danger), var(--text-primary) 12%);
 }
 .btn--danger:focus-visible {
   box-shadow: var(--ring-danger);
 }
 
-/* accent-quiet — لـ inline actions داخل الجداول
-   لون العلامة لكن مكتوم — أهدأ من primary */
+/* accent-quiet — لـ inline actions داخل الجداول (لون العلامة مكتوم) */
 .btn--accent-quiet {
-  background: var(--accent-50);
-  color: var(--accent-700);
+  --btn-bg: var(--accent-50);
+  --btn-fg: var(--accent-700);
 }
-.btn--accent-quiet:hover:not(:disabled) {
-  background: var(--accent-100);
-  color: var(--accent-700);
-}
+.btn--accent-quiet:hover:not(:disabled) { background: var(--accent-100); }
 
 /* danger-quiet — رفض/إلغاء داخل الجداول */
 .btn--danger-quiet {
-  background: var(--danger-tint);
-  color: var(--danger);
+  --btn-bg: var(--danger-tint);
+  --btn-fg: var(--danger);
 }
 .btn--danger-quiet:hover:not(:disabled) {
-  filter: brightness(0.96);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--danger-tint), var(--danger) 18%);
 }
+
+/* wa-quiet — زر واتساب داخل الجداول (أخضر مكتوم) */
+.btn--wa-quiet {
+  --btn-bg: var(--success-tint);
+  --btn-fg: var(--success);
+}
+.btn--wa-quiet:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success-tint), var(--success) 18%);
+}
+
+/* wa — زر واتساب بارز (للمودالات) */
+.btn--wa {
+  --btn-bg: #25D366;
+  --btn-fg: #FFFFFF;
+}
+.btn--wa:hover:not(:disabled) { background: #1EBE5B; }
 
 /* ─── الأحجام ─── */
 

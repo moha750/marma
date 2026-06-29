@@ -206,18 +206,45 @@
   line-height: 1;
 }
 
-/* صفّ «المدفوع» السفلي: شارة الدفع (جهة البداية) مقابل المتبقّي (جهة النهاية) */
-.pay-line {
+/* شريط حالة ممتد متمركز — موحّد: تنويه واتساب + كل حالات الدفع (مدفوع/جزئي/غير مدفوع) */
+.wa-confirmed,
+.pay-band,
+.wa-pending {
   display: flex;
+  width: 100%;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  background: var(--success-tint);
+  color: var(--success);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+}
+.wa-confirmed i,
+.wa-confirmed svg,
+.pay-band i,
+.pay-band svg,
+.wa-pending i,
+.wa-pending svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
-/* ─── شارات حالة الدفع — مستقلّة عن حالة الحجز ───
-   مدفوع (أخضر، معرّف أعلاه) · جزئي (برتقالي) · غير مدفوع (رمادي هادئ بنقطة حمراء تلفت للتحصيل) */
-.chip-status--partial { background: var(--warning-tint); color: var(--warning); }
+/* شريط «لم يُؤكَّد الحجز للعميل» — كهرماني يحثّ على التأكيد */
+.wa-pending {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
 
-.chip-status--unpaid  { background: var(--surface-2); color: var(--text-secondary); }
-.chip-status--unpaid::before { background: var(--danger); }
+/* شريط الدفع داخل خانة المدفوع — نفس التصميم مع فاصل علوي، ولون لكل حالة */
+.pay-band {
+  margin-top: 6px;
+}
+.pay-band.is-paid    { background: var(--success-tint); color: var(--success); }
+.pay-band.is-partial { background: var(--warning-tint); color: var(--warning); }
+.pay-band.is-unpaid  { background: var(--danger-tint);  color: var(--danger); }

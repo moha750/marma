@@ -538,6 +538,9 @@ window.bookingModal = (function () {
               window.utils.toast('تم تأكيد الحجز', 'success');
               ctrl.close();
               if (typeof onSaved === 'function') onSaved(saved);
+              window.bookingWhatsApp.offerConfirmation(saved, undefined, () => {
+                if (typeof onSaved === 'function') onSaved(saved);
+              });
             } catch (err) {
               window.utils.toast(window.utils.formatError(err), 'error');
             }
@@ -550,6 +553,7 @@ window.bookingModal = (function () {
           window.utils.toast('تم تأكيد الحجز', 'success');
           ctrl.close();
           if (typeof onSaved === 'function') onSaved(saved);
+          window.bookingWhatsApp.offerConfirmation(saved);
         } catch (err) {
           window.utils.toast(window.utils.formatError(err), 'error');
         }

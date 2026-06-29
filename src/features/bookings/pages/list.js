@@ -82,9 +82,18 @@
     return { key: 'paid', label: 'مدفوع', owed: 0 };
   }
 
-  function paymentBadge(p) {
-    return `<span class="chip-status chip-status--${p.key}">${p.label}</span>`;
+  // شريط حالة الدفع الموحّد — نفس التصميم لكل الحالات، بلونٍ وأيقونةٍ لكل حالة
+  function payBand(p) {
+    const meta = {
+      paid:    { cls: 'is-paid',    icon: 'check-check',   label: 'مدفوع' },
+      partial: { cls: 'is-partial', icon: 'circle-dashed', label: `مدفوع جزئياً · يتبقّى ${fmtMoney(p.owed)}` },
+      unpaid:  { cls: 'is-unpaid',  icon: 'circle-alert',  label: `غير مدفوع · يتبقّى ${fmtMoney(p.owed)}` }
+    }[p.key];
+    return `<span class="pay-band ${meta.cls}"><i data-lucide="${meta.icon}"></i> ${meta.label}</span>`;
   }
+
+  // تأكيد الحجز عبر واتساب — المنطق مشترك في window.bookingWhatsApp
+  const buildWhatsAppUrl = (b, venueName) => window.bookingWhatsApp.buildUrl(b, venueName);
 
   // نافذة تسجيل دفعة — مسار سريع: «تحصيل كامل المبلغ» أو مبلغ جزئي
   function openPaymentDialog(booking, onSaved) {
@@ -152,6 +161,8 @@
     async mount(container, ctx) {
       container.innerHTML = TEMPLATE;
       window.utils.renderIcons(container);
+
+      const venueName = (ctx && ctx.tenant && ctx.tenant.name) || '';
 
       const tableContainer = container.querySelector('#bookings-container');
       const addBtn         = container.querySelector('#add-booking-btn');
@@ -289,13 +300,14 @@
               </div>
             </div>
 
-            <div class="table-wrapper">
+            <div class="table-wrapper cards-only as-cards">
               <table class="table table--cards">
                 <thead>
                   <tr>
                     <th>التاريخ والوقت</th>
                     <th>الأرضية</th>
                     <th>العميل</th>
+                    <th>الجوال</th>
                     <th>المدة</th>
                     <th>السعر</th>
                     <th>المدفوع</th>
@@ -309,37 +321,36 @@
                     const accepted = isAccepted(b);
                     const pay = accepted ? paymentInfo(b) : null;
                     const effStatus = window.utils.effectiveBookingStatus(b);
-                    // المكتمل يتضمّن الدفع الكامل أصلاً → لا نكرّر بادج «مدفوع».
-                    // نُبقيه فقط إن كان مكتملاً وعليه متبقٍّ (حالة شاذّة من ضبط يدوي).
-                    const showPayBadge = pay && !(effStatus === 'completed' && pay.key === 'paid');
+                    // حجز مؤكد لم يُبلَّغ به العميل بعد عبر واتساب → نُنبّه الموظف للتأكيد
+                    const needsConfirm = effStatus === 'confirmed' && !b.whatsapp_confirmed_at;
                     return `
                       <tr data-id="${b.id}" data-status="${window.utils.escapeHtml(effStatus)}">
                         <td data-label="التاريخ والوقت">${window.utils.formatDateTime(b.start_time)}</td>
+                        <td class="card-note">${
+                          b.whatsapp_confirmed_at
+                            ? `<span class="wa-confirmed" title="تم التواصل عبر واتساب: ${window.utils.escapeHtml(window.utils.formatDateTime(b.whatsapp_confirmed_at))}"><i data-lucide="badge-check"></i> تم التواصل وتأكيد الحجز · ${window.utils.escapeHtml(window.utils.timeAgo(b.whatsapp_confirmed_at))}</span>`
+                            : (needsConfirm
+                                ? `<span class="wa-pending"><i data-lucide="alert-circle"></i> لم يُؤكَّد الحجز للعميل بعد</span>`
+                                : '')
+                        }</td>
                         <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                        <td data-label="العميل">
-                          <div>${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</div>
-                          ${b.customers && b.customers.phone ? `<div class="text-xs text-tertiary">${window.utils.escapeHtml(b.customers.phone)}</div>` : ''}
-                        </td>
-                        <td data-label="المدة" class="tabular-nums">${hours.toFixed(1)} س</td>
+                        <td data-label="العميل">${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</td>
+                        <td data-label="الجوال" class="tabular-nums">${b.customers && b.customers.phone ? window.utils.escapeHtml(b.customers.phone) : '—'}</td>
+                        <td data-label="المدة" class="tabular-nums">${window.utils.formatDuration(hours)}</td>
                         <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
                         <td data-label="المدفوع" class="tabular-nums cell-paid">
                           ${fmtMoney(b.paid_amount)}
-                          ${showPayBadge ? `
-                            <div class="pay-line">
-                              ${paymentBadge(pay)}
-                              ${pay.owed > 0 ? `<span class="text-xs text-warning">يتبقّى ${fmtMoney(pay.owed)}</span>` : ''}
-                            </div>
-                          ` : ''}
+                          ${pay ? payBand(pay) : ''}
                         </td>
                         <td data-label="الحالة" class="card-tag">${statusChip(effStatus)}</td>
                         <td class="actions-cell">
                           <div class="actions-inline">
                             ${b.status === 'pending' ? `
                               <button class="btn btn--xs btn--accent-quiet" data-action="approve" data-id="${b.id}" title="موافقة">
-                                <i data-lucide="check"></i>
+                                <i data-lucide="check"></i><span class="btn-label">قبول الحجز</span>
                               </button>
                               <button class="btn btn--xs btn--danger-quiet" data-action="reject" data-id="${b.id}" title="رفض">
-                                <i data-lucide="x"></i>
+                                <i data-lucide="x"></i><span class="btn-label">رفض الحجز</span>
                               </button>
                             ` : ''}
                             ${pay && pay.owed > 0 ? `
@@ -347,9 +358,16 @@
                                 <i data-lucide="banknote"></i><span class="btn-label">تحصيل</span>
                               </button>
                             ` : ''}
-                            <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="تعديل">
-                              <i data-lucide="pencil"></i><span class="btn-label">تعديل</span>
-                            </button>
+                            ${accepted && b.customers && b.customers.phone ? `
+                              <a class="btn btn--xs ${needsConfirm ? 'btn--wa' : 'btn--wa-quiet'}" data-action="whatsapp" data-id="${b.id}" href="${window.utils.escapeHtml(buildWhatsAppUrl(b, venueName))}" target="_blank" rel="noopener" title="${needsConfirm ? 'أكّد الموعد للعميل عبر واتساب' : 'تواصل عبر واتساب (تم التأكيد سابقاً)'}">
+                                <i data-lucide="message-circle"></i><span class="btn-label">${needsConfirm ? 'أكّد الموعد للعميل' : 'تواصل واتساب'}</span>
+                              </a>
+                            ` : ''}
+                            ${effStatus !== 'completed' ? `
+                              <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="تعديل">
+                                <i data-lucide="pencil"></i><span class="btn-label">تعديل الحجز</span>
+                              </button>
+                            ` : ''}
                           </div>
                         </td>
                       </tr>
@@ -366,8 +384,9 @@
               e.stopPropagation();
               btn.disabled = true;
               try {
-                await window.api.approveBooking(btn.dataset.id);
+                const approved = await window.api.approveBooking(btn.dataset.id);
                 window.utils.toast('تم تأكيد الحجز', 'success');
+                window.bookingWhatsApp.offerConfirmation(approved, venueName, refresh);
                 refresh();
               } catch (err) {
                 btn.disabled = false;
@@ -411,6 +430,14 @@
               e.stopPropagation();
               const booking = bookings.find((b) => b.id === btn.dataset.id);
               window.bookingModal.open({ booking, onSaved: refresh });
+            });
+          });
+
+          // زر واتساب: نترك الرابط يفتح المحادثة، ونسجّل أن التأكيد أُرسل ثم نُحدّث الصف
+          tableContainer.querySelectorAll('[data-action="whatsapp"]').forEach((a) => {
+            a.addEventListener('click', () => {
+              const booking = bookings.find((b) => b.id === a.dataset.id);
+              if (booking) window.bookingWhatsApp.markSent(booking).then(refresh);
             });
           });
 

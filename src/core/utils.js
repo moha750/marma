@@ -19,6 +19,8 @@ const currencyFormatter = new Intl.NumberFormat('ar-EG', {
   maximumFractionDigits: 2
 });
 
+const relTimeFormatter = new Intl.RelativeTimeFormat('ar', { numeric: 'auto' });
+
 // تحويل ساعات/دقائق إلى نص 12 ساعة بالعربية: "4:00 م"
 function toTime12(h, m) {
   const period = h >= 12 ? 'م' : 'ص';
@@ -75,6 +77,21 @@ window.utils = {
     if (!value) return '';
     const d = new Date(value);
     return `${dateShortFormatter.format(d)} - ${toTime12(d.getHours(), d.getMinutes())}`;
+  },
+
+  // توقيت نسبي بالعربية: «الآن»، «قبل ٥ دقائق»، «قبل ساعة»... وللأقدم من شهر يعرض التاريخ
+  timeAgo(value) {
+    if (!value) return '';
+    const diffMs = Date.now() - new Date(value).getTime();
+    const sec = Math.round(diffMs / 1000);
+    if (sec < 45) return 'الآن';
+    const min = Math.round(sec / 60);
+    if (min < 60) return relTimeFormatter.format(-min, 'minute');
+    const hr = Math.round(min / 60);
+    if (hr < 24) return relTimeFormatter.format(-hr, 'hour');
+    const day = Math.round(hr / 24);
+    if (day < 30) return relTimeFormatter.format(-day, 'day');
+    return this.formatDate(value);
   },
 
   // تحويل تاريخ ISO إلى صيغة datetime-local
@@ -159,6 +176,17 @@ window.utils = {
     artificial_grass: 'عشب صناعي',
     indoor: 'صالة مغلقة',
     court: 'ملعب صلب'
+  },
+
+  // تنسيق المدة بصيغة مألوفة: «1:30 ساعة»، «45 دقيقة»، «2 ساعة» — بدل العشرية «1.5 س»
+  formatDuration(hours) {
+    const totalMin = Math.round(Number(hours) * 60);
+    if (totalMin <= 0) return '0 دقيقة';
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h === 0) return `${m} دقيقة`;
+    if (m === 0) return `${h} ساعة`;
+    return `${h}:${String(m).padStart(2, '0')} ساعة`;
   },
 
   // حساب الفرق بالساعات بين تاريخين
@@ -261,17 +289,11 @@ window.utils = {
 
     const close = () => {
       backdrop.remove();
-      document.removeEventListener('keydown', onKey);
       if (typeof onClose === 'function') onClose();
     };
-    const onKey = (e) => {
-      if (e.key === 'Escape') close();
-    };
+    // الإغلاق عبر الأزرار فقط (زر × في الترويسة أو أزرار التذييل).
+    // عمداً لا نُغلق بالنقر خارج النافذة ولا بمفتاح Escape، حتى لا يُفقَد إدخالٌ بالخطأ.
     backdrop.querySelector('.modal-close').addEventListener('click', close);
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) close();
-    });
-    document.addEventListener('keydown', onKey);
     document.body.appendChild(backdrop);
     renderIcons(backdrop);
     return { close, modal, bodyEl };

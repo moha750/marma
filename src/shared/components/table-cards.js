@@ -8,6 +8,8 @@
   function measure(wrapper) {
     const table = wrapper.querySelector('table.table--cards');
     if (!table) { wrapper.classList.remove('as-cards'); return; }
+    // «كروت فقط»: لا نقيس أبداً — يبقى كروتاً بأي عرض
+    if (wrapper.classList.contains('cards-only')) { wrapper.classList.add('as-cards'); return; }
     wrapper.classList.remove('as-cards');
     const overflow = table.scrollWidth - wrapper.clientWidth > 1;
     wrapper.classList.toggle('as-cards', overflow);
