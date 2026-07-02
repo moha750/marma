@@ -387,12 +387,9 @@
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label" for="location_url">رابط الموقع على الخرائط</label>
-              <input type="url" class="form-control" id="location_url" name="location_url"
-                     value="${editing ? window.utils.escapeHtml(field.location_url || '') : ''}"
-                     placeholder="https://maps.app.goo.gl/...">
-              <span class="form-help">افتح Google Maps → مشاركة → انسخ الرابط هنا. سيظهر للعملاء كزر "افتح في الخرائط".</span>
-              <div id="location_url_status" class="form-help" hidden></div>
+              <label class="form-label">موقع الملعب على الخريطة</label>
+              <div id="location-picker"></div>
+              <span class="form-help">ابحث باسم ملعبك أو انقر على موقعه في الخريطة، واسحب الدبوس لضبطه. يظهر للعميل كخريطة وزر "افتح في الخرائط". (اختياري)</span>
             </div>
             <div class="form-group">
               <label class="form-label" for="field-description">وصف الأرضية</label>
@@ -456,63 +453,20 @@
         window.utils.bindPhoneInput(form.phone);
         ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
 
-        // إحداثيات الموقع: محفوظة بعد resolve ناجح للرابط (أو من الصف عند التعديل)
+        // إحداثيات موقع الأرضية — تُحدَّد عبر خريطة قوقل (بحث بالاسم + دبوس قابل للسحب).
+        // اختيارية تمامًا: غيابها لا يمنع الحفظ.
         let resolvedCoords = (editing && field.latitude != null && field.longitude != null)
           ? { lat: Number(field.latitude), lng: Number(field.longitude) }
           : null;
-        let lastResolvedUrl = (editing && resolvedCoords) ? (field.location_url || '') : '';
-        const statusEl = ctrl.modal.querySelector('#location_url_status');
-        const setStatus = (text, kind) => {
-          if (!text) { statusEl.hidden = true; statusEl.textContent = ''; statusEl.removeAttribute('style'); return; }
-          statusEl.hidden = false;
-          statusEl.textContent = text;
-          const color = kind === 'success' ? 'var(--success, #16a34a)'
-                       : kind === 'error'   ? 'var(--danger,  #dc2626)'
-                       : '';
-          statusEl.style.color = color;
-        };
-
-        const urlInput = ctrl.modal.querySelector('#location_url');
-        let resolveSeq = 0;
-        const resolveUrl = async () => {
-          const url = (urlInput.value || '').trim();
-          if (!url) {
-            resolvedCoords = null;
-            lastResolvedUrl = '';
-            setStatus('', null);
-            return;
-          }
-          if (!/^https?:\/\//i.test(url)) {
-            resolvedCoords = null;
-            setStatus('رابط الموقع يجب أن يبدأ بـ https://', 'error');
-            return;
-          }
-          if (url === lastResolvedUrl && resolvedCoords) {
-            return; // لم يتغير الرابط منذ آخر resolve ناجح
-          }
-          const mySeq = ++resolveSeq;
-          resolvedCoords = null;
-          setStatus('جاري التحقق من الموقع...', null);
-          try {
-            const { data, error } = await window.sb.functions.invoke('resolve-maps-url', { body: { url } });
-            if (mySeq !== resolveSeq) return; // أُلغي بطلب أحدث
-            if (error) throw error;
-            if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-              resolvedCoords = { lat: data.latitude, lng: data.longitude };
-              lastResolvedUrl = url;
-              setStatus('✓ تم تثبيت الموقع', 'success');
-            } else {
-              setStatus('تعذّر قراءة هذا الرابط. افتح Google Maps → مشاركة → نسخ الرابط، ثم ألصقه هنا.', 'error');
-            }
-          } catch (err) {
-            if (mySeq !== resolveSeq) return;
-            setStatus('تعذّر قراءة هذا الرابط. افتح Google Maps → مشاركة → نسخ الرابط، ثم ألصقه هنا.', 'error');
-          }
-        };
-        urlInput.addEventListener('blur', resolveUrl);
-        // أظهر الحالة الابتدائية عند تعديل أرضية محفوظة بإحداثيات
-        if (editing && resolvedCoords && field.location_url) {
-          setStatus('✓ تم تثبيت الموقع', 'success');
+        let locPicker = null;
+        const pickerHost = ctrl.modal.querySelector('#location-picker');
+        if (pickerHost && window.locationPicker) {
+          window.locationPicker.create(pickerHost, {
+            lat: resolvedCoords ? resolvedCoords.lat : undefined,
+            lng: resolvedCoords ? resolvedCoords.lng : undefined,
+            city: editing ? (field.city || '') : '',
+            onChange: (c) => { resolvedCoords = c; }
+          }).then((p) => { locPicker = p; }).catch(() => {});
         }
 
         // ── معرض الصور: تعديل = حفظ فوري، إضافة = تجهيز محلي يُرفع عند الحفظ ──
@@ -717,21 +671,11 @@
             form.phone.focus();
             return;
           }
-          const locationUrl = (fd.get('location_url') || '').trim();
-          if (locationUrl && !/^https?:\/\//i.test(locationUrl)) {
-            window.utils.toast('رابط الموقع يجب أن يبدأ بـ https://', 'error');
-            urlInput.focus();
-            return;
-          }
-          // إن غيّر المستخدم الرابط ولم يحدث blur (مثلاً ضغط حفظ مباشرة)، شغّل resolve أولاً
-          if (locationUrl && (locationUrl !== lastResolvedUrl || !resolvedCoords)) {
-            await resolveUrl();
-          }
-          if (locationUrl && !resolvedCoords) {
-            window.utils.toast('تحقق من رابط الموقع أولاً', 'error');
-            urlInput.focus();
-            return;
-          }
+          // موقع الأرضية اختياري: إن حُدِّد على الخريطة نبني رابطًا من الإحداثيات
+          // (لزر "افتح في الخرائط" لدى العميل) — وإلا نتركه فارغًا. لا شيء يوقف الحفظ.
+          const locationUrl = resolvedCoords
+            ? `https://www.google.com/maps?q=${resolvedCoords.lat},${resolvedCoords.lng}`
+            : '';
           const amenities = amenityChipsEl
             ? Array.from(amenityChipsEl.querySelectorAll('.amenity-chip.is-active'))
                 .map((el) => el.dataset.key || el.dataset.custom)

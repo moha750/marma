@@ -15,6 +15,7 @@
 /* المكوّنات */
 @import url('./components/button.css');
 @import url('./components/form.css');
+@import url('./components/location-picker.css');
 @import url('./components/card.css');
 @import url('./components/table.css');
 @import url('./components/badge.css');
