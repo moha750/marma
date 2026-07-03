@@ -95,6 +95,82 @@ select.form-control {
   background-position: left var(--space-3) center;
 }
 
+/* منطقة رفع ملف — input مخفي داخل label منسّق (صورة/PDF) */
+.file-drop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background   var(--duration-fast) var(--ease-out);
+}
+.file-drop:hover {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+}
+.file-drop.has-file {
+  border-style: solid;
+  border-color: var(--accent-500);
+  background: var(--surface-1);
+}
+.file-drop__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--accent-500);
+}
+.file-drop__icon svg { width: 22px; height: 22px; }
+.file-drop__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--leading-snug);
+}
+.file-drop__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-drop__hint {
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+}
+
+/* حقل كلمة مرور مع زرّ عين لكشف/إخفاء القيمة */
+.password-field { position: relative; }
+.password-field .form-control { padding-inline-end: var(--space-10); }
+.password-toggle {
+  position: absolute;
+  inset-inline-end: var(--space-1);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.password-toggle:hover { color: var(--text-secondary); background: var(--surface-2); }
+.password-toggle:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
+.password-toggle svg { width: 18px; height: 18px; }
+
 /* مساعد/خطأ تحت الحقل */
 .form-help {
   display: block;
@@ -127,6 +203,9 @@ select.form-control {
 }
 .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
 .form-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+/* اسمح لأعمدة الشبكة بالانكماش تحت عرض محتواها فلا يتجاوز المحتوى الحاوية
+   (مثل عدّادات الأرضيات/الموظفين) عند ضيق الحاوية دون بلوغ نقطة الفصل. */
+.form-row > * { min-width: 0; }
 
 @media (max-width: 640px) {
   .form-row.cols-2,

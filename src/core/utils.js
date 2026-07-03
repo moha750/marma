@@ -50,8 +50,31 @@ function pathWithBase(p) {
   return base + p;
 }
 
+// يوصّل كل أزرار .password-toggle (زر العين): يبدّل نوع الحقل ويقلب الأيقونة.
+function initPasswordToggles(root) {
+  const scope = root || document;
+  scope.querySelectorAll('.password-toggle').forEach((btn) => {
+    if (btn.dataset.wired === '1') return;  // لا نُكرّر التوصيل
+    btn.dataset.wired = '1';
+    const field = btn.closest('.password-field');
+    const input = field && field.querySelector('input');
+    if (!input) return;
+    btn.addEventListener('click', () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      // نمط "الحالة": عين مفتوحة حين تظهر كلمة المرور، مغلقة حين تُخفى
+      btn.innerHTML = '<i data-lucide="' + (show ? 'eye' : 'eye-off') + '"></i>';
+      renderIcons(btn);
+      input.focus();
+    });
+  });
+}
+
 window.utils = {
   renderIcons,
+  initPasswordToggles,
   path: pathWithBase,
 
   formatDate(value) {
@@ -375,7 +398,14 @@ window.utils = {
     if (msg.includes('SUBSCRIPTION_NOT_FOUND')) return 'طلب الاشتراك غير موجود';
     if (msg.includes('SUBSCRIPTION_ALREADY_REVIEWED')) return 'تمت مراجعة هذا الطلب مسبقاً';
     if (msg.includes('PLAN_NOT_AVAILABLE')) return 'الخطة غير متاحة';
+    if (msg.includes('PAYMENT_PROOF_REQUIRED')) return 'يرجى إرفاق إيصال التحويل';
     if (msg.includes('PAYMENT_REFERENCE_REQUIRED')) return 'رقم مرجع التحويل مطلوب';
+    if (msg.includes('INVALID_RECEIPT_PATH')) return 'ملف الإيصال غير صالح، يرجى إعادة الرفع';
+    if (msg.includes('UPGRADE_NOT_ALLOWED')) return 'الترقية الفورية متاحة فقط لاشتراك مدفوع نشط';
+    if (msg.includes('NO_UNITS_ADDED')) return 'لم تُضِف أي وحدات للترقية';
+    if (msg.includes('BELOW_CURRENT_USAGE')) return 'لا يمكن اختيار عدد أقلّ ممّا تستخدمه فعلاً — احذف الزائد أولاً';
+    if (msg.includes('DOWNGRADE_NOT_ALLOWED_ACTIVE')) return 'لا يمكن الخفض أثناء اشتراك نشط — يسري عند التجديد بعد انتهاء الدورة';
+    if (msg.includes('TENANT_NOT_FOUND')) return 'المنشأة غير موجودة';
     if (msg.includes('NOT_OWNER')) return 'هذه العملية متاحة لمالك الملعب فقط';
     if (msg.includes('NOT_SUPER_ADMIN')) return 'هذه العملية للمشرف العام فقط';
     if (msg.includes('UNAUTHENTICATED')) return 'يجب تسجيل الدخول أولاً';

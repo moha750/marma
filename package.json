@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/generate-config.js && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node test/pricing.test.js"
   },
   "devDependencies": {
     "vite": "^5.4.10"

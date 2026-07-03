@@ -810,6 +810,15 @@
   background: var(--surface-2);
   color: var(--text-primary);
 }
+/* عتبات الاشتراك النشِط: مطمئن (أخضر) ← خطر (أحمر). --grace يغطّي التحذير (كهرماني). */
+.trial-banner--ok {
+  background: var(--success-tint);
+  color: var(--success);
+}
+.trial-banner--danger {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
 .trial-banner--lifetime {
   background: #FBEFC8;
   color: #8A6D00;

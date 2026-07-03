@@ -72,7 +72,9 @@
     } catch (_) { return null; }
   }
 
-  // الإشغال: مجموع slots محجوزة / مجموع slots متاحة عبر كل الأرضيات اليوم
+  // الإشغال: مجموع slots المحجوزة فعلاً / مجموع slots اليوم عبر كل الأرضيات.
+  // نعتمد is_booked (حجز حقيقي يغطّي الوقت) لا is_available — إذ أنّ is_available=false
+  // يشمل أيضاً المواعيد المنقضية الفارغة، فكان يضخّم النسبة كلّما تقدّم اليوم.
   async function fetchUtilization(today) {
     try {
       const fields = window.store
@@ -88,7 +90,7 @@
       slotArrays.forEach((slots) => {
         slots.forEach((s) => {
           total++;
-          if (!s.is_available) booked++;
+          if (s.is_booked) booked++;
         });
       });
       if (total === 0) return null;

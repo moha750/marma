@@ -40,7 +40,7 @@
       <div class="table-wrapper">
         <table class="table table--cards">
           <thead>
-            <tr><th>التاريخ</th><th>الحالة</th><th>الباقة</th><th>المبلغ</th><th>المرجع</th><th>الفترة</th></tr>
+            <tr><th>التاريخ</th><th>الحالة</th><th>الباقة</th><th>المبلغ</th><th>الإيصال</th><th>الفترة</th></tr>
           </thead>
           <tbody>
             ${subs.map((s) => `
@@ -48,8 +48,10 @@
                 <td data-label="التاريخ">${fmtDateTime(s.created_at)}</td>
                 <td data-label="الحالة" class="card-tag"><span class="status-badge status-badge--${subStatusCls(s.status)}">${subStatusLabel(s.status)}</span></td>
                 <td data-label="الباقة" class="tabular-nums">${s.requested_fields || '—'} أرضية + ${s.requested_staff || '—'} موظف</td>
-                <td data-label="المبلغ">${s.amount != null ? window.utils.formatCurrency(s.amount) : '—'}</td>
-                <td data-label="المرجع">${s.payment_reference ? `<code>${window.utils.escapeHtml(s.payment_reference)}</code>` : '—'}</td>
+                <td data-label="المبلغ">${s.amount != null ? window.utils.formatCurrency(s.amount) : '—'}<div class="text-xs text-tertiary">${s.kind === 'upgrade' ? 'ترقية فورية' : 'تجديد شهر'}</div></td>
+                <td data-label="الإيصال">${s.receipt_path
+                  ? `<button type="button" class="btn btn--ghost btn--sm" data-receipt="${window.utils.escapeHtml(s.receipt_path)}"><i data-lucide="file-text"></i> عرض</button>`
+                  : (s.payment_reference ? `<code>${window.utils.escapeHtml(s.payment_reference)}</code>` : '—')}</td>
                 <td data-label="الفترة">${s.period_start ? `${fmtDate(s.period_start)} ← ${fmtDate(s.period_end)}` : (s.reject_reason ? window.utils.escapeHtml(s.reject_reason) : '—')}</td>
               </tr>
             `).join('')}
@@ -186,6 +188,11 @@
       function wire(d) {
         const t = d.tenant;
         const byAct = (a) => container.querySelector(`[data-act="${a}"]`);
+
+        // عرض إيصال اشتراك في نافذة منبثقة (المشرف مخوّل عبر RLS)
+        container.querySelectorAll('[data-receipt]').forEach((btn) => {
+          btn.addEventListener('click', () => window.receiptViewer.open(btn.getAttribute('data-receipt')));
+        });
 
         // نافذة إجراء مع سبب اختياري يُسجَّل في سجلّ الإجراءات
         function reasonModal({ title, intro, reasonLabel, confirmText, danger, run, successMsg }) {

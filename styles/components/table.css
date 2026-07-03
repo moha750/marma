@@ -415,6 +415,24 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
   overflow: visible;
 }
 
+/* حالة خاصة: جدول-كروت داخل .card (مثل «سجل الطلبات»).
+   في حالة الكروت لا نريد «بطاقة داخل بطاقة»: نُلغي غلاف الكرت، ونجعل
+   الترويسة صندوقاً مؤطّراً مستقلاً (فاصلاً بحدود من كل الجوانب)، والكروت
+   أسفله على خلفية الصفحة. يخصّ حالة الكروت فقط — حالة الجدول لا تتأثر. */
+.card:has(> .table-wrapper.as-cards) {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.card:has(> .table-wrapper.as-cards) > .card-header {
+  background: var(--surface-2);                 /* غائر/أخفت — يقود القائمة دون منافستها */
+  border: 1px solid var(--border-subtle);       /* حدّ رفيع موحّد (نفس مقاس/لون حلقة الكروت) */
+  border-radius: var(--radius-lg);              /* نفس لغة زوايا الكروت */
+  box-shadow: none;                             /* مسطّح — شريط تسمية لا كرت */
+  margin-bottom: var(--space-3);
+}
+
 /* نص داخل الزر — مخفي افتراضياً، يظهر فقط داخل كرت الجوال (القاعدة أعلاه) */
 .btn-label { display: none; }
 

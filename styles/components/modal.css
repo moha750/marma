@@ -30,6 +30,31 @@
 .modal--lg  { max-width: 720px; }
 .modal--xl  { max-width: 960px; }
 
+/* عارض الإيصالات (صورة/PDF) داخل نافذة منبثقة */
+.receipt-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 200px;
+}
+.receipt-view.is-loading { justify-content: center; }
+.receipt-view__img {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.receipt-view__frame {
+  width: 100%;
+  height: 70vh;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+.receipt-view__open { align-self: center; }
+
 .modal-header {
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-subtle);

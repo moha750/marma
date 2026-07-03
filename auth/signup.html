@@ -56,7 +56,10 @@
 
         <div class="form-group">
           <label class="form-label" for="password">كلمة المرور <span class="required">*</span></label>
-          <input type="password" class="form-control" id="password" name="password" required minlength="6" autocomplete="new-password">
+          <div class="password-field">
+            <input type="password" class="form-control" id="password" name="password" required minlength="6" autocomplete="new-password">
+            <button type="button" class="password-toggle" aria-label="إظهار كلمة المرور" aria-pressed="false"><i data-lucide="eye-off"></i></button>
+          </div>
           <span class="form-help">6 أحرف على الأقل</span>
         </div>
 
@@ -109,6 +112,7 @@
   <script src="../src/core/api.js"></script>
   <script>
     window.utils.renderIcons();
+    window.utils.initPasswordToggles();
     (async () => {
       // إعادة التوجيه إذا مسجل بالفعل (حسب نوع الحساب)
       const { data: { session } } = await window.sb.auth.getSession();

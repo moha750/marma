@@ -42,6 +42,30 @@ window.pricing = (function () {
     return { lines, total: calcPrice(f, s) };
   }
 
+  // ترقية فورية (proration): سعر الوحدات المضافة للأيام المتبقّية فقط (بلا تمديد).
+  //   السعر = الوحدات المضافة × سعر الوحدة × (الأيام المتبقّية ÷ مدة الدورة) — مُقرَّب لأقرب ريال.
+  function upgradeCost(addedUnits, remainingDays) {
+    const u = Math.max(0, Number(addedUnits)    || 0);
+    const d = Math.max(0, Number(remainingDays) || 0);
+    return Math.round(u * UNIT_PRICE * d / DURATION_DAYS);
+  }
+
+  // ملخّص فاتورة الترقية (سطر واحد + الإجمالي) — يطابق ما يحسبه الخادم.
+  function upgradeBreakdown(addedFields, addedStaff, remainingDays) {
+    const af = Math.max(0, Number(addedFields)  || 0);
+    const as = Math.max(0, Number(addedStaff)   || 0);
+    const d  = Math.max(0, Number(remainingDays) || 0);
+    const units = af + as;
+    const total = upgradeCost(units, d);
+    const parts = [];
+    if (af > 0) parts.push(`${af} أرضية`);
+    if (as > 0) parts.push(`${as} موظف`);
+    const lines = [
+      { label: `${parts.join(' + ') || 'وحدات'} إضافية × ${d} يوم متبقٍ (من ${DURATION_DAYS})`, amount: total }
+    ];
+    return { lines, total, days: d, units };
+  }
+
   return {
     BASE_PRICE,
     UNIT_PRICE,
@@ -50,6 +74,8 @@ window.pricing = (function () {
     INCLUDED,
     TRIAL,
     calcPrice,
-    breakdown
+    breakdown,
+    upgradeCost,
+    upgradeBreakdown
   };
 })();

@@ -1,5 +1,8 @@
 // لوحة المشرف العام — طلبات الاشتراك المعلّقة (نمط SPA: mount/unmount)
 (function () {
+  // نوع الطلب: ترقية فورية (مبلغ تفاضلي) أو تجديد شهري (مبلغ كامل)
+  function kindLabel(k) { return k === 'upgrade' ? 'ترقية فورية' : 'تجديد شهر'; }
+
   function render(pending) {
     if (!pending.length) {
       return `<div class="card"><div class="empty-state"><div class="empty-icon"><i data-lucide="check-circle-2"></i></div><h3>لا توجد طلبات معلقة</h3><p>كل الطلبات تمت مراجعتها.</p></div></div>`;
@@ -13,7 +16,7 @@
                   <th>الملعب</th>
                   <th>الباقة المطلوبة</th>
                   <th>المبلغ</th>
-                  <th>المرجع</th>
+                  <th>الإيصال</th>
                   <th>ملاحظة</th>
                   <th class="text-end">إجراءات</th>
                 </tr>
@@ -27,12 +30,16 @@
                       ${s.requested_fields || '—'} أرضية + ${s.requested_staff || '—'} موظف
                       <div class="text-xs text-tertiary">${window.utils.escapeHtml(s.plan_name)}</div>
                     </td>
-                    <td data-label="المبلغ">${window.utils.formatCurrency(s.amount)}</td>
-                    <td data-label="المرجع"><code>${window.utils.escapeHtml(s.payment_reference)}</code></td>
+                    <td data-label="المبلغ">${window.utils.formatCurrency(s.amount)}<div class="text-xs text-tertiary">${kindLabel(s.kind)}</div></td>
+                    <td data-label="الإيصال">${s.receipt_path
+                      ? `<button type="button" class="btn btn--ghost btn--sm" data-receipt="${window.utils.escapeHtml(s.receipt_path)}"><i data-lucide="file-text"></i> عرض الإيصال</button>`
+                      : (s.payment_reference ? `<code>${window.utils.escapeHtml(s.payment_reference)}</code>` : '—')}</td>
                     <td data-label="ملاحظة">${s.note ? window.utils.escapeHtml(s.note) : '—'}</td>
                     <td data-label="إجراءات" class="actions-cell text-end">
-                      <button class="btn btn--primary btn--sm" data-action="approve" data-id="${s.id}" data-tenant="${window.utils.escapeHtml(s.tenant_name)}">موافقة</button>
-                      <button class="btn btn--danger btn--sm" data-action="reject" data-id="${s.id}" data-tenant="${window.utils.escapeHtml(s.tenant_name)}">رفض</button>
+                      <div class="actions-inline">
+                        <button class="btn btn--primary btn--sm" data-action="approve" data-id="${s.id}" data-tenant="${window.utils.escapeHtml(s.tenant_name)}">موافقة</button>
+                        <button class="btn btn--danger btn--sm" data-action="reject" data-id="${s.id}" data-tenant="${window.utils.escapeHtml(s.tenant_name)}">رفض</button>
+                      </div>
                     </td>
                   </tr>
                 `).join('')}
@@ -116,6 +123,9 @@
         });
         body.querySelectorAll('[data-action="reject"]').forEach((btn) => {
           btn.addEventListener('click', () => openRejectModal(btn.dataset.id, btn.dataset.tenant));
+        });
+        body.querySelectorAll('[data-receipt]').forEach((btn) => {
+          btn.addEventListener('click', () => window.receiptViewer.open(btn.getAttribute('data-receipt')));
         });
       }
 

@@ -24,15 +24,9 @@
     })[phase] || phase;
   }
 
+  // حالة الاشتراك: نص عادي (بلا بادج) في كل الحالات — يطابق بقية قيم بطاقة الحالة
   function phaseChip(phase, extended) {
-    const cls = ({
-      trial: 'info', active: 'success',
-      grace_active: 'warning',
-      expired: 'danger',
-      suspended: 'danger',
-      lifetime: 'success'
-    })[phase] || 'muted';
-    return `<span class="chip-status chip-status--${cls}">${window.utils.escapeHtml(phaseLabel(phase, extended))}</span>`;
+    return `<span class="fw-semibold">${window.utils.escapeHtml(phaseLabel(phase, extended))}</span>`;
   }
 
   function reqChip(s) {
@@ -42,6 +36,15 @@
   }
 
   function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
+
+  // صيغة الأيام بالعربية الصحيحة: 1 يوم واحد · 2 يومان · 3–10 أيام · 11+ يومًا
+  function daysLabel(n) {
+    n = Math.max(0, Number(n) || 0);
+    if (n === 1) return 'يوم واحد';
+    if (n === 2) return 'يومان';
+    if (n >= 3 && n <= 10) return n + ' أيام';
+    return n + ' يومًا';
+  }
 
   const page = {
     async mount(container, ctx) {
@@ -88,44 +91,46 @@
         }
       }
 
-      function renderCallout(status, days) {
-        if (status && status.phase === 'lifetime') {
-          return `
-            <div class="trial-banner trial-banner--lifetime" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
-              <span class="trial-banner-icon"><i data-lucide="gem"></i></span>
-              <span>حسابك يتمتّع بوصول دائم — كل المميزات مفتوحة بلا حدود.</span>
+      // بانر دائم لحالة الاشتراك — يعرض المتبقّي دائماً، ولونه يتغيّر باقتراب الانتهاء.
+      function renderCallout(status) {
+        const banner = (cls, icon, text) => `
+            <div class="trial-banner trial-banner--${cls}" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
+              <span class="trial-banner-icon"><i data-lucide="${icon}"></i></span>
+              <span>${text}</span>
             </div>`;
+
+        if (status && status.phase === 'lifetime') {
+          return banner('lifetime', 'gem', 'حسابك يتمتّع بوصول دائم — كل المميزات مفتوحة بلا حدود.');
         }
         if (!status || !status.is_active) {
-          return `
-            <div class="trial-banner trial-banner--grace" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
-              <span class="trial-banner-icon"><i data-lucide="triangle-alert"></i></span>
-              <span>الخدمة مغلقة حالياً. اشترك لتفعيل حسابك مجدداً.</span>
-            </div>`;
+          return banner('danger', 'triangle-alert', 'انتهى اشتراكك والخدمة مغلقة حالياً. اشترك لإعادة تفعيل حسابك.');
         }
+
         const phase = status.phase;
+        // فترة السماح: العدّ حتى القفل الكامل (days_remaining)
+        if (phase && phase.startsWith('grace_')) {
+          const lock = daysLabel(Math.max(0, Number(status.days_remaining) || 0));
+          return banner('grace', 'triangle-alert', `أنت في فترة السماح — يرجى تجديد الاشتراك خلال ${lock}.`);
+        }
+
+        // نشِط/تجربة: المتبقّي حتى نهاية الاشتراك (days_until_expiry)، واللون حسب القرب
+        const toExpiry = Math.max(0, Number(status.days_until_expiry) || 0);
+        const left = daysLabel(toExpiry);
+        const tone = toExpiry <= 3 ? 'danger' : (toExpiry <= 7 ? 'grace' : 'ok');
+        const icon = tone === 'danger' ? 'triangle-alert' : (tone === 'grace' ? 'hourglass' : 'calendar-check');
+
         if (phase === 'trial') {
           const lead = status.trial_extended ? 'تجربتك الممدّدة نشطة' : 'تجربتك المجانية نشطة';
-          return `
-            <div class="trial-banner trial-banner--trial" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
-              <span class="trial-banner-icon"><i data-lucide="info"></i></span>
-              <span>${lead} (أرضية واحدة، بدون موظفين). يمكنك ترقية باقتك في أي وقت.</span>
-            </div>`;
+          return banner(tone, icon, `${lead} — متبقٍ ${left} (أرضية واحدة، بدون موظفين).`);
         }
-        if (phase && phase.startsWith('grace_')) {
-          return `
-            <div class="trial-banner trial-banner--grace" style="margin-bottom: var(--space-4); border-radius: var(--radius-md)">
-              <span class="trial-banner-icon"><i data-lucide="triangle-alert"></i></span>
-              <span>أنت في فترة السماح — يرجى تجديد الاشتراك خلال ${days} ${days === 1 ? 'يوم' : 'أيام'}.</span>
-            </div>`;
-        }
-        return '';
+        return banner(tone, icon, tone === 'ok'
+          ? `اشتراكك نشط — متبقٍ ${left}.`
+          : `يقترب انتهاء اشتراكك — متبقٍ ${left}. جدّد قبل الانقطاع.`);
       }
 
       function renderStatusCard(status) {
         const phase  = status ? status.phase : 'none';
         const lifetime = phase === 'lifetime';
-        const days   = status ? Math.max(0, Number(status.days_until_expiry) || 0) : 0;
         const effEnd = lifetime ? 'دائم' : (status && status.effective_end ? window.utils.formatDateTime(status.effective_end) : '—');
         const allowedFields = lifetime ? '∞' : (status ? (status.allowed_fields || 1) : 1);
         const allowedStaff  = lifetime ? '∞' : (status ? (status.allowed_staff  || 0) : 0);
@@ -133,27 +138,21 @@
         const currentStaff  = status ? (status.current_staff  || 0) : 0;
 
         return `
-          <div class="card mb-md">
-            <div class="card-body" style="display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap">
-              <div style="flex:1;min-width:200px">
+          <div class="card mb-md sub-status-card">
+            <div class="card-body sub-status-metrics">
+              <div>
                 <div class="text-xs text-tertiary fw-medium mb-sm">الحالة الحالية</div>
                 <div>${phaseChip(phase, status && status.trial_extended)}</div>
               </div>
-              <div style="min-width:180px">
+              <div>
                 <div class="text-xs text-tertiary fw-medium mb-sm">تاريخ الانتهاء</div>
                 <div class="fw-semibold tabular-nums">${window.utils.escapeHtml(effEnd)}</div>
               </div>
-              ${status && status.is_active && !lifetime ? `
-                <div style="min-width:120px">
-                  <div class="text-xs text-tertiary fw-medium mb-sm">المتبقي</div>
-                  <div class="fw-bold tabular-nums" style="font-size:var(--text-lg)">${days} ${days === 1 ? 'يوم' : 'أيام'}</div>
-                </div>
-              ` : ''}
-              <div style="min-width:140px">
+              <div>
                 <div class="text-xs text-tertiary fw-medium mb-sm">الأرضيات</div>
                 <div class="fw-semibold tabular-nums">${currentFields} / ${allowedFields}</div>
               </div>
-              <div style="min-width:140px">
+              <div>
                 <div class="text-xs text-tertiary fw-medium mb-sm">الموظفون</div>
                 <div class="fw-semibold tabular-nums">${currentStaff} / ${allowedStaff}</div>
               </div>
@@ -171,7 +170,7 @@
               <input type="text" name="${name}" value="${value}" data-min="${min}" data-max="${max}" inputmode="numeric" pattern="[0-9]*" maxlength="2">
               <button type="button" class="btn btn--secondary btn--sm" data-action="inc" aria-label="زيادة">+</button>
             </div>
-            ${hint ? `<span class="form-help">${window.utils.escapeHtml(hint)}</span>` : ''}
+            ${hint ? `<span class="form-help" style="text-align:center">${window.utils.escapeHtml(hint)}</span>` : ''}
           </div>
         `;
       }
@@ -200,12 +199,17 @@
         const currentFields = status ? (status.current_fields || 0) : 0;
         const currentStaff  = status ? (status.current_staff  || 0) : 0;
         const hasPending    = !!(status && status.pending_request_id);
-        // الحد الأدنى = ما هو نشط فعلياً (حتى لا يطلب أقل من احتياجه)
-        const minFields = Math.max(1, currentFields, 1);
-        const minStaff  = Math.max(1, currentStaff);
-        // افتراضي مبدئي = الأعلى بين الحالي والمسموح
+        const phase         = status ? status.phase : 'none';
+        // ضمن دورة مدفوعة نشطة (phase='active'): الحدّ الأدنى = المسموح — لا خفض لما دُفع له.
+        // بعد انتهاء الدورة (سماح/منتهٍ/تجربة): الحدّ = الاستخدام الفعلي — يمكن التجديد بأقلّ.
+        const periodActive = phase === 'active';
+        const minFields = periodActive ? Math.max(1, allowedFields, currentFields) : Math.max(1, currentFields);
+        const minStaff  = periodActive ? Math.max(1, allowedStaff,  currentStaff)  : Math.max(1, currentStaff);
+        // افتراضي مبدئي = الأعلى بين الحدّ الأدنى والمسموح
         const initFields = Math.max(minFields, allowedFields);
         const initStaff  = Math.max(minStaff,  allowedStaff, 1);
+        const hintFields = periodActive ? `المسموح لك ${allowedFields} · تستخدم ${currentFields}` : `الحدّ الأدنى ${minFields} بحسب استخدامك الحالي`;
+        const hintStaff  = periodActive ? `المسموح لك ${allowedStaff} · تستخدم ${currentStaff}`  : `الحدّ الأدنى ${minStaff} بحسب استخدامك الحالي`;
 
         return `
           <div class="card mb-md" id="config-card">
@@ -220,8 +224,8 @@
               </p>
 
               <div class="form-row cols-2">
-                ${renderCounter('fields', initFields, minFields, 50, 'عدد الأرضيات', `الحد الأدنى ${minFields} (لديك ${currentFields} نشطة)`)}
-                ${renderCounter('staff',  initStaff,  minStaff,  50, 'عدد الموظفين', `الحد الأدنى ${minStaff} (لديك ${currentStaff} حالياً)`)}
+                ${renderCounter('fields', initFields, minFields, 50, 'عدد الأرضيات', hintFields)}
+                ${renderCounter('staff',  initStaff,  minStaff,  50, 'عدد الموظفين', hintStaff)}
               </div>
 
               <div id="breakdown-slot">${renderBreakdown(initFields, initStaff)}</div>
@@ -252,33 +256,34 @@
               </div>
             ` : `
               <div class="table-wrapper" style="box-shadow:none;border-radius:0">
-                <table class="table tabular-nums">
+                <table class="table table--cards tabular-nums">
                   <thead>
                     <tr>
                       <th>التاريخ</th>
                       <th>الباقة المطلوبة</th>
                       <th>المبلغ</th>
-                      <th>المرجع</th>
+                      <th>الإيصال</th>
                       <th>الحالة</th>
-                      <th>الفترة</th>
+                      <th>التفاصيل</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${history.map((h) => `
                       <tr>
-                        <td>${window.utils.formatDateTime(h.created_at)}</td>
-                        <td>
+                        <td data-label="التاريخ">${window.utils.formatDateTime(h.created_at)}</td>
+                        <td data-label="الباقة المطلوبة">
                           ${h.requested_fields ? `${h.requested_fields} أرضية` : '—'} +
                           ${h.requested_staff  ? `${h.requested_staff} موظف`  : '—'}
                         </td>
-                        <td>${fmtMoney(h.amount)}</td>
-                        <td class="text-muted">${window.utils.escapeHtml(h.payment_reference || '—')}</td>
-                        <td>
-                          ${reqChip(h.status)}
-                          ${h.reject_reason ? `<div class="text-xs text-danger" style="margin-top:2px">${window.utils.escapeHtml(h.reject_reason)}</div>` : ''}
-                        </td>
-                        <td class="text-xs text-tertiary">
-                          ${h.period_start ? `${window.utils.formatDate(h.period_start)} → ${window.utils.formatDate(h.period_end)}` : '—'}
+                        <td data-label="المبلغ">${fmtMoney(h.amount)}<div class="text-2xs text-tertiary">${h.kind === 'upgrade' ? 'ترقية' : 'تجديد'}</div></td>
+                        <td data-label="الإيصال">${h.receipt_path
+                          ? `<button type="button" class="btn btn--ghost btn--sm" data-receipt="${window.utils.escapeHtml(h.receipt_path)}"><i data-lucide="file-text"></i> عرض</button>`
+                          : (h.payment_reference ? `<span class="text-muted">${window.utils.escapeHtml(h.payment_reference)}</span>` : '<span class="text-muted">—</span>')}</td>
+                        <td data-label="الحالة" class="card-tag">${reqChip(h.status)}</td>
+                        <td data-label="التفاصيل" class="text-xs text-tertiary">
+                          ${h.period_start
+                            ? `${window.utils.formatDate(h.period_start)} → ${window.utils.formatDate(h.period_end)}`
+                            : (h.reject_reason ? `<span class="text-danger">${window.utils.escapeHtml(h.reject_reason)}</span>` : '—')}
                         </td>
                       </tr>
                     `).join('')}
@@ -291,11 +296,10 @@
       }
 
       function renderPage(status, history) {
-        const days = status ? Math.max(0, Number(status.days_remaining) || 0) : 0;
         // الوصول الدائم لا يحتاج باقة/تجديد — نخفي بطاقة الطلب
         const lifetime = status && status.phase === 'lifetime';
         return `
-          ${renderCallout(status, days)}
+          ${renderCallout(status)}
           ${renderStatusCard(status)}
           ${lifetime ? '' : renderConfigCard(status)}
           ${renderHistoryCard(history)}
@@ -351,6 +355,11 @@
         if (openBtn && !openBtn.disabled) {
           openBtn.addEventListener('click', () => openRequestModal());
         }
+
+        // عرض إيصال طلب سابق في نافذة منبثقة (المالك يرى إيصاله فقط)
+        subContainer.querySelectorAll('[data-receipt]').forEach((btn) => {
+          btn.addEventListener('click', () => window.receiptViewer.open(btn.getAttribute('data-receipt')));
+        });
       }
 
       function openRequestModal() {
@@ -359,18 +368,65 @@
           return;
         }
         const { fields, staff } = readCounters();
-        const total = window.pricing.calcPrice(fields, staff);
+        const st = lastStatus || {};
+        const allowedFields = Number(st.allowed_fields) || 1;
+        const allowedStaff  = Number(st.allowed_staff)  || 0;
+        const daysLeft      = Math.max(0, Number(st.days_until_expiry) || 0);
+        const addedFields   = Math.max(0, fields - allowedFields);
+        const addedStaff    = Math.max(0, staff  - allowedStaff);
+        // الترقية الفورية متاحة فقط لاشتراك مدفوع نشط تُضاف إليه وحدات
+        const canUpgrade = !!st.is_active && st.phase === 'active' && (addedFields + addedStaff) > 0;
+
+        const fullB = window.pricing.breakdown(fields, staff);
+        const upB   = window.pricing.upgradeBreakdown(addedFields, addedStaff, daysLeft);
+        const amountOf = (k) => (k === 'upgrade' ? upB.total : fullB.total);
+        const invoiceHtml = (k) => {
+          const b = k === 'upgrade' ? upB : fullB;
+          const hint = k === 'upgrade'
+            ? `تُضاف الوحدات فورًا، وتاريخ التجديد يبقى كما هو (متبقٍ ${daysLabel(daysLeft)}).`
+            : `شهر كامل بالوحدات المختارة، يُمدّد التجديد ${window.pricing.DURATION_DAYS} يومًا.`;
+          return `
+            <div class="card" style="background:var(--surface-2);box-shadow:none;border:1px solid var(--border-subtle);margin-bottom:var(--space-2)">
+              <div class="card-body" style="padding:var(--space-3)">
+                <div class="invoice-lines">
+                  ${b.lines.map((l) => `<div class="invoice-line"><span>${window.utils.escapeHtml(l.label)}</span><span class="tabular-nums">${fmtMoney(l.amount)}</span></div>`).join('')}
+                  <div class="invoice-line invoice-line--total"><span>الإجمالي</span><span class="tabular-nums">${fmtMoney(b.total)}</span></div>
+                </div>
+              </div>
+            </div>
+            <p class="text-muted text-xs" style="margin-bottom:var(--space-3)">${hint}</p>`;
+        };
+        let selectedKind = canUpgrade ? 'upgrade' : 'renew';
+        const segHtml = canUpgrade ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-3)">
+            <button type="button" class="btn btn--primary seg-btn" data-kind="upgrade">ترقية فورية · ${fmtMoney(upB.total)}</button>
+            <button type="button" class="btn btn--secondary seg-btn" data-kind="renew">تجديد شهر · ${fmtMoney(fullB.total)}</button>
+          </div>` : '';
         const body = `
-          <div class="card" style="background:var(--surface-2);box-shadow:none;border:1px solid var(--border-subtle);margin-bottom:var(--space-3)">
+          ${segHtml}
+          <div id="req-invoice">${invoiceHtml(selectedKind)}</div>
+          <p class="text-muted text-sm">حوّل <strong id="req-amount">${fmtMoney(amountOf(selectedKind))}</strong> إلى الحساب أدناه، ثم أرفق إيصال التحويل. سيراجع المشرف طلبك خلال 24 ساعة.</p>
+          <div class="card" style="background:var(--surface-1);box-shadow:none;border:1px solid var(--border-subtle);margin-bottom:var(--space-3)">
             <div class="card-body" style="padding:var(--space-3)">
-              ${renderBreakdown(fields, staff)}
+              <div class="text-xs text-tertiary" style="margin-bottom:2px">بيانات التحويل</div>
+              <div class="fw-semibold">البنك العربي</div>
+              <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);flex-wrap:wrap">
+                <code id="iban-value" style="direction:ltr;font-size:var(--text-sm);letter-spacing:.02em">SA7730100974016871643647</code>
+                <button type="button" class="btn btn--ghost btn--sm" id="copy-iban"><i data-lucide="copy"></i> نسخ</button>
+              </div>
             </div>
           </div>
-          <p class="text-muted text-sm">حوّل المبلغ <strong>${fmtMoney(total)}</strong> ثم أدخل رقم/مرجع التحويل أدناه. سيراجع المشرف طلبك خلال 24 ساعة.</p>
           <form id="req-form">
             <div class="form-group">
-              <label class="form-label">رقم/مرجع التحويل <span class="required">*</span></label>
-              <input type="text" class="form-control" name="payment_reference" required maxlength="120" placeholder="مثلاً: TRX-123456">
+              <label class="form-label">إيصال التحويل <span class="required">*</span></label>
+              <label class="file-drop" id="receipt-drop">
+                <span class="file-drop__icon"><i data-lucide="upload-cloud"></i></span>
+                <span class="file-drop__text">
+                  <span class="file-drop__title" data-default="اضغط لإرفاق الإيصال">اضغط لإرفاق الإيصال</span>
+                  <span class="file-drop__hint">صورة (JPG/PNG/WebP) أو PDF — حتى 5 ميجابايت</span>
+                </span>
+                <input type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+              </label>
             </div>
             <div class="form-group">
               <label class="form-label">ملاحظة <span class="optional">اختياري</span></label>
@@ -386,20 +442,72 @@
           title: `طلب اشتراك: ${fields} أرضية + ${staff} موظف`,
           body, footer
         });
+        window.utils.renderIcons(ctrl.modal);
 
         ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+
+        // مُبدِّل النوع (ترقية/تجديد) — يحدّث الفاتورة والمبلغ والنوع المُرسَل
+        const setKind = (k) => {
+          selectedKind = k;
+          ctrl.modal.querySelectorAll('.seg-btn').forEach((b) => {
+            const on = b.getAttribute('data-kind') === k;
+            b.className = 'btn seg-btn ' + (on ? 'btn--primary' : 'btn--secondary');
+          });
+          ctrl.modal.querySelector('#req-invoice').innerHTML = invoiceHtml(k);
+          ctrl.modal.querySelector('#req-amount').textContent = fmtMoney(amountOf(k));
+        };
+        ctrl.modal.querySelectorAll('.seg-btn').forEach((b) => {
+          b.addEventListener('click', () => setKind(b.getAttribute('data-kind')));
+        });
+
+        const copyBtn = ctrl.modal.querySelector('#copy-iban');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText('SA7730100974016871643647');
+              window.utils.toast('تم نسخ الآيبان', 'success');
+            } catch (_) {
+              window.utils.toast('تعذّر النسخ — انسخه يدويًّا', 'error');
+            }
+          });
+        }
+
+        // منطقة الرفع: أظهر اسم الملف المختار وبدّل الحالة
+        const dropEl    = ctrl.modal.querySelector('#receipt-drop');
+        const dropInput = dropEl && dropEl.querySelector('input[type="file"]');
+        const dropTitle = dropEl && dropEl.querySelector('.file-drop__title');
+        if (dropInput) {
+          dropInput.addEventListener('change', () => {
+            const f = dropInput.files && dropInput.files[0];
+            if (f) {
+              dropTitle.textContent = f.name;
+              dropEl.classList.add('has-file');
+            } else {
+              dropTitle.textContent = dropTitle.dataset.default;
+              dropEl.classList.remove('has-file');
+            }
+          });
+        }
+
         ctrl.modal.querySelector('#req-form').addEventListener('submit', async (e) => {
           e.preventDefault();
           const submit = ctrl.modal.querySelector('#req-submit');
+          const fd = new FormData(e.target);
+          const file = fd.get('receipt');
+          if (!file || !file.size) {
+            window.utils.toast('يرجى إرفاق إيصال التحويل', 'error');
+            return;
+          }
           submit.dataset.loading = 'true';
           submit.disabled = true;
-          const fd = new FormData(e.target);
           try {
+            const receipt_path = await window.api.uploadReceipt(file);
             await window.api.requestSubscription({
               plan_id: basePlan.id,
               fields, staff,
-              payment_reference: (fd.get('payment_reference') || '').trim(),
-              note: (fd.get('note') || '').trim() || null
+              receipt_path,
+              note: (fd.get('note') || '').trim() || null,
+              kind: selectedKind
             });
             window.utils.toast('تم إرسال طلب الاشتراك', 'success');
             ctrl.close();

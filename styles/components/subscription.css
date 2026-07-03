@@ -84,15 +84,31 @@
   margin: 8px 0;
 }
 
+/* ─── بطاقة حالة الاشتراك — عمودان متساويان ─── */
+/* ينهاران لعمود واحد حسب عرض البطاقة نفسها (container query لا شاشة —
+   لأنّ الحاوية قد تضيق بينما الشاشة عريضة بسبب الشريط الجانبي). */
+.sub-status-card { container-type: inline-size; }
+.sub-status-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+@container (max-width: 380px) {
+  .sub-status-metrics { grid-template-columns: 1fr; }
+}
+
 /* ─── Unit counter — لاستخدامه في صفحة الاشتراك (عدّاد +/-) ─── */
 
 .unit-counter {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   align-items: stretch;
   gap: var(--space-1);
 }
 .unit-counter input {
-  width: 64px;
+  flex: 1;
+  min-width: 0;
   height: 36px;
   text-align: center;
   border: 1px solid var(--border-default);
