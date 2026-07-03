@@ -2,26 +2,141 @@
 .locpick {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2, 8px);
+  gap: var(--space-2);
 }
-.locpick__search { min-height: 0; }
-/* عنصر البحث من قوقل (web component) — نجعله بعرض كامل */
-.locpick__pac {
-  width: 100%;
-  display: block;
+
+/* ─────────────────────────────────────────────
+   صندوق البحث المخصّص — هوية مرمى (لا هوية قوقل)
+   ───────────────────────────────────────────── */
+.locpick__search { position: relative; }
+
+.locpick__field { position: relative; }
+
+/* أيقونة البحث (تبدأ من جهة البداية — يمين في RTL) */
+.locpick__field-icon {
+  position: absolute;
+  inset-inline-start: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  pointer-events: none;
 }
+
+/* الحقل يرث .form-control؛ نضيف فقط مساحة الأيقونتين */
+.locpick__input {
+  padding-inline-start: var(--space-8);
+  padding-inline-end: var(--space-8);
+}
+
+/* زر المسح (×) — جهة النهاية */
+.locpick__clear {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.locpick__clear:hover {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+.locpick__clear[hidden] { display: none; }
+.locpick__clear svg { width: 14px; height: 14px; }
+
+/* ─────────────────────────────────────────────
+   قائمة النتائج — منسدلة عادية (لا ملء شاشة)
+   ───────────────────────────────────────────── */
+.locpick__results {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + var(--space-1));
+  z-index: 20;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  max-height: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+}
+.locpick__results[hidden] { display: none; }
+
+.locpick__result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-out);
+}
+.locpick__result:hover,
+.locpick__result.is-active {
+  background: var(--accent-50);
+}
+
+.locpick__result-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--accent-500);
+}
+
+.locpick__result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* يسمح بقصّ النص الطويل */
+  line-height: var(--leading-snug);
+}
+.locpick__result-main {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.locpick__result-sub {
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─────────────────────────────────────────────
+   الخريطة والتلميح
+   ───────────────────────────────────────────── */
 .locpick__map {
   width: 100%;
   height: 260px;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--surface-2, #f3f4f6);
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
 }
+
 .locpick__hint {
-  font-size: var(--text-sm, 0.85rem);
-  color: var(--text-muted, #6b7280);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   min-height: 1.2em;
 }
-.locpick__hint--ok { color: var(--success, #16a34a); }
-.locpick__hint--warn { color: var(--warning, #d97706); }
+.locpick__hint--ok { color: var(--success); }
+.locpick__hint--warn { color: var(--warning); }

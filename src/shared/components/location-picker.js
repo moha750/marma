@@ -60,6 +60,22 @@ window.locationPicker = (function () {
     return { lat: lat, lng: lng };
   }
 
+  // تهريب HTML — نتائج البحث تأتي من قوقل، نعرضها كنص لا كـ markup
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // أيقونة الدبوس المصغّرة لعناصر قائمة النتائج (بلون العلامة)
+  const PIN_SVG =
+    '<svg class="locpick__result-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"></path>'
+    + '<circle cx="12" cy="10" r="3"></circle></svg>';
+
   async function create(container, opts) {
     opts = opts || {};
     const onChange = typeof opts.onChange === 'function' ? opts.onChange : function () {};
@@ -147,34 +163,173 @@ window.locationPicker = (function () {
         setHint('ابحث باسم ملعبك، أو انقر على موقعه في الخريطة.', null);
       }
 
-      // صندوق البحث بالاسم (Places API New) — دفاعيًا: إن فشل، تبقى الخريطة تعمل
+      // ── صندوق بحث مخصّص بهوية مرمى ──
+      // نستخدم واجهة AutocompleteSuggestion البرمجية (لا العنصر الجاهز من قوقل)
+      // فنرسم الحقل والقائمة بأنفسنا: تحكّم كامل بالشكل، وبلا وضع ملء الشاشة على الجوال.
+      // دفاعيًا: إن تعذّر البحث تبقى الخريطة والدبوس يكفيان.
       try {
         const placesLib = await google.maps.importLibrary('places');
-        const PAC = placesLib.PlaceAutocompleteElement;
-        if (PAC) {
-          const pac = new PAC({ includedRegionCodes: ['sa'] });
-          pac.className = 'locpick__pac';
-          searchWrap.appendChild(pac);
+        const AutocompleteSuggestion = placesLib.AutocompleteSuggestion;
+        const AutocompleteSessionToken = placesLib.AutocompleteSessionToken;
+        const canSuggest = AutocompleteSuggestion
+          && typeof AutocompleteSuggestion.fetchAutocompleteSuggestions === 'function';
 
-          const onSelect = async function (ev) {
+        if (!canSuggest) {
+          searchWrap.style.display = 'none';
+        } else {
+          searchWrap.innerHTML = ''
+            + '<div class="locpick__field">'
+            + '<svg class="locpick__field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+            + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            + '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'
+            + '<input type="text" class="form-control locpick__input" placeholder="ابحث باسم ملعبك…"'
+            + ' autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"'
+            + ' aria-controls="locpick-results" enterkeyhint="search">'
+            + '<button type="button" class="locpick__clear" aria-label="مسح البحث" hidden>'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+            + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            + '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>'
+            + '</div>'
+            + '<ul class="locpick__results" id="locpick-results" role="listbox" hidden></ul>';
+
+          const input = searchWrap.querySelector('.locpick__input');
+          const clearBtn = searchWrap.querySelector('.locpick__clear');
+          const results = searchWrap.querySelector('.locpick__results');
+
+          let token = new AutocompleteSessionToken();
+          let items = [];
+          let activeIndex = -1;
+          let seq = 0;
+          let debounceId = 0;
+
+          const closeResults = function () {
+            results.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            activeIndex = -1;
+          };
+
+          const renderResults = function () {
+            if (!items.length) { results.innerHTML = ''; closeResults(); return; }
+            results.innerHTML = items.map(function (it, i) {
+              return '<li class="locpick__result" role="option" id="locpick-opt-' + i + '" data-i="' + i + '">'
+                + PIN_SVG
+                + '<span class="locpick__result-text">'
+                + '<span class="locpick__result-main">' + escapeHtml(it.main) + '</span>'
+                + (it.sub ? '<span class="locpick__result-sub">' + escapeHtml(it.sub) + '</span>' : '')
+                + '</span></li>';
+            }).join('');
+            results.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+          };
+
+          const runSearch = async function (q) {
+            const mySeq = ++seq;
             try {
-              let place = null;
-              if (ev && ev.placePrediction && typeof ev.placePrediction.toPlace === 'function') {
-                place = ev.placePrediction.toPlace();
-              } else if (ev && ev.place) {
-                place = ev.place;
-              }
-              if (!place) return;
-              if (typeof place.fetchFields === 'function') {
-                await place.fetchFields({ fields: ['location'] });
-              }
+              const res = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                input: q,
+                sessionToken: token,
+                includedRegionCodes: ['sa'],
+                language: 'ar',
+                region: 'sa'
+              });
+              if (mySeq !== seq || destroyed) return; // نتيجة قديمة أو أُتلف المكوّن
+              // FormattableText: نفضّل الخاصية .text، ونسقط إلى toString دفاعيًا
+              const fmt = function (f) {
+                if (!f) return '';
+                return typeof f.text === 'string' ? f.text : String(f);
+              };
+              items = (res.suggestions || [])
+                .filter(function (s) { return s.placePrediction; })
+                .map(function (s) {
+                  const p = s.placePrediction;
+                  return {
+                    main: fmt(p.mainText) || fmt(p.text),
+                    sub: fmt(p.secondaryText),
+                    prediction: p
+                  };
+                });
+              activeIndex = -1;
+              renderResults();
+            } catch (_) {
+              if (mySeq === seq) { items = []; closeResults(); }
+            }
+          };
+
+          const selectIndex = async function (i) {
+            const it = items[i];
+            if (!it) return;
+            input.value = it.main;
+            clearBtn.hidden = false;
+            closeResults();
+            try {
+              const place = it.prediction.toPlace();
+              await place.fetchFields({ fields: ['location'] });
               const c = toCoords(place.location);
               if (c) placeMarker(c.lat, c.lng, 17);
-            } catch (_) { /* تجاهل خطأ اختيار مكان مفرد */ }
+            } catch (_) { /* تجاهل فشل جلب موقع مفرد */ }
+            token = new AutocompleteSessionToken(); // الجلسة تُستهلك بعد الاختيار
           };
-          // أسماء الأحداث اختلفت بين إصدارات المكوّن — نستمع للاثنين
-          pac.addEventListener('gmp-select', onSelect);
-          pac.addEventListener('gmp-placeselect', onSelect);
+
+          const moveActive = function (dir) {
+            const n = items.length;
+            if (!n) return;
+            activeIndex = (activeIndex + dir + n) % n;
+            Array.prototype.forEach.call(results.children, function (li, i) {
+              const on = i === activeIndex;
+              li.classList.toggle('is-active', on);
+              if (on) {
+                input.setAttribute('aria-activedescendant', li.id);
+                li.scrollIntoView({ block: 'nearest' });
+              }
+            });
+          };
+
+          input.addEventListener('input', function () {
+            const q = input.value.trim();
+            clearBtn.hidden = !input.value;
+            clearTimeout(debounceId);
+            if (q.length < 2) { items = []; closeResults(); return; }
+            debounceId = setTimeout(function () { runSearch(q); }, 250);
+          });
+
+          input.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown') {
+              if (!results.hidden) { e.preventDefault(); moveActive(1); }
+            } else if (e.key === 'ArrowUp') {
+              if (!results.hidden) { e.preventDefault(); moveActive(-1); }
+            } else if (e.key === 'Enter') {
+              if (!results.hidden && items.length) {
+                e.preventDefault(); // لا نُرسل النموذج
+                selectIndex(activeIndex >= 0 ? activeIndex : 0);
+              }
+            } else if (e.key === 'Escape') {
+              if (!results.hidden) { e.preventDefault(); closeResults(); }
+            }
+          });
+
+          // mousedown (لا click) حتى لا يُفقد تركيز الحقل قبل تنفيذ الاختيار
+          results.addEventListener('mousedown', function (e) {
+            const li = e.target.closest ? e.target.closest('.locpick__result') : null;
+            if (!li) return;
+            e.preventDefault();
+            selectIndex(Number(li.getAttribute('data-i')));
+          });
+
+          clearBtn.addEventListener('click', function () {
+            input.value = '';
+            clearBtn.hidden = true;
+            items = [];
+            closeResults();
+            input.focus();
+          });
+
+          const onDocDown = function (e) {
+            if (!searchWrap.contains(e.target)) closeResults();
+          };
+          document.addEventListener('mousedown', onDocDown);
+          listeners.push(function () { document.removeEventListener('mousedown', onDocDown); });
+          listeners.push(function () { clearTimeout(debounceId); });
         }
       } catch (searchErr) {
         // البحث غير متاح (مثلاً Places API New غير مفعّلة) — الخريطة والدبوس يكفيان
