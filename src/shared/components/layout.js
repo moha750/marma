@@ -20,6 +20,7 @@ window.layout = (function () {
     { key: 'schedule',     group: 'إدارة',  label: 'أيام وفترات العمل',    icon: 'clock',            path: '/schedule',     ownerOnly: true },
     { key: 'offers',       group: 'إدارة',  label: 'العروض',               icon: 'badge-percent',    path: '/offers',       ownerOnly: true },
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
+    { key: 'visits',       group: 'إدارة',  label: 'الزيارات',             icon: 'eye',              path: '/visits',       ownerOnly: true },
     { key: 'staff',        group: 'إدارة',  label: 'الموظفون',             icon: 'user',             path: '/staff',        ownerOnly: true },
     { key: 'account',      group: 'حساب',   label: 'حسابي',                icon: 'user-circle',      path: '/account' },
     { key: 'subscription', group: 'حساب',   label: 'الاشتراك',             icon: 'credit-card',      path: '/subscription', ownerOnly: true },
@@ -35,6 +36,7 @@ window.layout = (function () {
   ];
 
   let spaCtx = null;
+  let currentRouteKey = null; // آخر مسار نشط — لإعادة رسم بانر الاشتراك لحظيًّا
 
   // ─── بانر الاشتراك ───────────────────────────────────────
 
@@ -113,10 +115,13 @@ window.layout = (function () {
           const title    = locked ? 'جدّد اشتراكك للوصول' : item.label;
           const lockAttr = locked ? ' aria-disabled="true" tabindex="-1"' : '';
           const lockIcon = locked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
+          // شارة الإشعارات غير المقروءة الخاصّة بوجهة هذا التبويب
+          const badge    = `<span class="nav-notif-badge" data-notif-link="${item.path}" hidden></span>`;
           return `
           <a${hrefAttr} data-nav-key="${item.key}"${cls}${lockAttr} title="${window.utils.escapeHtml(title)}">
             <span class="nav-icon"><i data-lucide="${item.icon}"></i></span>
             <span class="nav-label">${window.utils.escapeHtml(item.label)}</span>
+            ${badge}
             ${lockIcon}
           </a>`;
         }).join('')}
@@ -137,7 +142,7 @@ window.layout = (function () {
             const lock = isLocked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
             return `
             <a${hrefAttr} data-bottom-key="${it.key}"${cls}${aria}>
-              <span class="nav-icon"><i data-lucide="${it.icon}"></i>${lock}</span>
+              <span class="nav-icon"><i data-lucide="${it.icon}"></i>${lock}<span class="nav-notif-badge" data-notif-link="${it.path}" hidden></span></span>
               <span>${window.utils.escapeHtml(it.label)}</span>
             </a>`;
           }).join('')}
@@ -214,12 +219,16 @@ window.layout = (function () {
          </a>`
       : '';
 
-    // استرجع حالة الطيّ المحفوظة
+    // استرجع حالة الطيّ المحفوظة، وإلا اضبطها حتميًّا حسب حجم الشاشة.
+    // (ترك السمة غائبة يجعل الحالة "افتراضية" ضمنيًّا فيختلّ زر الطيّ ويطفح نص التثبيت)
     let sidebarState = '';
     try {
       const stored = localStorage.getItem('marma:sidebar:collapsed');
-      if (stored === 'true')  sidebarState = 'collapsed';
-      if (stored === 'false') sidebarState = 'expanded';
+      if (stored === 'true')       sidebarState = 'collapsed';
+      else if (stored === 'false') sidebarState = 'expanded';
+      else if (window.matchMedia('(min-width: 1280px)').matches) sidebarState = 'expanded';
+      else if (window.matchMedia('(min-width: 768px)').matches)  sidebarState = 'collapsed';
+      // أقل من 768px: تبقى فارغة — الشريط يعمل كدرج (drawer)
     } catch (_) {}
 
     root.innerHTML = `
@@ -293,6 +302,7 @@ window.layout = (function () {
               <button type="button" class="header-icon-btn" id="palette-trigger-mobile" aria-label="بحث">
                 <i data-lucide="search"></i>
               </button>
+              <span id="notif-slot"></span>
               <span id="theme-toggle-slot"></span>
             </div>
           </header>
@@ -364,6 +374,26 @@ window.layout = (function () {
       window.themeToggle.render(themeSlot);
     }
 
+    // جرس الترويسة (تيّار الأحداث) + شارة "طابور العمل" على تبويب الحجوزات
+    // (عدد الحجوزات المعلّقة بانتظار التأكيد — تبقى حتى يُنجَز العمل، لا عند قراءة الجرس)
+    if (window.notificationBell) {
+      const headerSlot = document.getElementById('notif-slot');
+      if (headerSlot) window.notificationBell.mount(headerSlot);
+      const navEl = document.querySelector('.sidebar-nav');
+      if (navEl) window.notificationBell.bindPendingBadges(navEl, [
+        {
+          link: '/bookings',
+          event: 'bookings:change',
+          count: async () => {
+            const { count } = await window.sb
+              .from('bookings').select('id', { count: 'exact', head: true })
+              .eq('status', 'pending');
+            return count || 0;
+          }
+        }
+      ]);
+    }
+
     // PWA install prompt — أظهر الزر عند توفر beforeinstallprompt (Android/Desktop)
     // أو على iOS (مع modal تعليمات بدلاً من prompt برمجي)
     const installCta = document.getElementById('install-cta');
@@ -405,6 +435,28 @@ window.layout = (function () {
       });
     }
 
+    // ─── تحديث لحظي لحالة الاشتراك في الـ shell ──────────────
+    // عند تغيّر المنشأة/الاشتراك (موافقة الأدمن، تعليق، تمديد): نعيد جلب الحالة،
+    // نحدّث البانر فورًا. وإن انقلبت حالة القفل (فعّال↔مقفل) نعيد التحميل ليُطبَّق
+    // القفل/الفتح على كل التبويبات والراوتر بشكل متّسق.
+    if (window.realtime) {
+      const onTenantOrSub = window.utils.debounce(async () => {
+        let st = null;
+        try { st = await window.auth.loadSubscriptionStatus({ force: true }); } catch (_) { return; }
+        const wasLocked = !!(spaCtx && spaCtx.status && spaCtx.status.is_active === false);
+        const nowLocked = !!(st && st.is_active === false);
+        if (spaCtx) spaCtx.status = st;
+        const slot2 = document.getElementById('trial-banner-slot');
+        if (slot2) {
+          slot2.innerHTML = renderTrialBanner(st, currentRouteKey);
+          window.utils.renderIcons(slot2);
+        }
+        if (wasLocked !== nowLocked) window.location.reload();
+      }, 500);
+      window.realtime.on('tenants:change', onTenantOrSub);
+      window.realtime.on('subscriptions:change', onTenantOrSub);
+    }
+
     window.utils.renderIcons(root);
     return ctx;
   }
@@ -432,6 +484,7 @@ window.layout = (function () {
     if (pageTitle) document.title = `${pageTitle} - مَرمى`;
 
     // بانر الاشتراك
+    currentRouteKey = routeKey;
     const slot = document.getElementById('trial-banner-slot');
     if (slot && spaCtx) {
       slot.innerHTML = renderTrialBanner(spaCtx.status, routeKey);

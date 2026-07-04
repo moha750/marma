@@ -391,6 +391,13 @@ window.utils = {
     if (msg.includes('INVITE_EXPIRED')) return 'انتهت صلاحية هذه الدعوة';
     if (msg.includes('TENANT_NAME_REQUIRED')) return 'اسم الملعب مطلوب';
     if (msg.includes('FULL_NAME_REQUIRED')) return 'الاسم الكامل مطلوب';
+    if (msg.includes('PHONE_REQUIRED')) return 'رقم الجوال مطلوب';
+    if (msg.includes('INVALID_PHONE')) return 'رقم الجوال غير صحيح';
+
+    // أخطاء رمز التحقق (OTP)
+    if (msg.includes('Token has expired') || msg.includes('otp_expired')) return 'انتهت صلاحية الرمز — اطلب رمزاً جديداً';
+    if (msg.includes('Invalid') && msg.toLowerCase().includes('otp')) return 'الرمز غير صحيح';
+    if (msg.includes('Email link is invalid or has expired')) return 'الرمز غير صحيح أو منتهي — اطلب رمزاً جديداً';
 
     // أخطاء الاشتراك
     if (msg.includes('TENANT_INACTIVE')) return 'انتهت صلاحية اشتراكك. يرجى تجديد الاشتراك للاستمرار';
@@ -406,6 +413,7 @@ window.utils = {
     if (msg.includes('BELOW_CURRENT_USAGE')) return 'لا يمكن اختيار عدد أقلّ ممّا تستخدمه فعلاً — احذف الزائد أولاً';
     if (msg.includes('DOWNGRADE_NOT_ALLOWED_ACTIVE')) return 'لا يمكن الخفض أثناء اشتراك نشط — يسري عند التجديد بعد انتهاء الدورة';
     if (msg.includes('TENANT_NOT_FOUND')) return 'المنشأة غير موجودة';
+    if (msg.includes('ALREADY_ONBOARDED')) return 'لديك منشأة بالفعل';
     if (msg.includes('NOT_OWNER')) return 'هذه العملية متاحة لمالك الملعب فقط';
     if (msg.includes('NOT_SUPER_ADMIN')) return 'هذه العملية للمشرف العام فقط';
     if (msg.includes('UNAUTHENTICATED')) return 'يجب تسجيل الدخول أولاً';

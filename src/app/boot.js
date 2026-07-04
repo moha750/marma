@@ -24,6 +24,11 @@
   window.app = window.app || {};
 
   try {
+    // مالك جديد بلا منشأة → شاشة الإعداد أولًا (تُنشئ المنشأة)، ثم يُركَّب الـ shell
+    if (window.onboarding && window.auth && await window.auth.needsOwnerOnboarding()) {
+      await window.onboarding.show();
+    }
+
     const ctx = await window.layout.mountShell();
     window.app.ctx = ctx;
 

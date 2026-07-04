@@ -521,6 +521,12 @@
       }
 
       cleanup.push(() => { alive = false; });
+      // تحديث لحظي: موافقة/رفض الأدمن أو تغيّر حالة المنشأة يظهر فورًا
+      if (window.realtime) {
+        const debounced = window.utils.debounce(refresh, 400);
+        cleanup.push(window.realtime.on('subscriptions:change', debounced));
+        cleanup.push(window.realtime.on('tenants:change', debounced));
+      }
       await refresh();
     },
 

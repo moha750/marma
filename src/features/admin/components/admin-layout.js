@@ -14,6 +14,7 @@ window.layout = (function () {
   const NAV_ITEMS = [
     { key: 'admin-overview',      group: 'رئيسي',     label: 'نظرة عامة',     icon: 'layout-dashboard', path: '/admin/overview' },
     { key: 'admin-analytics',     group: 'رئيسي',     label: 'نموّ المنصّة',   icon: 'trending-up',      path: '/admin/analytics' },
+    { key: 'admin-visits',        group: 'رئيسي',     label: 'زيارات المنصّة', icon: 'radar',             path: '/admin/visits' },
     { key: 'admin-subscriptions', group: 'الاشتراكات', label: 'طلبات الاشتراك', icon: 'credit-card',       path: '/admin/subscriptions' },
     { key: 'admin-revenue',       group: 'الاشتراكات', label: 'الإيرادات',      icon: 'wallet',            path: '/admin/revenue' },
     { key: 'admin-tenants',       group: 'الملاعب',    label: 'الملاعب',        icon: 'goal',              path: '/admin/tenants' },
@@ -55,6 +56,7 @@ window.layout = (function () {
           <a href="${window.utils.path(item.path)}" data-nav-key="${item.key}" title="${window.utils.escapeHtml(item.label)}">
             <span class="nav-icon"><i data-lucide="${item.icon}"></i></span>
             <span class="nav-label">${window.utils.escapeHtml(item.label)}</span>
+            <span class="nav-notif-badge" data-notif-link="${item.path}" hidden></span>
           </a>`).join('')}
       </div>
     `).join('');
@@ -66,7 +68,7 @@ window.layout = (function () {
         <div class="bottom-nav-list">
           ${BOTTOM_NAV.map((it) => `
             <a href="${window.utils.path(it.path)}" data-bottom-key="${it.key}">
-              <span class="nav-icon"><i data-lucide="${it.icon}"></i></span>
+              <span class="nav-icon"><i data-lucide="${it.icon}"></i><span class="nav-notif-badge" data-notif-link="${it.path}" hidden></span></span>
               <span>${window.utils.escapeHtml(it.label)}</span>
             </a>`).join('')}
         </div>
@@ -147,6 +149,7 @@ window.layout = (function () {
               </nav>
             </div>
             <div class="app-header-end">
+              <span id="notif-slot"></span>
               <span id="theme-toggle-slot"></span>
             </div>
           </header>
@@ -202,6 +205,26 @@ window.layout = (function () {
     const themeSlot = document.getElementById('theme-toggle-slot');
     if (window.themeToggle && themeSlot) {
       window.themeToggle.render(themeSlot);
+    }
+
+    // جرس الترويسة (تيّار الأحداث) + شارة "طابور العمل" على تبويب طلبات الاشتراك
+    // (عدد الطلبات المعلّقة بانتظار المراجعة — تبقى حتى تُراجَع، لا عند قراءة الجرس)
+    if (window.notificationBell) {
+      const headerSlot = document.getElementById('notif-slot');
+      if (headerSlot) window.notificationBell.mount(headerSlot);
+      const navEl = document.querySelector('.sidebar-nav');
+      if (navEl) window.notificationBell.bindPendingBadges(navEl, [
+        {
+          link: '/admin/subscriptions',
+          event: 'subscriptions:change',
+          count: async () => {
+            const { count } = await window.sb
+              .from('subscriptions').select('id', { count: 'exact', head: true })
+              .eq('status', 'pending');
+            return count || 0;
+          }
+        }
+      ]);
     }
 
     window.utils.renderIcons(root);

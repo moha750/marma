@@ -189,7 +189,19 @@ window.auth = (function () {
     }
     const isAdmin = await checkIsSuperAdmin({ force: true });
     if (isAdmin) return withBase('/admin/overview');
-    return null;
+    // مالك جديد بلا منشأة (بريد أو OAuth) → ندخله التطبيق، وإقلاعه يعرض شاشة الإعداد
+    return withBase('/dashboard');
+  }
+
+  // هل يحتاج المستخدم لإعداد أوّل (مسجَّل، بلا profile، وليس مشرفًا)؟
+  async function needsOwnerOnboarding() {
+    const session = await getSession();
+    if (!session) return false;
+    const { data: profile } = await window.sb
+      .from('profiles').select('id').eq('id', session.user.id).maybeSingle();
+    if (profile) return false;
+    const isAdmin = await checkIsSuperAdmin();
+    return !isAdmin;
   }
 
   // إعادة توجيه المستخدمين المسجلين بعيداً عن صفحات login/signup
@@ -203,6 +215,37 @@ window.auth = (function () {
       await window.sb.auth.signOut();
       window.utils && window.utils.toast && window.utils.toast('حسابك غير مرتبط بأي ملعب', 'error');
     }
+  }
+
+  // دخول/تسجيل عبر مزوّد OAuth — يحوّل إلى المزوّد ثم يعود لنفس الصفحة
+  async function signInWithProvider(provider) {
+    const { error } = await window.sb.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error && window.utils) window.utils.toast(window.utils.formatError(error), 'error');
+  }
+  function signInWithGoogle() { return signInWithProvider('google'); }
+  function signInWithApple() { return signInWithProvider('apple'); }
+
+  // معالجة العودة من OAuth: يبدّل code بجلسة (PKCE) وينظّف الرابط. يُرجع true عند النجاح.
+  async function handleOAuthCallback() {
+    const url = new URL(window.location.href);
+    const errDesc = url.searchParams.get('error_description') || url.searchParams.get('error');
+    const code = url.searchParams.get('code');
+    if (errDesc) {
+      if (window.utils) window.utils.toast(decodeURIComponent(errDesc), 'error');
+      window.history.replaceState({}, '', url.pathname);
+      return false;
+    }
+    if (!code) return false;
+    const { error } = await window.sb.auth.exchangeCodeForSession(code);
+    window.history.replaceState({}, '', url.pathname);
+    if (error) {
+      if (window.utils) window.utils.toast(window.utils.formatError(error), 'error');
+      return false;
+    }
+    return true;
   }
 
   async function signOut(redirectTo = '/auth/login') {
@@ -226,6 +269,10 @@ window.auth = (function () {
     requireSuperAdmin,
     redirectIfAuthenticated,
     getPostLoginDestination,
+    needsOwnerOnboarding,
+    signInWithGoogle,
+    signInWithApple,
+    handleOAuthCallback,
     signOut
   };
 })();

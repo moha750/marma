@@ -52,6 +52,55 @@ window.realtime = (function () {
       table: 'fields',
       invalidates: ['fields:active', 'fields:all'],
       event: 'fields:change'
+    },
+    // ── تحديث لحظي إضافي (اشتراكات، منشأة، جدول، عروض، موظفون) ──
+    {
+      channel: 'rt-tenants',
+      table: 'tenants',
+      invalidates: [],                // حالة المنشأة/التجربة غير cached
+      event: 'tenants:change'
+    },
+    {
+      channel: 'rt-subscriptions',
+      table: 'subscriptions',
+      invalidates: [],
+      event: 'subscriptions:change'
+    },
+    {
+      channel: 'rt-working-periods',
+      table: 'working_periods',
+      invalidates: [],
+      event: 'working_periods:change'
+    },
+    {
+      channel: 'rt-staff-invitations',
+      table: 'staff_invitations',
+      invalidates: [],
+      event: 'staff_invitations:change'
+    },
+    {
+      channel: 'rt-profiles',
+      table: 'profiles',
+      invalidates: [],
+      event: 'profiles:change'
+    },
+    {
+      channel: 'rt-field-offers',
+      table: 'field_offers',
+      invalidates: [],
+      event: 'field_offers:change'
+    },
+    {
+      channel: 'rt-offer-targets',
+      table: 'offer_targets',
+      invalidates: [],
+      event: 'offer_targets:change'
+    },
+    {
+      channel: 'rt-notifications',
+      table: 'notifications',
+      invalidates: [],
+      event: 'notifications:change'
     }
   ];
 

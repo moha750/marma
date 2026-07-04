@@ -25,6 +25,7 @@ window.appRoutes = [
   { name: 'schedule',         path: '/schedule',         title: 'أيام وفترات العمل', ownerOnly: true },
   { name: 'offers',           path: '/offers',           title: 'العروض',            ownerOnly: true },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },
+  { name: 'visits',           path: '/visits',           title: 'الزيارات',          ownerOnly: true },
   { name: 'staff',            path: '/staff',            title: 'الموظفون',          ownerOnly: true },
   { name: 'subscription',     path: '/subscription',     title: 'الاشتراك',          ownerOnly: true },
   { name: 'account',          path: '/account',          title: 'حسابي' },

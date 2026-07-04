@@ -106,26 +106,29 @@ function detailRow(label: string, value: string): string {
 
 export interface SignupConfirmationParams {
   fullName: string;
-  verifyUrl: string;
+  code: string;      // رمز التحقق (OTP) — المسار الأساسي
+  verifyUrl: string; // رابط احتياطي للتفعيل المباشر
 }
 
-export function signupConfirmation({ fullName, verifyUrl }: SignupConfirmationParams) {
+export function signupConfirmation({ fullName, code, verifyUrl }: SignupConfirmationParams) {
   const greeting = fullName ? `أهلاً ${fullName}،` : "أهلاً بك،";
   const bodyHtml = `
-    <h1 style="margin:0 0 16px;font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.3;">مرحباً بك في مَرمى</h1>
+    <h1 style="margin:0 0 16px;font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${ACCENT};line-height:1.3;">مرحباً بك في مَرمى</h1>
     <p style="margin:0 0 12px;">${escapeHtml(greeting)}</p>
-    <p style="margin:0 0 16px;">شكراً لانضمامك. لإكمال إنشاء حسابك وتفعيل تجربتك المجانية، يرجى تأكيد بريدك الإلكتروني بالضغط على الزر أدناه.</p>
-    ${ctaButton("تأكيد البريد الإلكتروني", verifyUrl)}
-    <div style="margin-top:24px;padding:16px;background:${SURFACE_BODY};border-radius:8px;border:1px solid ${BORDER_SUBTLE};">
+    <p style="margin:0 0 16px;">شكراً لانضمامك. لتفعيل حسابك وبدء تجربتك المجانية، أدخل رمز التحقق التالي في صفحة التسجيل:</p>
+    <div style="margin:0 0 6px;font-size:13px;font-weight:600;color:${ACCENT_DARK};">رمز التحقق</div>
+    <div dir="ltr" style="margin:0 0 8px;padding:18px 20px;background:#E9F7EF;border:1px solid ${ACCENT};border-radius:10px;text-align:center;font-family:${FONT_STACK};font-size:34px;font-weight:700;letter-spacing:10px;color:${ACCENT_DARK};user-select:all;-webkit-user-select:all;-moz-user-select:all;cursor:pointer;">${escapeHtml(code)}</div>
+    <p style="margin:0 0 16px;font-size:12px;color:${TEXT_SECONDARY};">اضغط على الرمز لتحديده كاملاً ثم انسخه. صالح لمدة ساعة — إن لم تطلبه فتجاهل الرسالة.</p>
+    <div style="margin-top:8px;padding:16px;background:${SURFACE_BODY};border-radius:8px;border:1px solid ${BORDER_SUBTLE};">
       <div style="font-weight:600;color:${TEXT_PRIMARY};margin-bottom:6px;">تجربة مجانية لمدة 3 أيام</div>
       <div style="font-size:13px;color:${TEXT_SECONDARY};">ستحصل على ملعب واحد لتجربة كامل ميزات النظام. بعد انتهاء التجربة يمكنك الاشتراك بـ 200 ريال شهرياً.</div>
     </div>
-    <p style="margin:24px 0 0;font-size:13px;color:${TEXT_SECONDARY};">إن لم يعمل الزر، انسخ الرابط التالي والصقه في المتصفح:</p>
+    <p style="margin:24px 0 0;font-size:13px;color:${TEXT_SECONDARY};">يمكنك أيضاً تفعيل حسابك مباشرةً عبر هذا الرابط:</p>
     <p style="margin:8px 0 0;font-size:12px;color:${ACCENT_DARK};word-break:break-all;direction:ltr;text-align:left;">${escapeHtml(verifyUrl)}</p>`;
 
   return {
-    subject: "تأكيد بريدك الإلكتروني — مَرمى",
-    html: shell({ preheader: "أكّد بريدك لتفعيل حسابك في مَرمى وابدأ تجربتك المجانية", bodyHtml }),
+    subject: "رمز تفعيل حسابك — مَرمى",
+    html: shell({ preheader: "رمز التحقق لتفعيل حسابك في مَرمى وبدء تجربتك المجانية", bodyHtml }),
   };
 }
 

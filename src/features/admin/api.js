@@ -100,6 +100,23 @@ window.adminApi = (function () {
     return data;
   }
 
+  // ── تحليلات الزيارات (المنصّة كاملة / ملعب محدد / متصلون الآن) ──
+  async function adminVisitsStats(fromDate, toDate) {
+    const { data, error } = await sb().rpc('admin_visits_stats', { p_from: fromDate, p_to: toDate });
+    if (error) throw error;
+    return data;
+  }
+  async function adminTenantVisits(tenantId, fromDate, toDate) {
+    const { data, error } = await sb().rpc('admin_tenant_visits', { p_tenant_id: tenantId, p_from: fromDate, p_to: toDate });
+    if (error) throw error;
+    return data;
+  }
+  async function adminVisitsLiveNow() {
+    const { data, error } = await sb().rpc('visits_live_now', { p_tenant_id: null });
+    if (error) throw error;
+    return Number(data) || 0;
+  }
+
   // ── إدارة المشرفين ──
   async function adminListAdmins() {
     const { data, error } = await sb().rpc('admin_list_admins');
@@ -158,6 +175,7 @@ window.adminApi = (function () {
     adminTenantDetail, adminSetTenantActive, adminExtendTrial, adminGrantSubscription, adminSetLimits,
     adminEndTrial, adminEndSubscription, adminGrantLifetime, adminRevokeLifetime,
     adminListSubscriptions, adminRevenueStats, adminGrowthStats,
+    adminVisitsStats, adminTenantVisits, adminVisitsLiveNow,
     adminListAdmins, adminAddAdmin, adminRemoveAdmin,
     adminBroadcastAudience, adminListBroadcasts, adminBroadcastOwners, adminBroadcast,
     adminListAuditLog

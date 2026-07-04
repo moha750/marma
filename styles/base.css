@@ -198,7 +198,8 @@ a:hover { color: var(--color-primary-dark); }
   padding: 10px 12px;
   font-size: 0.85rem;
   line-height: 1.6;
-  margin-bottom: var(--space-lg);
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-md);
 }
 
 .auth-confirm__msg {
@@ -223,6 +224,22 @@ a:hover { color: var(--color-primary-dark); }
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+}
+
+/* حقل رمز التحقق (OTP) */
+.otp-input {
+  text-align: center;
+  letter-spacing: 0.5em;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding-inline: 0.5em;
+  direction: ltr;
+}
+.otp-input::placeholder {
+  letter-spacing: 0.4em;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
 }
 
 /* ملاحظة: قواعد صفحة الهبوط نُقلت إلى styles/components/landing.css */

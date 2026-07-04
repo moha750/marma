@@ -105,24 +105,36 @@
         window.utils.renderIcons(body);
       }
 
-      body.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
-      try {
-        all = await window.api.adminListTenants();
-        if (!alive) return;
-        apply();
-        searchEl.addEventListener('input', () => { q = searchEl.value; apply(); });
-        filtersEl.addEventListener('click', (e) => {
-          const btn = e.target.closest('[data-f]');
-          if (!btn) return;
-          flt = btn.dataset.f;
-          filtersEl.querySelectorAll('.cal-view').forEach((b) => b.classList.toggle('is-active', b === btn));
+      async function load() {
+        body.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
+        try {
+          all = await window.api.adminListTenants();
+          if (!alive) return;
           apply();
-        });
-      } catch (err) {
-        if (!alive) return;
-        body.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-icon"><i data-lucide="triangle-alert"></i></div><h3>تعذّر تحميل البيانات</h3><p>${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
-        window.utils.renderIcons(body);
+        } catch (err) {
+          if (!alive) return;
+          body.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-icon"><i data-lucide="triangle-alert"></i></div><h3>تعذّر تحميل البيانات</h3><p>${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
+          window.utils.renderIcons(body);
+        }
       }
+
+      searchEl.addEventListener('input', () => { q = searchEl.value; apply(); });
+      filtersEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-f]');
+        if (!btn) return;
+        flt = btn.dataset.f;
+        filtersEl.querySelectorAll('.cal-view').forEach((b) => b.classList.toggle('is-active', b === btn));
+        apply();
+      });
+
+      // تحديث لحظي: منشأة جديدة أو تغيّر حالتها/اشتراكها يظهر فورًا
+      if (window.realtime) {
+        const debounced = window.utils.debounce(load, 500);
+        page._cleanup.push(window.realtime.on('tenants:change', debounced));
+        page._cleanup.push(window.realtime.on('subscriptions:change', debounced));
+      }
+
+      await load();
     },
 
     unmount() {

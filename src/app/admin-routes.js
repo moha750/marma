@@ -2,6 +2,7 @@
 window.appRoutes = [
   { name: 'admin-overview',      path: '/admin/overview',      title: 'نظرة عامة' },
   { name: 'admin-analytics',     path: '/admin/analytics',     title: 'نموّ المنصّة' },
+  { name: 'admin-visits',        path: '/admin/visits',        title: 'زيارات المنصّة' },
   { name: 'admin-subscriptions', path: '/admin/subscriptions', title: 'طلبات الاشتراك' },
   { name: 'admin-revenue',       path: '/admin/revenue',       title: 'الإيرادات' },
   { name: 'admin-tenants',       path: '/admin/tenants',       title: 'الملاعب' },

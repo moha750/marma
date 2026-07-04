@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
     if (actionType === "recovery") {
       ({ subject, html } = passwordReset({ fullName, resetUrl: buildVerifyUrl("recovery") }));
     } else {
-      ({ subject, html } = signupConfirmation({ fullName, verifyUrl: buildVerifyUrl("signup") }));
+      // رمز التحقق (OTP) هو المسار الأساسي؛ الرابط يبقى كخيار احتياطي
+      ({ subject, html } = signupConfirmation({ fullName, code: email_data.token, verifyUrl: buildVerifyUrl("signup") }));
     }
 
     await sendEmail({ to: user.email, subject, html });

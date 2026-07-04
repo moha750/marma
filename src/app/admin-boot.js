@@ -10,6 +10,9 @@
     const ctx = await window.layout.mountShell();
     window.app.ctx = ctx;
 
+    // بدء القنوات الحيّة (طلبات الاشتراك والمنشآت تتحدّث فورًا للمشرف)
+    if (window.realtime) window.realtime.start();
+
     const routes = window.appRoutes || [];
     routes.forEach((r) => window.router.register(r.name, r));
 

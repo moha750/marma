@@ -1,6 +1,9 @@
 # Local config (يحتوي على credentials)
 config.js
 
+# Apple Sign in — المفتاح الخاص (لا يُرفع أبداً)
+*.p8
+
 # IDE
 .vscode/
 .idea/
@@ -35,3 +38,6 @@ node_modules/
 *.tmp
 *.bak
 supabase/.temp/
+
+# Wrangler local dev cache (npx wrangler pages dev)
+.wrangler/

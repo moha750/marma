@@ -398,6 +398,12 @@
       }
 
       container.querySelector('#add-offer').addEventListener('click', () => openForm(null));
+      // تحديث لحظي للعروض واستهدافاتها
+      if (window.realtime) {
+        const debounced = window.utils.debounce(load, 400);
+        page._cleanup.push(window.realtime.on('field_offers:change', debounced));
+        page._cleanup.push(window.realtime.on('offer_targets:change', debounced));
+      }
       load();
     },
 

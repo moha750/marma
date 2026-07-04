@@ -12,6 +12,7 @@ const APP_ROUTES = [
   'schedule',
   'offers',
   'reports',
+  'visits',
   'staff',
   'subscription',
   'account',
@@ -49,7 +50,8 @@ export default defineConfig(({ mode }) => {
     appType: 'mpa',
     base,
     server: {
-      port: 5173,
+      port: 5174,
+      strictPort: true,
       open: '/'
     },
     build: {

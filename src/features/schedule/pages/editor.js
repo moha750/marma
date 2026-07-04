@@ -555,6 +555,7 @@
       if (window.realtime) {
         const debounced = window.utils.debounce(init, 400);
         cleanup.push(window.realtime.on('fields:change', debounced));
+        cleanup.push(window.realtime.on('working_periods:change', debounced));
       }
 
       init();

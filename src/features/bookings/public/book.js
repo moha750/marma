@@ -1094,6 +1094,9 @@
       </button>
     `;
 
+    // تتبع القُمع: الزائر وصل لمراجعة الحجز (بدء حجز)
+    if (window.track) window.track.event('booking_start', { tenant_id: tenantId, field_id: state.selectedField.id });
+
     const ctrl = window.utils.openModal({
       title: 'مراجعة الحجز',
       body, footer
@@ -1117,6 +1120,8 @@
           p_notes: notes
         });
         if (error) throw error;
+        // تتبع القُمع: حجز مُنشأ فعلاً (تحويل مكتمل)
+        if (window.track) window.track.event('booking_created', { tenant_id: tenantId, field_id: state.selectedField.id, booking_id: data.booking_id });
         settled = true;
         ctrl.close();
         renderSuccessView({

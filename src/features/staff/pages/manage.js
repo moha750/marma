@@ -355,6 +355,13 @@
         inviteBtn.removeEventListener('click', openInviteModal);
       });
 
+      // تحديث لحظي: قبول دعوة أو تغيّر قائمة الموظفين يظهر فورًا
+      if (window.realtime) {
+        const debounced = window.utils.debounce(refresh, 400);
+        cleanup.push(window.realtime.on('profiles:change', debounced));
+        cleanup.push(window.realtime.on('staff_invitations:change', debounced));
+      }
+
       refresh();
     },
 

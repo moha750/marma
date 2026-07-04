@@ -67,21 +67,33 @@
       container.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
       let alive = true;
       page._cleanup = [() => { alive = false; }];
-      try {
-        const [tenants, pending] = await Promise.all([
-          window.api.adminListTenants(),
-          window.api.adminListPendingSubscriptions()
-        ]);
-        if (!alive) return;
-        container.innerHTML = render(tenants || [], pending || []);
-        window.utils.renderIcons(container);
-      } catch (err) {
-        if (!alive) return;
-        container.innerHTML = `
-          <div class="page-header"><div><h2>نظرة عامة</h2></div></div>
-          <div class="card"><div class="empty-state"><div class="empty-icon"><i data-lucide="triangle-alert"></i></div><h3>تعذّر تحميل البيانات</h3><p>${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
-        window.utils.renderIcons(container);
+
+      async function load() {
+        try {
+          const [tenants, pending] = await Promise.all([
+            window.api.adminListTenants(),
+            window.api.adminListPendingSubscriptions()
+          ]);
+          if (!alive) return;
+          container.innerHTML = render(tenants || [], pending || []);
+          window.utils.renderIcons(container);
+        } catch (err) {
+          if (!alive) return;
+          container.innerHTML = `
+            <div class="page-header"><div><h2>نظرة عامة</h2></div></div>
+            <div class="card"><div class="empty-state"><div class="empty-icon"><i data-lucide="triangle-alert"></i></div><h3>تعذّر تحميل البيانات</h3><p>${window.utils.escapeHtml(window.utils.formatError(err))}</p></div></div>`;
+          window.utils.renderIcons(container);
+        }
       }
+
+      // تحديث لحظي: منشأة جديدة أو طلب اشتراك يحدّث النظرة العامة فورًا
+      if (window.realtime) {
+        const debounced = window.utils.debounce(load, 500);
+        page._cleanup.push(window.realtime.on('subscriptions:change', debounced));
+        page._cleanup.push(window.realtime.on('tenants:change', debounced));
+      }
+
+      await load();
     },
     unmount() {
       if (page._cleanup) page._cleanup.forEach((fn) => { try { fn(); } catch (_) {} });

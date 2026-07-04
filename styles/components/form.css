@@ -144,6 +144,51 @@ select.form-control {
   color: var(--text-tertiary);
 }
 
+/* زرّ دخول عبر مزوّد (Google/Apple) + فاصل "أو" */
+.btn--oauth {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.btn--oauth:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.btn--oauth svg { width: 18px; height: 18px; }
+.btn--apple {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.btn--apple:hover { background: #1a1a1a; color: #fff; }
+.btn--apple svg { width: 18px; height: 18px; }
+[data-theme="dark"] .btn--apple {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+[data-theme="dark"] .btn--apple:hover { background: #f0f0f0; color: #000; }
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
 /* حقل كلمة مرور مع زرّ عين لكشف/إخفاء القيمة */
 .password-field { position: relative; }
 .password-field .form-control { padding-inline-end: var(--space-10); }

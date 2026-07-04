@@ -342,6 +342,14 @@
         container.innerHTML = `<div class="card"><div class="empty-state"><h3>لا يوجد ملعب</h3></div></div>`;
         return;
       }
+
+      // تحديث لحظي لتفاصيل المنشأة (حالة، اشتراك)
+      if (window.realtime) {
+        const debounced = window.utils.debounce(load, 500);
+        page._cleanup.push(window.realtime.on('tenants:change', debounced));
+        page._cleanup.push(window.realtime.on('subscriptions:change', debounced));
+      }
+
       load();
     },
 

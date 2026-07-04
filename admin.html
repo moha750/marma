@@ -33,8 +33,18 @@
   <!-- API aggregator (window.api) -->
   <script src="/src/core/api.js"></script>
 
+  <!-- Charts (vanilla SVG, no deps) — تحتاجها صفحة زيارات المنصّة -->
+  <script src="/src/shared/charts/sparkline.js"></script>
+  <script src="/src/shared/charts/bar.js"></script>
+  <script src="/src/shared/charts/donut.js"></script>
+  <script src="/src/shared/charts/heatmap.js"></script>
+
+  <!-- Realtime (تحديث لحظي لطلبات الاشتراك والمنشآت) -->
+  <script src="/src/core/realtime.js"></script>
+
   <!-- Shared components -->
   <script src="/src/shared/components/theme-toggle.js"></script>
+  <script src="/src/shared/components/notifications.js"></script>
   <script src="/src/shared/components/table-cards.js"></script>
   <script src="/src/shared/components/receipt-viewer.js"></script>
   <script src="/src/features/admin/audit-format.js"></script>
@@ -49,6 +59,7 @@
   <!-- Page modules (يسجّل كل صفحة نفسها في window.pages) -->
   <script src="/src/features/admin/pages/overview.js"></script>
   <script src="/src/features/admin/pages/analytics.js"></script>
+  <script src="/src/features/admin/pages/visits.js"></script>
   <script src="/src/features/admin/pages/revenue.js"></script>
   <script src="/src/features/admin/pages/subscriptions.js"></script>
   <script src="/src/features/admin/pages/tenants.js"></script>

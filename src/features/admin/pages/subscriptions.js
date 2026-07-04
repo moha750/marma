@@ -146,6 +146,13 @@
       }
       page._refresh = refresh;
 
+      // تحديث لحظي: طلبات الاشتراك الواردة تظهر فورًا للمشرف
+      if (window.realtime) {
+        const debounced = window.utils.debounce(refresh, 400);
+        page._cleanup.push(window.realtime.on('subscriptions:change', debounced));
+        page._cleanup.push(window.realtime.on('tenants:change', debounced));
+      }
+
       refresh();
     },
 
