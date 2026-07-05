@@ -1370,3 +1370,18 @@
     max-width: none;
   }
 }
+
+/* ─── شعار الملعب المصغر بجانب اسمه في الشريط الجانبي ─── */
+.tenant-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tenant-name-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}

@@ -809,3 +809,55 @@ select.form-control {
 }
 .amenity-add .form-control { flex: 1; }
 
+
+/* ─── شعار الملعب (إعدادات الهوية): دائرة + أزرار تغيير/حذف ─── */
+.tenant-logo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.tenant-logo-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.tenant-logo-slot[data-busy] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.tenant-logo-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tenant-logo-preview > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tenant-logo-initial {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.tenant-logo-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}

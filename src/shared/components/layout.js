@@ -238,7 +238,10 @@ window.layout = (function () {
             <span class="sidebar-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></span>
             <div class="sidebar-brand-text">
               <img src="${window.utils.path('/assets/logo-wordmark.svg')}" alt="مَرمى" class="brand-title">
-              <span class="tenant-name">${window.utils.escapeHtml(tenant ? tenant.name : '')}</span>
+              <span class="tenant-name">
+                ${tenant && tenant.logo_url ? `<img class="tenant-name-logo" src="${window.utils.escapeHtml(tenant.logo_url)}" alt="">` : ''}
+                <span>${window.utils.escapeHtml(tenant ? tenant.name : '')}</span>
+              </span>
             </div>
           </div>
 

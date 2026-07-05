@@ -43,7 +43,14 @@
                   const s = statusInfo(t);
                   return `
                     <tr>
-                      <td data-label="الاسم" class="fw-semibold">${window.utils.escapeHtml(t.name)}</td>
+                      <td data-label="الاسم" class="fw-semibold">
+                        <span class="tenant-cell">
+                          ${t.logo_url
+                            ? `<img class="tenant-logo-chip" src="${window.utils.escapeHtml(t.logo_url)}" alt="" loading="lazy">`
+                            : `<span class="tenant-logo-chip tenant-logo-chip--initial">${window.utils.escapeHtml((t.name || '؟').trim().charAt(0))}</span>`}
+                          <span>${window.utils.escapeHtml(t.name)}</span>
+                        </span>
+                      </td>
                       <td data-label="المدن">${window.utils.escapeHtml(t.cities || '—')}</td>
                       <td data-label="الحالة" class="card-tag"><span class="status-badge status-badge--${s.cls}">${s.label}</span></td>
                       <td data-label="تاريخ الإنشاء">${window.utils.formatDate(t.created_at)}</td>

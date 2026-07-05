@@ -4,9 +4,15 @@
 //   isSupported()    → bool — يدعم المتصفح Push + Notifications API؟
 //   permission()     → 'default' | 'granted' | 'denied'
 //   isSubscribed()   → Promise<bool> — هل الجهاز مشترك حالياً؟
-//   subscribe()      → Promise<{ ok, error?, reason? }>
-//   unsubscribe()    → Promise<{ ok, error? }>
-//   ensureSync()     → يضمن أن الاشتراك المحلي مسجَّل في DB (يستدعى بعد login)
+//   subscribe()      → Promise<{ ok, error?, reason? }> — بنية المستخدم (يمسح علامة الإيقاف)
+//   unsubscribe()    → Promise<{ ok, error? }> — إيقاف بنية المستخدم (يثبّت علامة الإيقاف)
+//   teardown()       → تنظيف عند تسجيل الخروج: يلغي اشتراك الجهاز وصف DB
+//                      دون المساس بتفضيل المستخدم — حتى لا يستقبل الجهاز
+//                      إشعارات حساب خرج منه صاحبه.
+//   ensureSync()     → بعد الدخول: يعيد تسجيل الجهاز للحساب الحالي (عبر RPC
+//                      claim_push_subscription الذي ينقل الملكية عند تبديل
+//                      الحسابات)، ويعيد إنشاء الاشتراك بصمت إن كان الإذن ممنوحًا
+//                      (يحدث بعد teardown الخروج) — ما لم يوقفه المستخدم بنفسه.
 //
 // أحداث على window:
 //   push:subscribed
@@ -59,38 +65,26 @@
     return !!sub;
   }
 
+  // علامة إيقاف المستخدم اليدوي — تمنع ensureSync من إعادة التفعيل رغمًا عنه
+  const DISABLED_KEY = 'marma:push:disabled';
+  function userDisabled() {
+    try { return localStorage.getItem(DISABLED_KEY) === '1'; } catch (_) { return false; }
+  }
+  function setUserDisabled(v) {
+    try { v ? localStorage.setItem(DISABLED_KEY, '1') : localStorage.removeItem(DISABLED_KEY); } catch (_) {}
+  }
+
   async function saveSubscriptionToDB(sub) {
     if (!window.sb) throw new Error('Supabase client unavailable');
-    const { data: { user } } = await window.sb.auth.getUser();
-    if (!user) throw new Error('غير مسجّل دخول');
-
-    // نحتاج tenant_id من profile
-    const ctx = window.layout && window.layout.getContext ? window.layout.getContext() : null;
-    let tenantId = ctx && ctx.profile ? ctx.profile.tenant_id : null;
-    if (!tenantId) {
-      const { data: profile } = await window.sb
-        .from('profiles')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-      tenantId = profile && profile.tenant_id;
-    }
-    if (!tenantId) throw new Error('لا يوجد ملعب مرتبط بالحساب');
-
+    // RPC ينقل ملكية الـendpoint للمستخدم الحالي (يصلح تبديل الحسابات على نفس
+    // الجهاز — upsert المباشر كان يفشل بصمت على صف مستخدم سابق بسبب RLS)
     const json = sub.toJSON();
-    const row = {
-      user_id: user.id,
-      tenant_id: tenantId,
-      endpoint: sub.endpoint,
-      p256dh_key: json.keys.p256dh,
-      auth_key: json.keys.auth,
-      user_agent: navigator.userAgent || null
-    };
-
-    // upsert على endpoint (للتعامل مع إعادة الاشتراك)
-    const { error } = await window.sb
-      .from('push_subscriptions')
-      .upsert(row, { onConflict: 'endpoint' });
+    const { error } = await window.sb.rpc('claim_push_subscription', {
+      p_endpoint: sub.endpoint,
+      p_p256dh: json.keys.p256dh,
+      p_auth: json.keys.auth,
+      p_user_agent: navigator.userAgent || null
+    });
     if (error) throw error;
   }
 
@@ -123,6 +117,7 @@
         });
       }
       await saveSubscriptionToDB(sub);
+      setUserDisabled(false); // تفعيل صريح → ألغِ أي إيقاف سابق
       window.dispatchEvent(new CustomEvent('push:subscribed'));
       return { ok: true };
     } catch (err) {
@@ -131,7 +126,8 @@
     }
   }
 
-  async function unsubscribe() {
+  // إلغاء الاشتراك الفعلي (جهاز + DB) — مشترك بين إيقاف المستخدم وتنظيف الخروج
+  async function removeSubscription() {
     if (!isSupported()) return { ok: true };
     const reg = await getRegistration();
     if (!reg) return { ok: true };
@@ -148,17 +144,43 @@
     }
   }
 
-  // يُستدعى بعد login: لو المتصفح يحوي اشتراكاً نشطاً لكنه غير موجود في DB
-  // (مثلاً غيّر المستخدم أو امتسحت DB)، أعد حفظه.
+  // إيقاف بنيّة المستخدم (زر الإيقاف في الإعدادات) — يُثبّت التفضيل
+  async function unsubscribe() {
+    const res = await removeSubscription();
+    if (res.ok) setUserDisabled(true);
+    return res;
+  }
+
+  // تنظيف الخروج: الجهاز يجب ألا يستقبل إشعارات حساب خرج صاحبه منه.
+  // لا يمسّ تفضيل المستخدم — ensureSync يعيد التفعيل بصمت بعد الدخول التالي.
+  // يُستدعى والجلسة ما زالت حيّة (قبل sb.auth.signOut) ليتمكن من حذف صف DB.
+  async function teardown() {
+    try { return await removeSubscription(); } catch (_) { return { ok: false }; }
+  }
+
+  // يُستدعى بعد الدخول (إقلاع لوحة المالك):
+  //  - اشتراك قائم → أعد تسجيله للحساب الحالي (نقل ملكية عند تبديل الحسابات)
+  //  - لا اشتراك والإذن ممنوح → أنشئه بصمت (استعادة ما أزاله teardown الخروج)
+  //  - المستخدم أوقفه يدويًا → لا تفعل شيئًا
   async function ensureSync() {
     if (!isSupported()) return;
     if (permission() !== 'granted') return;
-    const reg = await getRegistration();
-    if (!reg) return;
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) return;
-    try { await saveSubscriptionToDB(sub); } catch (_) {}
+    if (userDisabled()) return;
+    if (!VAPID_PUBLIC_KEY) return;
+    try {
+      const reg = await getRegistration();
+      if (!reg) return;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        // الإذن ممنوح مسبقًا → لا نافذة إذن تظهر للمستخدم
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+      }
+      await saveSubscriptionToDB(sub);
+    } catch (_) { /* صامت — الإشعارات كمالية ولا تعطّل الإقلاع */ }
   }
 
-  window.push = { isSupported, permission, isSubscribed, subscribe, unsubscribe, ensureSync };
+  window.push = { isSupported, permission, isSubscribed, subscribe, unsubscribe, teardown, ensureSync };
 })();

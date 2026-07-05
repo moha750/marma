@@ -43,7 +43,7 @@ export async function onRequest(context) {
     const image = optimizeImage(pickImage(tenant) || GENERIC_IMAGE);
     const canonical = `${url.origin}/book?t=${encodeURIComponent(tenantId)}`;
 
-    const transformed = new HTMLRewriter()
+    let rewriter = new HTMLRewriter()
       .on('title',                            new TextSetter(title))
       .on('meta[name="description"]',         new AttrSetter('content', desc))
       .on('meta[property="og:title"]',        new AttrSetter('content', title))
@@ -53,8 +53,14 @@ export async function onRequest(context) {
       .on('meta[property="og:url"]',          new AttrSetter('content', canonical))
       .on('meta[name="twitter:title"]',       new AttrSetter('content', title))
       .on('meta[name="twitter:description"]', new AttrSetter('content', desc))
-      .on('meta[name="twitter:image"]',       new AttrSetter('content', image))
-      .transform(page);
+      .on('meta[name="twitter:image"]',       new AttrSetter('content', image));
+
+    // أيقونة التبويب = شعار المالك (مصغّرة 64px) — هوية النشاط تمتد للمتصفح نفسه
+    if (tenant.logo_url) {
+      rewriter = rewriter.on('link[rel="icon"]', new IconSetter(faviconUrl(tenant.logo_url)));
+    }
+
+    const transformed = rewriter.transform(page);
 
     const html = await transformed.text();
     return new Response(html, {
@@ -102,6 +108,16 @@ function optimizeImage(rawUrl) {
   return `${rendered}${sep}width=1200&height=630&resize=cover&quality=75`;
 }
 
+// نسخة مصغّرة من الشعار لأيقونة التبويب (64×64) عبر تحويل صور Supabase.
+// غير روابط تخزين Supabase تمرّ كما هي.
+function faviconUrl(rawUrl) {
+  const MARKER = '/storage/v1/object/public/';
+  if (!rawUrl || rawUrl.indexOf(MARKER) < 0) return rawUrl;
+  const rendered = rawUrl.replace(MARKER, '/storage/v1/render/image/public/');
+  const sep = rendered.indexOf('?') < 0 ? '?' : '&';
+  return `${rendered}${sep}width=64&height=64&resize=cover&quality=80`;
+}
+
 // أولوية الصورة: غلاف الملعب → أول صورة لأول أرضية → الصورة العامة
 function pickImage(tenant) {
   if (tenant.cover_image_url) return tenant.cover_image_url;
@@ -126,4 +142,9 @@ class AttrSetter {
 class TextSetter {
   constructor(value) { this.value = value; }
   element(el) { el.setInnerContent(this.value); }
+}
+// أيقونة التبويب: بدّل href وأزل type (الأصل svg والشعار نقطي — المتصفح يستنتج النوع)
+class IconSetter {
+  constructor(href) { this.href = href; }
+  element(el) { el.setAttribute('href', this.href); el.removeAttribute('type'); }
 }

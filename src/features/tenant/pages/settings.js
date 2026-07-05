@@ -205,6 +205,16 @@
         <form id="branding-form" autocomplete="off">
           <div class="card-body">
             <div class="form-group">
+              <label class="form-label">شعار الملعب</label>
+              <div class="tenant-logo-row">
+                <div class="tenant-logo-slot" id="logo-slot"></div>
+                <span class="form-help" style="margin:0">
+                  شعار مربّع يظهر بجانب اسم ملعبك في صفحة الحجز وأيقونة تبويب المتصفح.
+                  JPG/PNG/WebP، حد 5 ميجابايت.
+                </span>
+              </div>
+            </div>
+            <div class="form-group">
               <label class="form-label">صورة الغلاف</label>
               <div class="tenant-cover-slot" id="cover-slot" data-state="${tenant.cover_image_url ? 'filled' : 'empty'}">
                 ${tenant.cover_image_url ? `
@@ -343,7 +353,9 @@
           try {
             await window.api.updateTenant({ name: fd.get('name') });
             window.utils.toast('تم حفظ الإعدادات', 'success');
-            const el = document.querySelector('.sidebar-brand .tenant-name');
+            // الاسم داخل span فرعي (بجانب الشعار المصغر) — لا تمسح الشعار
+            const el = document.querySelector('.sidebar-brand .tenant-name span:last-child')
+              || document.querySelector('.sidebar-brand .tenant-name');
             if (el) el.textContent = fd.get('name');
             ctx.tenant.name = fd.get('name');
           } catch (err) {
@@ -397,9 +409,37 @@
     window.utils.renderIcons(slot);
   }
 
+  // خانة الشعار: دائرة بالشعار أو الحرف الأول، مع أزرار تغيير/حذف للمالك
+  function renderLogoSlot(slot, logoUrl, tenantName, isOwner) {
+    const initial = (tenantName || '؟').trim().charAt(0).toUpperCase();
+    slot.innerHTML = `
+      <div class="tenant-logo-preview">
+        ${logoUrl
+          ? `<img src="${window.utils.escapeHtml(logoUrl)}" alt="شعار الملعب">`
+          : `<span class="tenant-logo-initial">${window.utils.escapeHtml(initial)}</span>`}
+      </div>
+      ${isOwner ? `
+        <div class="tenant-logo-actions">
+          <label class="btn btn--secondary btn--sm">
+            <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-role="logo-replace">
+            <i data-lucide="image"></i><span>${logoUrl ? 'تغيير' : 'إضافة شعار'}</span>
+          </label>
+          ${logoUrl ? `
+            <button type="button" class="btn btn--danger-quiet btn--sm" data-role="logo-remove">
+              <i data-lucide="trash-2"></i><span>حذف</span>
+            </button>
+          ` : ''}
+        </div>
+      ` : ''}
+    `;
+    window.utils.renderIcons(slot);
+  }
+
   function mountBrandingCard(container, ctx, isOwner) {
     const brandingForm = container.querySelector('#branding-form');
     const slot = container.querySelector('#cover-slot');
+    const logoSlot = container.querySelector('#logo-slot');
+    if (logoSlot) renderLogoSlot(logoSlot, ctx.tenant.logo_url, ctx.tenant.name, isOwner);
     const textarea = brandingForm ? brandingForm.querySelector('textarea[name="description"]') : null;
     const counter = container.querySelector('#desc-counter');
 
@@ -416,11 +456,13 @@
       if (busy) return;
       busy = true;
       slot.dataset.busy = '1';
+      if (logoSlot) logoSlot.dataset.busy = '1';
       try { await fn(); }
       catch (err) { window.utils.toast(window.utils.formatError(err), 'error'); }
       finally {
         busy = false;
         delete slot.dataset.busy;
+        if (logoSlot) delete logoSlot.dataset.busy;
       }
     }
 
@@ -461,6 +503,46 @@
         window.utils.toast('تم حذف الغلاف', 'success');
       });
     });
+
+    // ─── الشعار: قصّ مربع 1:1 ثم رفع، وحذف بتأكيد ───
+    if (logoSlot) {
+      logoSlot.addEventListener('change', (e) => {
+        const input = e.target.closest('input[data-role="logo-replace"]');
+        if (!input) return;
+        const file = input.files && input.files[0];
+        input.value = '';
+        if (!file) return;
+        withBusy(async () => {
+          const cropped = await window.cropImage(file, {
+            aspect: 1, outWidth: 512, outHeight: 512,
+            title: 'تعديل الشعار',
+          });
+          if (!cropped) return; // ألغى المستخدم القصّ
+          const newUrl = await window.api.uploadTenantLogo(cropped);
+          ctx.tenant.logo_url = newUrl;
+          renderLogoSlot(logoSlot, newUrl, ctx.tenant.name, isOwner);
+          window.utils.toast('تم حفظ الشعار', 'success');
+        });
+      });
+
+      logoSlot.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('button[data-role="logo-remove"]');
+        if (!removeBtn) return;
+        withBusy(async () => {
+          const ok = await window.utils.confirm({
+            title: 'حذف الشعار',
+            message: 'هل تريد حذف شعار الملعب؟',
+            confirmText: 'حذف',
+            danger: true
+          });
+          if (!ok) return;
+          await window.api.removeTenantLogo();
+          ctx.tenant.logo_url = null;
+          renderLogoSlot(logoSlot, null, ctx.tenant.name, isOwner);
+          window.utils.toast('تم حذف الشعار', 'success');
+        });
+      });
+    }
 
     const saveBtn = container.querySelector('#branding-save');
     brandingForm.addEventListener('submit', async (e) => {

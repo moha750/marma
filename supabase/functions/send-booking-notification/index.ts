@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
         customer_input_name,
         customers ( full_name, phone ),
         fields ( name ),
-        tenants ( name )
+        tenants ( name, logo_url )
       `)
       .eq("id", booking_id)
       .single();
@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
       endTime: booking.end_time,
       totalPrice: Number(booking.total_price) || 0,
       dashboardUrl,
+      logoUrl: tenant?.logo_url || null,
     });
 
     await sendEmail({ to: ownerUser.user.email, subject, html });

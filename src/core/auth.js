@@ -20,6 +20,20 @@ window.auth = (function () {
     return err.name === 'TypeError' || /failed to fetch|networkerror|network request failed|load failed/.test(m);
   }
 
+  // هل الخطأ يثبت أن الجلسة/الحساب باطلان فعلًا؟ فقط عندها يجوز إتلاف الجلسة.
+  // كل ما عداه (5xx أثناء نشر تحديث، إعادة تحميل مخطط PostgREST بعد migration،
+  // انقطاع لحظي من الحافة) عابرٌ مهما كان شكله — كان يُعامَل خطأً كخطأ مصادقة
+  // فيُسجّل خروج المالك عند كل رفعة تحديث.
+  function isAuthDeadError(err) {
+    if (!err) return false;
+    if (err.status === 401) return true;                      // رمز وصول/تحديث باطل
+    const code = err.code || '';
+    if (code === 'PGRST301' || code === 'PGRST302') return true; // JWT مرفوض من PostgREST
+    if (code === 'PGRST116') return true;                     // لا صف profile → حساب غير سليم
+    const m = (err.message || '').toLowerCase();
+    return /jwt|refresh token|invalid claim|token is expired/.test(m);
+  }
+
   // يضمن جلسة صالحة: يقرأ المخزّنة ويحدّثها استباقيًا إن انتهت/قاربت الانتهاء.
   // هذا يمنع «الخروج بعد خمول»: عند فتح التطبيق برمز وصول منتهٍ نحدّثه بدل أن
   // يفشل أول طلب فيُسجّل الخروج. يُرجع null فقط لو لا جلسة أو رمز التحديث باطل.
@@ -64,7 +78,7 @@ window.auth = (function () {
     }
     const { data, error } = await window.sb
       .from('profiles')
-      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url)')
+      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url)')
       .eq('id', user.id)
       .single();
     if (error) {
@@ -111,14 +125,14 @@ window.auth = (function () {
       const profile = await loadProfile();
       return { user: session.user, profile, tenant: profile.tenants };
     } catch (err) {
-      // خطأ عابر (شبكة): لا تُتلف الجلسة — وجّه للدخول مع الإبقاء عليها ليعود
-      // المستخدم تلقائيًّا عند توفّر الشبكة (redirectIfAuthenticated يُعيده).
-      if (isTransientError(err)) {
-        window.location.replace(withBase(redirectTo));
-        throw err;
+      // لا نُتلف الجلسة إلا عند دليل قاطع على بطلانها (401/JWT/لا profile).
+      // أي فشل آخر — شبكة، 5xx لحظة نشر تحديث، إعادة تحميل مخطط PostgREST بعد
+      // migration — عابر: وجّه للدخول مع إبقاء الجلسة، وredirectIfAuthenticated
+      // في صفحة الدخول يعيد المستخدم تلقائيًّا فور تعافي الخادم.
+      if (isAuthDeadError(err)) {
+        try { if (window.push && window.push.teardown) await window.push.teardown(); } catch (_) {}
+        await window.sb.auth.signOut();
       }
-      // خطأ مصادقة حقيقي أو حساب غير سليم: نظّف وسجّل الخروج
-      await window.sb.auth.signOut();
       window.location.replace(withBase(redirectTo));
       throw err;
     }
@@ -249,6 +263,10 @@ window.auth = (function () {
   }
 
   async function signOut(redirectTo = '/auth/login') {
+    // ألغِ اشتراك push للجهاز قبل إنهاء الجلسة (حذف صف DB يتطلب جلسة حيّة) —
+    // وإلا بقي الجهاز يستقبل إشعارات الحساب بعد الخروج. fail-silent: أي فشل
+    // هنا لا يعطّل الخروج أبدًا.
+    try { if (window.push && window.push.teardown) await window.push.teardown(); } catch (_) {}
     if (window.realtime) await window.realtime.stop();
     await window.sb.auth.signOut();
     currentProfile = null;

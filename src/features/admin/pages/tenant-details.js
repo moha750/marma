@@ -80,7 +80,11 @@
       </a>
       <div class="page-header">
         <div>
-          <h2>${window.utils.escapeHtml(t.name)} <span class="status-badge status-badge--${s.cls}" style="vertical-align:middle">${s.label}</span></h2>
+          <h2 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${t.logo_url ? `<img class="tenant-logo-chip tenant-logo-chip--lg" src="${window.utils.escapeHtml(t.logo_url)}" alt="">` : ''}
+            <span>${window.utils.escapeHtml(t.name)}</span>
+            <span class="status-badge status-badge--${s.cls}" style="vertical-align:middle">${s.label}</span>
+          </h2>
           <div class="page-subtitle">أُنشئ ${fmtDate(t.created_at)}${o.full_name ? ' · المالك ' + window.utils.escapeHtml(o.full_name) : ''}</div>
         </div>
         <div class="actions">

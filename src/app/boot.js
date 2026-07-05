@@ -40,6 +40,10 @@
     // realtime
     if (window.realtime) window.realtime.start();
 
+    // push: أعد تسجيل الجهاز للحساب الحالي (نقل ملكية عند تبديل الحسابات،
+    // واستعادة صامتة بعد تنظيف الخروج إن كان الإذن ممنوحًا) — دون انتظار
+    if (window.push && window.push.ensureSync) window.push.ensureSync();
+
     // تسجيل المسارات
     const routes = window.appRoutes || [];
     routes.forEach((r) => window.router.register(r.name, r));

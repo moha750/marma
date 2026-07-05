@@ -235,13 +235,21 @@
       ? `<div class="bp-hero-cover"><img src="${window.utils.escapeHtml(t.cover_image_url)}" alt="غلاف ${window.utils.escapeHtml(t.name)}"></div>`
       : '';
 
+    // شعار المالك (اختياري) — دائرة بجانب الاسم تعزز هوية النشاط أمام عملائه
+    const logoHtml = t.logo_url
+      ? `<img class="bp-hero-logo" src="${window.utils.escapeHtml(t.logo_url)}" alt="شعار ${window.utils.escapeHtml(t.name)}">`
+      : '';
+
     host.innerHTML = `
       ${coverHtml}
       <span class="bp-hero-tag">
         <span class="bp-hero-tag-dot"></span>
         احجز موعدك في 30 ثانية
       </span>
-      <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
+      <div class="bp-hero-brand">
+        ${logoHtml}
+        <h1 class="bp-hero-title">${window.utils.escapeHtml(t.name)}</h1>
+      </div>
     `;
     bindManageBtn();
   }

@@ -170,6 +170,7 @@ export interface NewBookingNotificationParams {
   endTime: string;    // ISO
   totalPrice: number;
   dashboardUrl: string;
+  logoUrl?: string | null;  // شعار الملعب (اختياري) — يظهر أعلى الرسالة
 }
 
 export function newBookingNotification(p: NewBookingNotificationParams) {
@@ -183,7 +184,13 @@ export function newBookingNotification(p: NewBookingNotificationParams) {
   const timeLabel = `${start.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit", hour12: true })} — ${end.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
   const priceLabel = `${p.totalPrice.toLocaleString("ar-SA-u-nu-latn")} ر.س`;
 
+  // شعار الملعب (إن وُجد) — دائرة صغيرة تعزز هوية النشاط أعلى الرسالة
+  const logoHtml = p.logoUrl
+    ? `<img src="${escapeHtml(p.logoUrl)}" alt="${escapeHtml(p.tenantName)}" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:12px;border:1px solid ${BORDER_SUBTLE};">`
+    : "";
+
   const bodyHtml = `
+    ${logoHtml}
     <div style="display:inline-block;padding:4px 10px;background:#FCEFD9;color:#C77700;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:12px;">بانتظار التأكيد</div>
     <h1 style="margin:0 0 16px;font-family:${FONT_STACK};font-size:22px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.3;">حجز جديد على ${escapeHtml(p.tenantName)}</h1>
     <p style="margin:0 0 20px;">${escapeHtml(greeting)} وصلك طلب حجز جديد عبر الرابط العام. راجع التفاصيل وأكّد الحجز.</p>

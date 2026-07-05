@@ -1684,3 +1684,26 @@
   .bp-landing-field-card__body { padding: var(--space-3); }
   .bp-section-title { font-size: var(--text-md); }
 }
+
+/* ─── شعار المالك في رأس صفحة الحجز: دائرة بجانب الاسم ─── */
+.bp-hero-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.bp-hero-brand .bp-hero-title {
+  margin-bottom: 0;
+}
+
+.bp-hero-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--c-card, #fff);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  animation: bp-rise 0.6s var(--ease-out) backwards;
+}
