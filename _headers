@@ -2,8 +2,11 @@
 # الهدف: HTML و service-worker دائماً طازجة، الأصول المُهَشَّمة كاش طويل.
 
 # Service Worker: يجب يُفحَص في كل زيارة (وإلا النسخة القديمة تبقى للأبد)
+# no-cache (لا max-age=0 وحده): Cloudflare يكتب max-age فوق قيمتنا بإعداد
+# Browser Cache TTL على مستوى النطاق، لكنه يُبقي بقية التوجيهات — وno-cache
+# يُلزم المتصفّح بالتحقّق قبل الاستخدام مهما كان الرقم.
 /service-worker.js
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, no-cache, must-revalidate
   Service-Worker-Allowed: /
 
 # صفحات HTML الجذر: دائماً طازجة
@@ -29,16 +32,19 @@
 /admin/*
   Cache-Control: public, max-age=0, must-revalidate
 
-# ملفات JS غير المُهَشَّمة (vanilla JS مكتوبة كـ window globals)
+# ملفات JS غير المُهَشَّمة (vanilla JS مكتوبة كـ window globals).
+# أسماؤها ثابتة عبر النشرات، فأي max-age يعني كوداً قديماً بعد الرفع —
+# no-cache يجعلها تُتحقَّق دائماً (رد 304 رخيص) بدل أن تعلق 4 ساعات.
+# البناء يضيف ?v=<hash> فوق ذلك، فالرابط نفسه يتغيّر مع كل نشر.
 /src/*
-  Cache-Control: public, max-age=300
+  Cache-Control: public, no-cache, must-revalidate
 
 # Manifest و config — كاش قصير
 /manifest.webmanifest
   Cache-Control: public, max-age=3600
 
 /config.js
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, no-cache, must-revalidate
 
 # ملاحظة: ملفات /assets/* المُهَشَّمة بواسطة Vite (مثل main-XXXXX.css)
 # تحصل تلقائياً على max-age=31536000 من Cloudflare Pages — لا حاجة لتعديل.

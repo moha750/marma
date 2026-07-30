@@ -46,6 +46,14 @@ export default defineConfig(({ mode }) => {
   // مثال: '/marma' في prod، '' في dev
   const baseNoSlash = base.replace(/\/$/, '');
 
+  // بصمة البناء: تُحقن في CACHE_VERSION للـ service worker، وكـ ?v= على روابط
+  // ملفات /src/*.js و/config.js (أسماؤها ثابتة فلا تحمل hash من Vite).
+  // المصدر: Cloudflare Pages env، أو GH Actions، أو timestamp محلي.
+  const buildHash =
+    (process.env.CF_PAGES_COMMIT_SHA && process.env.CF_PAGES_COMMIT_SHA.slice(0, 8)) ||
+    (process.env.GITHUB_SHA && process.env.GITHUB_SHA.slice(0, 8)) ||
+    Date.now().toString(36);
+
   return {
     appType: 'mpa',
     base,
@@ -91,6 +99,20 @@ export default defineConfig(({ mode }) => {
               /<head>/i,
               `<head>\n  <script>window.__BASE__=${JSON.stringify(baseNoSlash)};</script>`
             );
+
+            // ?v=<buildHash> على السكربتات غير المُهَشَّمة (/src/**.js و/config.js).
+            // بدونها يبقى الرابط ثابتاً بين النشرات، فيخدم المتصفّح نسخته المخزّنة
+            // ويظهر كود قديم إلى أن يعمل المستخدم hard reload — وHTML نفسه طازج
+            // دائماً (max-age=0) فالرابط الجديد يصل فوراً بعد كل نشر.
+            if (isProd) {
+              html = html.replace(
+                /(<script\b[^>]*\bsrc=")([^"]*(?:src\/[^"]+\.js|config\.js))(")/gi,
+                (match, prefix, url, suffix) =>
+                  /^https?:/i.test(url) || url.includes('?')
+                    ? match
+                    : `${prefix}${url}?v=${buildHash}${suffix}`
+              );
+            }
 
             // في dev/custom-domain (baseNoSlash فارغ) لا نعيد كتابة شيء
             if (!baseNoSlash) return html;
@@ -153,13 +175,8 @@ export default defineConfig(({ mode }) => {
           }
 
           // ─── حقن CACHE_VERSION الديناميكي في service-worker.js ───
-          // كل deploy → CACHE_VERSION فريد → SW جديد → الكاش القديم يُحذف تلقائياً
-          // المصدر: Cloudflare Pages env (CF_PAGES_COMMIT_SHA) أو GH Actions أو timestamp محلي.
-          const buildHash =
-            (process.env.CF_PAGES_COMMIT_SHA && process.env.CF_PAGES_COMMIT_SHA.slice(0, 8)) ||
-            (process.env.GITHUB_SHA && process.env.GITHUB_SHA.slice(0, 8)) ||
-            Date.now().toString(36);
-
+          // كل deploy → CACHE_VERSION فريد → SW جديد → الكاش القديم يُحذف تلقائياً.
+          // نفس buildHash المستخدم في ?v= أعلاه، فالإصداران متطابقان.
           try {
             const swPath = resolve(dist, 'service-worker.js');
             const sw = await readFile(swPath, 'utf8');
