@@ -78,7 +78,7 @@ window.auth = (function () {
     }
     const { data, error } = await window.sb
       .from('profiles')
-      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url)')
+      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url, show_manage_banner)')
       .eq('id', user.id)
       .single();
     if (error) {

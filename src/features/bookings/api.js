@@ -8,7 +8,7 @@ window.bookingsApi = (function () {
   async function listBookings({ from, to, fieldId, status, limit, customerId, includeBlocks = false } = {}) {
     let q = sb()
       .from('bookings')
-      .select('id, start_time, end_time, total_price, paid_amount, status, notes, field_id, customer_id, customer_input_name, created_at, whatsapp_confirmed_at, fields(id, name), customers(id, full_name, phone)')
+      .select('id, start_time, end_time, total_price, paid_amount, status, notes, field_id, customer_id, customer_input_name, created_at, created_by, whatsapp_confirmed_at, cancelled_by, cancelled_at, no_show_at, fields(id, name), customers(id, full_name, phone)')
       .order('start_time', { ascending: false });
     if (from) q = q.gte('start_time', new Date(from).toISOString());
     if (to) q = q.lte('start_time', new Date(to).toISOString());
@@ -64,6 +64,27 @@ window.bookingsApi = (function () {
       status: 'cancelled',
       cancelled_by: 'staff',
       cancelled_at: new Date().toISOString()
+    });
+  }
+
+  // وسم «لم يحضر» — يؤرشف الحجز ويُسقط مطالبته؛ المحصَّل منه (عربون) يبقى مسجلًا
+  async function markNoShow(id) {
+    return updateBooking(id, { no_show_at: new Date().toISOString() });
+  }
+
+  // تراجع عن الوسم — يعود الحجز لحالته المشتقة الطبيعية (ومطالبته إن كان عليه متبقٍ)
+  async function unmarkNoShow(id) {
+    return updateBooking(id, { no_show_at: null });
+  }
+
+  // استعادة حجز ملغي — يعود مؤكدًا لكن بتأكيد جديد للعميل: تأكيد الواتساب القديم
+  // كان لاتفاق نُقض بالإلغاء. قيد no_overlapping_bookings يرفضها إن حُجز الموعد لغيره.
+  async function restoreBooking(id) {
+    return updateBooking(id, {
+      status: 'confirmed',
+      cancelled_by: null,
+      cancelled_at: null,
+      whatsapp_confirmed_at: null
     });
   }
 
@@ -136,7 +157,8 @@ window.bookingsApi = (function () {
 
   return {
     listBookings, getBooking, createBooking, updateBooking,
-    cancelBooking, approveBooking, rejectBooking, listPendingBookings,
+    cancelBooking, restoreBooking, markNoShow, unmarkNoShow,
+    approveBooking, rejectBooking, listPendingBookings,
     markWhatsAppConfirmed, createBlock, deleteBlock
   };
 })();

@@ -37,11 +37,17 @@
 
   function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
 
-  function statusChip(status) {
+  function statusChip(status, b) {
     if (status === 'pending')   return '<span class="chip-status chip-status--pending">بانتظار تأكيدك</span>';
     if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">حجز مؤكد</span>';
     if (status === 'completed') return '<span class="chip-status chip-status--completed">حجز مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    if (status === 'cancelled') {
+      // تمييز إلغاء العميل (عبر صفحة «حجوزاتي») عن إلغاء الإدارة
+      return b && b.cancelled_by === 'customer'
+        ? '<span class="chip-status chip-status--cancelled">ألغى العميل حجزه</span>'
+        : '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    }
+    if (status === 'no_show') return '<span class="chip-status chip-status--noshow">لم يحضر</span>';
     return '';
   }
 
@@ -329,7 +335,7 @@
                 <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
               </div>
               <div class="timeline-side">
-                ${statusChip(window.utils.effectiveBookingStatus(b))}
+                ${statusChip(window.utils.effectiveBookingStatus(b), b)}
                 <span class="timeline-price">${window.utils.formatPrice(b.total_price)}</span>
               </div>
             </div>
@@ -374,7 +380,7 @@
                 <div class="timeline-field">${escapeName(b.fields && b.fields.name)}</div>
               </div>
               <div class="timeline-side">
-                ${statusChip(window.utils.effectiveBookingStatus(b))}
+                ${statusChip(window.utils.effectiveBookingStatus(b), b)}
               </div>
             </div>
           `).join('')}

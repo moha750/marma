@@ -26,13 +26,14 @@ window.tenantApi = (function () {
     return cachedTenantId;
   }
 
-  async function updateTenant({ name, description, cover_image_url, logo_url }) {
+  async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner }) {
     const tenantId = await getMyTenantId();
     const patch = {};
     if (name !== undefined) patch.name = name;
     if (description !== undefined) patch.description = description || null;
     if (cover_image_url !== undefined) patch.cover_image_url = cover_image_url || null;
     if (logo_url !== undefined) patch.logo_url = logo_url || null;
+    if (show_manage_banner !== undefined) patch.show_manage_banner = show_manage_banner;
     const { data, error } = await sb()
       .from('tenants')
       .update(patch)

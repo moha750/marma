@@ -56,11 +56,30 @@ window.customersApi = (function () {
   async function getCustomerBookings(customerId) {
     const { data, error } = await sb()
       .from('bookings')
-      .select('id, start_time, end_time, total_price, paid_amount, status, fields(name)')
+      .select('id, start_time, end_time, total_price, paid_amount, status, notes, field_id, customer_id, customer_input_name, created_by, whatsapp_confirmed_at, cancelled_by, cancelled_at, no_show_at, fields(id, name), customers(id, full_name, phone)')
       .eq('customer_id', customerId)
       .order('start_time', { ascending: false });
     if (error) throw error;
     return data;
+  }
+
+  // موثوقية العميل: مرات الغياب من إجمالي حجوزاته السابقة الفعلية (المقبولة الفائتة)
+  async function getCustomerReliability(customerId) {
+    const nowIso = new Date().toISOString();
+    const [ns, past] = await Promise.all([
+      sb().from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', customerId)
+        .not('no_show_at', 'is', null),
+      sb().from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', customerId)
+        .in('status', ['confirmed', 'completed'])
+        .lt('start_time', nowIso)
+    ]);
+    if (ns.error) throw ns.error;
+    if (past.error) throw past.error;
+    return { noShows: ns.count || 0, pastBookings: past.count || 0 };
   }
 
   async function countCustomerBookings(customerId) {
@@ -72,5 +91,5 @@ window.customersApi = (function () {
     return count || 0;
   }
 
-  return { listCustomers, getCustomer, createCustomer, updateCustomer, getCustomerBookings, countCustomerBookings };
+  return { listCustomers, getCustomer, createCustomer, updateCustomer, getCustomerBookings, countCustomerBookings, getCustomerReliability };
 })();

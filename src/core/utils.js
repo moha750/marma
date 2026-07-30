@@ -72,6 +72,10 @@ function initPasswordToggles(root) {
   });
 }
 
+// عدّاد النوافذ المنبثقة المفتوحة — لقفل تمرير الصفحة خلفها،
+// بعدّاد لأن النوافذ تتراكب (حوار تأكيد فوق نافذة الحجز مثلًا)
+let openModalsCount = 0;
+
 window.utils = {
   renderIcons,
   initPasswordToggles,
@@ -147,10 +151,11 @@ window.utils = {
     return Math.round((total - Number(b.paid_amount || 0)) * 100) / 100;
   },
 
-  // مُسدَّد بالكامل — أو لا يوجد ما يُحصَّل أصلاً (مجاني/عند التواصل)
+  // مُسدَّد بالكامل — أو مجاني. «عند التواصل» (سعر فارغ) ليس مسدَّدًا:
+  // ماليّته غير محسومة، فيبقى الحجز «مؤكدًا» مطالِبًا بالتسعير لا «مكتملًا» يُدفن
   isBookingSettled(b) {
     const owed = this.bookingOwed(b);
-    return owed == null || owed <= 0;
+    return owed != null && owed <= 0;
   },
 
   // انتهى وقت الحجز فعلاً
@@ -161,6 +166,11 @@ window.utils = {
   // الحالة الفعلية المعروضة: حجز مؤكد انتهى وقته وسُدِّد بالكامل ⇒ «مكتمل» تلقائياً.
   // ملاحظة: حجز ماضٍ غير مُسدَّد يبقى «مؤكد» عمداً ليظلّ مطالِباً بالتحصيل.
   effectiveBookingStatus(b) {
+    // «لم يحضر» تتقدم على كل الاشتقاقات: حجز موسوم بالغياب أرشيفٌ بوسمه،
+    // لا «مؤكد يطالب بالتحصيل» ولا «مكتمل» — والمطالبة المالية ساقطة عمدًا
+    if (b.status === 'confirmed' && b.no_show_at) {
+      return 'no_show';
+    }
     if (b.status === 'confirmed' && this.isBookingPast(b) && this.isBookingSettled(b)) {
       return 'completed';
     }
@@ -311,12 +321,26 @@ window.utils = {
     }
 
     const close = () => {
+      if (!backdrop.isConnected) return; // حماية من الاستدعاء المزدوج
       backdrop.remove();
+      openModalsCount = Math.max(0, openModalsCount - 1);
+      if (openModalsCount === 0) {
+        document.body.style.overflow = '';
+        document.body.style.paddingInlineEnd = '';
+      }
       if (typeof onClose === 'function') onClose();
     };
     // الإغلاق عبر الأزرار فقط (زر × في الترويسة أو أزرار التذييل).
     // عمداً لا نُغلق بالنقر خارج النافذة ولا بمفتاح Escape، حتى لا يُفقَد إدخالٌ بالخطأ.
     backdrop.querySelector('.modal-close').addEventListener('click', close);
+    if (openModalsCount === 0) {
+      // قفل تمرير الصفحة خلف النافذة، مع تعويض عرض شريط التمرير المُخفى
+      // بحشوة منطقية (inline-end = جهة الشريط في RTL وLTR معًا) كي لا يقفز التخطيط
+      const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarW > 0) document.body.style.paddingInlineEnd = scrollbarW + 'px';
+    }
+    openModalsCount++;
     document.body.appendChild(backdrop);
     renderIcons(backdrop);
     return { close, modal, bodyEl };

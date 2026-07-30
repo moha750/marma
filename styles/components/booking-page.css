@@ -1284,6 +1284,17 @@
   color: var(--c-brand-dd);
   font-variant-numeric: tabular-nums;
 }
+/* حجز محصَّل — لا إلغاء ذاتيًا؛ ملاحظة تشرح بدل إخفاء الزر صامتًا */
+.bp-booking-item-locked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--c-mute);
+}
+.bp-booking-item-locked svg.lucide,
+.bp-booking-item-locked i[data-lucide] { width: 12px; height: 12px; flex-shrink: 0; color: var(--c-brand); }
 
 .bp-empty {
   text-align: center;

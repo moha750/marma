@@ -1371,17 +1371,25 @@
   }
 }
 
-/* ─── شعار الملعب المصغر بجانب اسمه في الشريط الجانبي ─── */
-.tenant-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tenant-name-logo {
-  width: 16px;
-  height: 16px;
+/* ─── هوية الملعب في الشريط الجانبي (حين يوجد شعار): شعاره + اسمه يتصدران ─── */
+.sidebar-brand-logo--tenant img {
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
+  border: 1px solid var(--border-default);
+}
+
+/* شعار المالك صورة حقيقية — لا تُطبَّق عليه فلاتر الوضع الداكن الخاصة بشعار مَرمى */
+[data-theme="dark"] .sidebar-brand-logo--tenant img {
+  filter: none;
+}
+
+.tenant-brand-name {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }

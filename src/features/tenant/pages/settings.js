@@ -209,8 +209,8 @@
               <div class="tenant-logo-row">
                 <div class="tenant-logo-slot" id="logo-slot"></div>
                 <span class="form-help" style="margin:0">
-                  شعار مربّع يظهر بجانب اسم ملعبك في صفحة الحجز وأيقونة تبويب المتصفح.
-                  JPG/PNG/WebP، حد 5 ميجابايت.
+                  يُقصّ دائريًا ويظهر بجانب اسم ملعبك في صفحة الحجز وأيقونة تبويب المتصفح
+                  والشريط الجانبي. JPG/PNG/WebP، حد 5 ميجابايت.
                 </span>
               </div>
             </div>
@@ -244,12 +244,21 @@
               </div>
               <span class="form-help">صورة عرضية تظهر أعلى صفحة الحجز. JPG/PNG/WebP، حد 5 ميجابايت.</span>
             </div>
-            <div class="form-group" style="margin-bottom:0">
+            <div class="form-group">
               <label class="form-label">وصف الملعب</label>
               <textarea class="form-control" name="description" rows="3" maxlength="600"
                         placeholder="اكتب نبذة قصيرة عن الملعب — موقعه، ما يميّزه، نوع الخدمة"
                         ${isOwner ? '' : 'disabled'}>${window.utils.escapeHtml(tenant.description || '')}</textarea>
               <span class="form-help">600/<span id="desc-counter">${(tenant.description || '').length}</span> حرف</span>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">بانر «هل لديك حجز سابق؟»</label>
+              <label class="form-check">
+                <input type="checkbox" id="manage-banner-toggle"
+                       ${tenant.show_manage_banner === false ? '' : 'checked'} ${isOwner ? '' : 'disabled'}>
+                <span>إظهار بانر متابعة الحجوزات في صفحة الحجز</span>
+              </label>
+              <span class="form-help">يتيح لعملائك متابعة حجوزاتهم أو تعديلها وإلغاءها عبر رقم الجوال. يُحفظ التغيير فورًا.</span>
             </div>
           </div>
           ${isOwner ? `
@@ -353,8 +362,8 @@
           try {
             await window.api.updateTenant({ name: fd.get('name') });
             window.utils.toast('تم حفظ الإعدادات', 'success');
-            // الاسم داخل span فرعي (بجانب الشعار المصغر) — لا تمسح الشعار
-            const el = document.querySelector('.sidebar-brand .tenant-name span:last-child')
+            // مع شعار: الاسم في .tenant-brand-name؛ بدونه: في .tenant-name
+            const el = document.querySelector('.sidebar-brand .tenant-brand-name')
               || document.querySelector('.sidebar-brand .tenant-name');
             if (el) el.textContent = fd.get('name');
             ctx.tenant.name = fd.get('name');
@@ -407,6 +416,34 @@
       `;
     }
     window.utils.renderIcons(slot);
+  }
+
+  // قناع دائري بزوايا شفافة (PNG) — ليظهر الشعار دائريًا حتى حيث لا يُطبَّق
+  // CSS: أيقونة تبويب المتصفح (favicon) وعملاء البريد. يعيد الأصل عند أي فشل.
+  function toCircularPng(blob, size = 512) {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        const url = URL.createObjectURL(blob);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const cx = canvas.getContext('2d');
+            cx.beginPath();
+            cx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+            cx.closePath();
+            cx.clip();
+            cx.drawImage(img, 0, 0, size, size);
+            canvas.toBlob((out) => resolve(out || blob), 'image/png');
+          } catch (_) { resolve(blob); }
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+        img.src = url;
+      } catch (_) { resolve(blob); }
+    });
   }
 
   // خانة الشعار: دائرة بالشعار أو الحرف الأول، مع أزرار تغيير/حذف للمالك
@@ -518,7 +555,8 @@
             title: 'تعديل الشعار',
           });
           if (!cropped) return; // ألغى المستخدم القصّ
-          const newUrl = await window.api.uploadTenantLogo(cropped);
+          const circular = await toCircularPng(cropped);
+          const newUrl = await window.api.uploadTenantLogo(circular);
           ctx.tenant.logo_url = newUrl;
           renderLogoSlot(logoSlot, newUrl, ctx.tenant.name, isOwner);
           window.utils.toast('تم حفظ الشعار', 'success');
@@ -561,6 +599,25 @@
         delete saveBtn.dataset.loading;
       }
     });
+
+    // ─── بانر «هل لديك حجز سابق؟»: حفظ فوري عند التبديل ───
+    const bannerToggle = container.querySelector('#manage-banner-toggle');
+    if (isOwner && bannerToggle) {
+      bannerToggle.addEventListener('change', async () => {
+        const show = bannerToggle.checked;
+        bannerToggle.disabled = true;
+        try {
+          await window.api.updateTenant({ show_manage_banner: show });
+          ctx.tenant.show_manage_banner = show;
+          window.utils.toast(show ? 'سيظهر البانر لعملائك في صفحة الحجز' : 'تم إخفاء البانر من صفحة الحجز', 'success');
+        } catch (err) {
+          bannerToggle.checked = !show;
+          window.utils.toast(window.utils.formatError(err), 'error');
+        } finally {
+          bannerToggle.disabled = false;
+        }
+      });
+    }
   }
 
   async function renderNotificationsSection(body) {
