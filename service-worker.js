@@ -226,9 +226,12 @@ async function cacheFirst(req) {
 
 // network-first: يجلب من الشبكة دائماً إن كانت متاحة، ويسقط للكاش فقط لو فشلت.
 // مناسب لأصولنا الديناميكية (JS/CSS) لتجنّب خدمة نسخة قديمة بعد deploy جديد.
+// cache:'no-cache' يُلزم بالتحقّق من الخادم (رد 304 رخيص) بدل الاكتفاء بنسخة
+// كاش HTTP — وإلا فـ max-age الذي يفرضه Cloudflare يجعل "network-first" يخدم
+// الملف القديم نفسه، فتُعاد الصفحة بلا تغيير حتى مع hard reload من المستخدم.
 async function networkFirst(req) {
   try {
-    const fresh = await fetch(req);
+    const fresh = await fetch(req, { cache: 'no-cache' });
     if (fresh && (fresh.ok || fresh.type === 'opaque')) {
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(req, fresh.clone());

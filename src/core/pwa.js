@@ -64,12 +64,25 @@
     const swUrl = base + '/service-worker.js';
     const scope = (base || '') + '/';
 
-    navigator.serviceWorker.register(swUrl, { scope })
+    // updateViaCache:'none' — لا تقرأ ملف الـ SW من كاش HTTP عند فحص التحديث.
+    // ضروري لأن Cloudflare يفرض max-age طويلاً على ملفات .js، فبدونه قد يقارن
+    // المتصفّح النسخة الجديدة بنسخة مخزّنة قديمة ولا يرى فرقاً فلا يُحدِّث أبداً.
+    navigator.serviceWorker.register(swUrl, { scope, updateViaCache: 'none' })
       .then((reg) => {
         registration = reg;
 
         // تحقق من تحديث كل ساعة بينما التبويب مفتوح
         setInterval(() => { reg.update().catch(() => {}); }, 60 * 60 * 1000);
+
+        // وأيضاً عند العودة إلى التبويب — التطبيق المثبَّت يبقى مفتوحاً أياماً،
+        // فانتظار الساعة يعني رؤية نسخة قديمة بعد النشر. حدٌّ أدنى دقيقة بين الفحوص.
+        let lastCheck = Date.now();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState !== 'visible') return;
+          if (Date.now() - lastCheck < 60 * 1000) return;
+          lastCheck = Date.now();
+          reg.update().catch(() => {});
+        });
 
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
