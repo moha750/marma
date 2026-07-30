@@ -1,10 +1,16 @@
 // تفاصيل العميل — رأس + بطاقات KPI + ودجت أعمار المدفوعات + سجل الحجوزات
 (function () {
-  function statusChip(status) {
+  function statusChip(status, b) {
     if (status === 'pending')   return '<span class="chip-status chip-status--pending">بانتظار تأكيدك</span>';
     if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">حجز مؤكد</span>';
     if (status === 'completed') return '<span class="chip-status chip-status--completed">حجز مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    if (status === 'cancelled') {
+      // تمييز إلغاء العميل (عبر صفحة «حجوزاتي») عن إلغاء الإدارة
+      return b && b.cancelled_by === 'customer'
+        ? '<span class="chip-status chip-status--cancelled">ألغى العميل حجزه</span>'
+        : '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    }
+    if (status === 'no_show') return '<span class="chip-status chip-status--noshow">لم يحضر</span>';
     return `<span class="chip-status chip-status--muted">${window.utils.escapeHtml(status)}</span>`;
   }
 
@@ -18,7 +24,7 @@
   function computeAging(bookings) {
     const buckets = { '0-30': 0, '31-60': 0, '61+': 0 };
     bookings.forEach((b) => {
-      if (b.status === 'cancelled') return;
+      if (b.status === 'cancelled' || b.no_show_at) return; // مطالبة الغائب ساقطة
       const owed = Number(b.total_price || 0) - Number(b.paid_amount || 0);
       if (owed <= 0) return;
       const age = daysSince(b.start_time);
@@ -168,9 +174,11 @@
           }
 
           const active = bookings.filter((b) => b.status !== 'cancelled');
-          const totalSpent = active.reduce((sum, b) => sum + Number(b.total_price || 0), 0);
+          // الغائب: قيمته المتحققة هي المحصَّل منه فقط — فلا يظهر متبقيه دينًا وهميًا
+          const totalSpent = active.reduce((sum, b) => sum + Number(b.no_show_at ? (b.paid_amount || 0) : (b.total_price || 0)), 0);
           const totalPaid  = active.reduce((sum, b) => sum + Number(b.paid_amount || 0), 0);
           const balance    = totalSpent - totalPaid;
+          const noShows    = bookings.filter((b) => b.no_show_at).length;
 
           const aging = computeAging(bookings);
 
@@ -204,6 +212,14 @@
                 </div>
                 <div class="stat-value">${active.length}</div>
                 <div class="stat-sub">من أصل ${bookings.length} حجزاً مسجّلاً</div>
+              </div>
+              <div class="stat-card${noShows > 0 ? ' stat-card--warning' : ''}">
+                <div class="stat-card-head">
+                  <span class="stat-icon-chip ${noShows > 0 ? 'stat-icon-chip--warning' : ''}"><i data-lucide="user-x"></i></span>
+                  <span class="stat-label">مرات عدم الحضور</span>
+                </div>
+                <div class="stat-value ${noShows > 0 ? 'text-warning' : ''}">${noShows}</div>
+                ${noShows > 0 ? '<div class="stat-sub">فكّر باشتراط عربون لحجوزاته القادمة</div>' : '<div class="stat-sub">سجل حضور نظيف</div>'}
               </div>
               <div class="stat-card">
                 <div class="stat-card-head">
@@ -281,7 +297,7 @@
                               ${fmtMoney(b.paid_amount)}
                               ${owed > 0 && b.status !== 'cancelled' ? `<div class="text-xs text-warning">يتبقّى ${fmtMoney(owed)}</div>` : ''}
                             </td>
-                            <td data-label="الحالة" class="card-tag">${statusChip(window.utils.effectiveBookingStatus(b))}</td>
+                            <td data-label="الحالة" class="card-tag">${statusChip(window.utils.effectiveBookingStatus(b), b)}</td>
                             <td class="actions-cell">
                               <div class="actions-inline">
                                 <button class="btn btn--xs btn--ghost" data-action="open-booking" data-id="${b.id}" title="تعديل">

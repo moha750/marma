@@ -207,7 +207,9 @@
 
   // بانر واضح للعملاء العائدين — بديل زر الزاوية القديم.
   // يُحقن في عرض الـ landing وعرض تفاصيل الأرضية (لتغطية مستأجري الأرضية الواحدة).
+  // المالك يتحكم بإظهاره من الإعدادات (show_manage_banner) — الافتراضي ظاهر.
   function renderManageBanner() {
+    if (state.tenantInfo.show_manage_banner === false) return '';
     return `
       <section class="bp-manage-banner">
         <span class="bp-manage-banner-icon"><i data-lucide="ticket"></i></span>
@@ -1362,6 +1364,12 @@
                   </button>
                 ` : ''}
               </div>
+              ${!b.is_cancellable && b.has_payment ? `
+                <p class="bp-booking-item-locked">
+                  <i data-lucide="lock"></i>
+                  <span>تم تحصيل مبلغ لهذا الحجز — للإلغاء تواصل مع الملعب</span>
+                </p>
+              ` : ''}
             </li>
           `;
         }).join('')}
@@ -1435,6 +1443,8 @@
             window.utils.toast('لا يمكن إلغاء هذا الحجز في وضعه الحالي', 'error');
           } else if (msg.includes('BOOKING_ALREADY_STARTED')) {
             window.utils.toast('بدأ موعد الحجز — لا يمكن إلغاؤه', 'error');
+          } else if (msg.includes('BOOKING_PAID')) {
+            window.utils.toast('تم تحصيل مبلغ لهذا الحجز — للإلغاء تواصل مع الملعب', 'error');
           } else {
             window.utils.toast(window.utils.formatError(err), 'error');
           }

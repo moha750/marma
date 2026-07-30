@@ -193,6 +193,17 @@
 .chip-status--muted { background: var(--surface-2); color: var(--text-secondary); }
 .chip-status--muted::before { background: var(--text-tertiary); }
 
+/* لم يحضر — خلفية الخطر الهادئة + علامة ✕: غياب مسجَّل ضد العميل */
+.chip-status--noshow { background: var(--danger-tint); color: var(--danger); }
+.chip-status--noshow::before {
+  content: '✕';
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  font-size: 1.05em;
+}
+
 /* مكتمل — خلفية هادئة + علامة ✓ بلون البادج نفسه (بدل الدائرة): «أُنجز» */
 .chip-status--completed { background: var(--surface-2); color: var(--text-secondary); }
 .chip-status--completed::before {

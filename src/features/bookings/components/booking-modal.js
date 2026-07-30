@@ -79,6 +79,25 @@ window.bookingModal = (function () {
       : '';
 
     const isCancelled = editing && booking.status === 'cancelled';
+    const isNoShow = editing && !!booking.no_show_at;
+    const isCompleted = editing && !isCancelled && window.utils.effectiveBookingStatus(booking) === 'completed';
+    // معلّق = مراجعة قبل القرار، ملغي/مكتمل/لم يحضر = أرشيف — كلها عرض بلا تحرير.
+    // التعديل الحقيقي متاح للمؤكد فقط (وهو المسار الوحيد الذي يملك زر حفظ).
+    const readOnly = isPending || isCancelled || isNoShow || isCompleted;
+
+    // موثوقية العميل — تُعرض لحظة القرار على الطلب المعلّق (السجل النظيف صامت)
+    let reliability = null;
+    if (isPending && booking.customer_id && window.api.getCustomerReliability) {
+      try { reliability = await window.api.getCustomerReliability(booking.customer_id); } catch (_) {}
+    }
+    const reliabilityBanner = reliability && reliability.noShows > 0
+      ? `<div class="trial-banner trial-banner--danger" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+           <span class="trial-banner-icon"><i data-lucide="user-x"></i></span>
+           <span><strong>تنبيه:</strong> هذا العميل لم يحضر في ${reliability.noShows} من أصل ${reliability.pastBookings} حجز سابق — قد ترغب باشتراط عربون قبل التأكيد.</span>
+         </div>`
+      : '';
+    // ملاحظات الحجز القادم من صفحة الحجز العامة يكتبها العميل — تُعرض ولا تُحرَّر
+    const customerNotes = editing && !booking.created_by;
     const cancelledByLabel = booking && booking.cancelled_by === 'customer'
       ? 'ألغاه العميل'
       : (booking && booking.cancelled_by === 'staff' ? 'أُلغي من قبل الإدارة' : '');
@@ -86,16 +105,41 @@ window.bookingModal = (function () {
       ? window.utils.formatDateTime(booking.cancelled_at)
       : '';
     const cancelledBanner = isCancelled && cancelledByLabel
-      ? `<div class="trial-banner trial-banner--grace" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+      ? `<div class="trial-banner trial-banner--danger" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
            <span class="trial-banner-icon"><i data-lucide="x-circle"></i></span>
            <span><strong>${cancelledByLabel}</strong>${cancelledWhen ? ` · ${window.utils.escapeHtml(cancelledWhen)}` : ''}</span>
          </div>`
       : '';
 
+    const noShowBanner = isNoShow
+      ? `<div class="trial-banner trial-banner--danger" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+           <span class="trial-banner-icon"><i data-lucide="user-x"></i></span>
+           <span><strong>لم يحضر العميل</strong> · سُجّل الغياب ${window.utils.escapeHtml(window.utils.formatDateTime(booking.no_show_at))}</span>
+         </div>`
+      : '';
+
+    // الحالة للعرض فقط — تغييرها حصريًا عبر الأزرار المخصصة (قبول/رفض/إلغاء/استعادة)
+    // التي تمر بمنطق العمل الكامل (cancelled_by، تسوية الأسماء، عرض واتساب).
+    const STATUS_CHIPS = {
+      pending:   ['chip-status--pending',   'بانتظار الموافقة'],
+      confirmed: ['chip-status--confirmed', 'مؤكد'],
+      completed: ['chip-status--completed', 'مكتمل'],
+      cancelled: ['chip-status--cancelled', 'ملغي'],
+      no_show:   ['chip-status--noshow',    'لم يحضر']
+    };
+    const statusChipHtml = (() => {
+      if (!editing) return '';
+      const eff = window.utils.effectiveBookingStatus(booking);
+      const [cls, label] = STATUS_CHIPS[eff] || ['chip-status--muted', eff];
+      return `<span class="chip-status ${cls}">${window.utils.escapeHtml(label)}</span>`;
+    })();
+
     const body = document.createElement('div');
     body.innerHTML = `
       ${pendingBanner}
+      ${reliabilityBanner}
       ${cancelledBanner}
+      ${noShowBanner}
       ${nameMismatchBanner}
       <form id="booking-form" autocomplete="off">
         ${editing ? `
@@ -108,12 +152,7 @@ window.bookingModal = (function () {
           </div>
           <div class="form-group">
             <label class="form-label">الحالة</label>
-            <select class="form-control" name="status">
-              ${booking.status === 'pending' ? '<option value="pending" selected>بانتظار الموافقة</option>' : ''}
-              <option value="confirmed" ${booking.status === 'confirmed' ? 'selected' : ''}>مؤكد</option>
-              <option value="completed" ${booking.status === 'completed' ? 'selected' : ''}>مكتمل</option>
-              <option value="cancelled" ${booking.status === 'cancelled' ? 'selected' : ''}>ملغي</option>
-            </select>
+            <div style="display:flex;align-items:center;min-height:40px">${statusChipHtml}</div>
           </div>
         </div>
         ` : `
@@ -139,7 +178,14 @@ window.bookingModal = (function () {
 
         <div class="form-group">
           <label class="form-label">العميل <span class="required">*</span></label>
-          ${prefillCustomer ? `
+          ${editing && booking.customers ? `
+            <div class="form-control" style="display:flex;align-items:center;gap:var(--space-2);background:var(--surface-2);cursor:default">
+              <i data-lucide="user" style="width:16px;height:16px;color:var(--text-secondary)"></i>
+              <span class="fw-semibold">${window.utils.escapeHtml(booking.customers.full_name)}</span>
+              <span class="text-muted text-sm">(${window.utils.escapeHtml(booking.customers.phone || '')})</span>
+            </div>
+            <input type="hidden" name="customer_id" id="customer-id" value="${booking.customers.id}">
+          ` : prefillCustomer ? `
             <div class="form-control" style="display:flex;align-items:center;gap:var(--space-2);background:var(--surface-2);cursor:default">
               <i data-lucide="user" style="width:16px;height:16px;color:var(--text-secondary)"></i>
               <span class="fw-semibold">${window.utils.escapeHtml(prefillCustomer.full_name)}</span>
@@ -167,22 +213,26 @@ window.bookingModal = (function () {
           `}
         </div>
 
-        <div class="form-row cols-2">
+        <div class="form-row ${isPending ? '' : 'cols-2'}">
           <div class="form-group">
             <label class="form-label">السعر الإجمالي (ر.س)</label>
             <input type="number" class="form-control" name="total_price" min="0" step="0.01" placeholder="عند التواصل" value="${editing && booking.total_price != null ? booking.total_price : ''}">
-            <span class="form-help" id="price-help">يُؤخذ تلقائياً من سعر الموعد · فارغ = عند التواصل · 0 = مجاني</span>
+            ${readOnly ? '' : '<span class="form-help" id="price-help">يُؤخذ تلقائياً من سعر الموعد · فارغ = عند التواصل · 0 = مجاني</span>'}
           </div>
+          ${isPending ? '' : `
           <div class="form-group">
             <label class="form-label">المدفوع (ر.س)</label>
             <input type="number" class="form-control" name="paid_amount" min="0" step="0.01" value="${editing ? booking.paid_amount : '0'}">
           </div>
+          `}
         </div>
 
+        ${customerNotes && !(booking.notes || '').trim() ? '' : `
         <div class="form-group">
-          <label class="form-label">ملاحظات</label>
-          <textarea class="form-control" name="notes" rows="2">${editing ? window.utils.escapeHtml(booking.notes || '') : ''}</textarea>
+          <label class="form-label">${customerNotes ? 'ملاحظات العميل' : 'ملاحظات'}</label>
+          <textarea class="form-control" name="notes" rows="2" ${customerNotes ? 'disabled' : ''}>${editing ? window.utils.escapeHtml(booking.notes || '') : ''}</textarea>
         </div>
+        `}
       </form>
     `;
 
@@ -193,6 +243,12 @@ window.bookingModal = (function () {
         <div style="flex:1"></div>
         <button type="button" class="btn btn--ghost" data-action="close">إغلاق</button>
         <button type="button" class="btn btn--primary" id="approve-booking-btn"><i data-lucide="check"></i> تأكيد الحجز</button>
+      `;
+    } else if (isCancelled || isNoShow || isCompleted) {
+      // أرشيف (ملغي/لم يحضر/مكتمل) — عرض فقط؛ الاستعادة/التراجع من صفحة الحجوزات
+      footerEl.innerHTML = `
+        <div style="flex:1"></div>
+        <button type="button" class="btn btn--ghost" data-action="close">إغلاق</button>
       `;
     } else {
       footerEl.innerHTML = `
@@ -207,7 +263,10 @@ window.bookingModal = (function () {
     footerEl.style.width = '100%';
 
     const ctrl = window.utils.openModal({
-      title: editing ? 'تعديل حجز' : 'حجز جديد',
+      title: !editing ? 'حجز جديد'
+        : isPending ? 'مراجعة طلب الحجز'
+        : readOnly ? 'تفاصيل الحجز'
+        : 'تعديل حجز',
       body,
       footer: footerEl,
       size: 'lg'
@@ -219,7 +278,6 @@ window.bookingModal = (function () {
     const startInput = form.start_time;
     const endInput = form.end_time;
     const priceInput = form.total_price;
-    const paidInput = form.paid_amount;
     const slotsArea = ctrl.modal.querySelector('#slots-area');
     const customerSearch = ctrl.modal.querySelector('#customer-search');
     const customerIdInput = ctrl.modal.querySelector('#customer-id');
@@ -228,12 +286,6 @@ window.bookingModal = (function () {
     const newCustomerFields = ctrl.modal.querySelector('#new-customer-fields');
     if (newCustomerFields) {
       window.utils.bindPhoneInput(newCustomerFields.querySelector('[name="new_customer_phone"]'));
-    }
-
-    // تعبئة العميل عند التعديل
-    if (editing && booking.customers && customerSearch) {
-      customerSearch.value = `${booking.customers.full_name} (${booking.customers.phone})`;
-      customerIdInput.value = booking.customers.id;
     }
 
     // إدارة المواعيد (slots) - السعر يأتي من slot المختار
@@ -245,8 +297,8 @@ window.bookingModal = (function () {
     function pickSlot(startIso, endIso, slotPrice, btn) {
       startInput.value = startIso;
       endInput.value = endIso;
-      slotsArea.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('selected'));
-      if (btn) btn.classList.add('selected');
+      slotsArea.querySelectorAll('.slot-btn').forEach((b) => b.classList.remove('is-selected'));
+      if (btn) btn.classList.add('is-selected');
       if (!priceManuallyEdited && slotPrice !== null && slotPrice !== undefined) {
         priceInput.value = Number(slotPrice).toFixed(2);
       }
@@ -292,7 +344,7 @@ window.bookingModal = (function () {
       if (editing && currentStartIso && !hasCurrentSlot) {
         const customBtn = document.createElement('button');
         customBtn.type = 'button';
-        customBtn.className = 'slot-btn selected';
+        customBtn.className = 'slot-btn is-selected';
         customBtn.innerHTML = `
           <div class="slot-time">${window.utils.formatTime(booking.start_time)} → ${window.utils.formatTime(booking.end_time)}</div>
           <div class="slot-status">الموعد الحالي</div>
@@ -309,13 +361,15 @@ window.bookingModal = (function () {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'slot-btn';
-        if (isSelected) btn.classList.add('selected');
+        if (isSelected) btn.classList.add('is-selected');
         if (!s.is_available && !isSelected) btn.classList.add('is-busy');
         if (s.is_past) btn.classList.add('is-past');
         btn.disabled = (!s.is_available || s.is_past) && !isSelected;
 
         let statusLabel = '';
-        if (s.is_past) statusLabel = 'انتهى';
+        // موعد الحجز الذي نعدّله يشغل خانته بنفسه — «محجوز» هنا تضليل
+        if (isSelected) statusLabel = 'الموعد الحالي';
+        else if (s.is_past) statusLabel = 'انتهى';
         else if (!s.is_available) statusLabel = 'محجوز';
         else statusLabel = window.utils.formatPrice(slotPrice);
 
@@ -346,8 +400,22 @@ window.bookingModal = (function () {
       refreshSlots();
     });
 
-    // تحميل أولي
-    refreshSlots();
+    // وضع العرض: تعطيل الحقول وعرض الموعد ثابتًا بلا نداء شبكة المواعيد
+    if (readOnly) {
+      form.querySelectorAll('input, select, textarea').forEach((el) => { el.disabled = true; });
+      slotsArea.innerHTML = `
+        <div class="slot-grid">
+          <button type="button" class="slot-btn is-selected" disabled>
+            <div class="slot-time">${window.utils.formatTime(booking.start_time)} → ${window.utils.formatTime(booking.end_time)}</div>
+            <div class="slot-status">${isPending ? 'الموعد المطلوب' : 'موعد الحجز'}</div>
+          </button>
+        </div>
+      `;
+      slotsArea.className = '';
+    } else {
+      // تحميل أولي
+      refreshSlots();
+    }
 
     // combobox العملاء — يُتجاوَز عند prefillCustomer (العميل ثابت)
     let selectedNewCustomer = false;
@@ -430,8 +498,10 @@ window.bookingModal = (function () {
       const rawPrice = (fd.get('total_price') || '').trim();
       const totalPrice = rawPrice === '' ? null : Math.max(0, parseFloat(rawPrice) || 0);
       const paidAmount = parseFloat(fd.get('paid_amount')) || 0;
-      const notes = fd.get('notes').trim() || null;
-      const status = fd.get('status') || 'confirmed';
+      // ملاحظات العميل (الحجز العام) لا يلمسها الحفظ؛ حقلها معروض disabled فلا يصل عبر FormData
+      const notes = customerNotes ? (booking.notes || null) : ((fd.get('notes') || '').trim() || null);
+      // الحالة لا تُغيَّر من نموذج التعديل — حصريًا عبر الأزرار المخصصة
+      const status = editing ? booking.status : 'confirmed';
 
       if (!startTime || !endTime) {
         window.utils.toast('اختر موعداً من القائمة', 'error');

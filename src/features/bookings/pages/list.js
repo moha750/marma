@@ -39,6 +39,7 @@
           <option value="confirmed">مؤكد</option>
           <option value="completed">مكتمل</option>
           <option value="cancelled">ملغي</option>
+          <option value="no_show">لم يحضر</option>
         </select>
       </div>
       <button class="btn btn--ghost" id="reset-filters-btn" title="إعادة تعيين">
@@ -53,16 +54,22 @@
     </div>
   `;
 
-  function statusChip(status) {
+  function statusChip(status, b) {
     if (status === 'pending')   return '<span class="chip-status chip-status--pending">بانتظار تأكيدك</span>';
     if (status === 'confirmed') return '<span class="chip-status chip-status--confirmed">حجز مؤكد</span>';
     if (status === 'completed') return '<span class="chip-status chip-status--completed">حجز مكتمل</span>';
-    if (status === 'cancelled') return '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    if (status === 'cancelled') {
+      // تمييز إلغاء العميل (عبر صفحة «حجوزاتي») عن إلغاء الإدارة
+      return b && b.cancelled_by === 'customer'
+        ? '<span class="chip-status chip-status--cancelled">ألغى العميل حجزه</span>'
+        : '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
+    }
+    if (status === 'no_show') return '<span class="chip-status chip-status--noshow">لم يحضر</span>';
     return `<span class="chip-status chip-status--muted">${window.utils.escapeHtml(status)}</span>`;
   }
 
   function statusLabel(s) {
-    return { pending:'معلّق', confirmed:'مؤكد', completed:'مكتمل', cancelled:'ملغي' }[s] || s;
+    return { pending:'معلّق', confirmed:'مؤكد', completed:'مكتمل', cancelled:'ملغي', no_show:'لم يحضر' }[s] || s;
   }
 
   function fmtMoney(v) { return window.utils.formatCurrency(v || 0); }
@@ -157,6 +164,54 @@
     ctrl.modal.querySelector('[data-action="close"]').addEventListener('click', ctrl.close);
   }
 
+  // نافذة تحديد سعر حجز «عند التواصل» — حقل واحد، وبعد الحفظ يدخل خط التحصيل الطبيعي
+  function openPriceDialog(booking, onSaved) {
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <p class="text-muted text-sm" style="margin:0 0 var(--space-3)">
+        سعر هذا الحجز «عند التواصل» — سجّل السعر المتفق عليه مع العميل ليدخل حساب التحصيل والإيرادات.
+      </p>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">السعر المتفق عليه (ر.س)</label>
+        <input type="number" class="form-control" id="price-amount" min="0" step="0.01" inputmode="decimal">
+        <span class="form-help">0 = مجاني</span>
+      </div>
+    `;
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex;gap:8px;width:100%';
+    footer.innerHTML = `
+      <div style="flex:1"></div>
+      <button type="button" class="btn btn--ghost" data-action="close">إغلاق</button>
+      <button type="button" class="btn btn--primary" id="price-submit">حفظ السعر</button>
+    `;
+
+    const ctrl = window.utils.openModal({ title: 'تحديد سعر الحجز', body, footer });
+    const input = ctrl.modal.querySelector('#price-amount');
+    input.focus();
+
+    const submit = async () => {
+      const raw = (input.value || '').trim();
+      const val = parseFloat(raw);
+      if (raw === '' || isNaN(val) || val < 0) {
+        window.utils.toast('أدخل سعراً صحيحاً', 'error');
+        input.focus();
+        return;
+      }
+      try {
+        const saved = await window.api.updateBooking(booking.id, { total_price: Math.round(val * 100) / 100 });
+        window.utils.toast('تم تحديد السعر', 'success');
+        ctrl.close();
+        if (typeof onSaved === 'function') onSaved(saved);
+      } catch (err) {
+        window.utils.toast(window.utils.formatError(err), 'error');
+      }
+    };
+    ctrl.modal.querySelector('#price-submit').addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    ctrl.modal.querySelector('[data-action="close"]').addEventListener('click', ctrl.close);
+  }
+
   const page = {
     async mount(container, ctx) {
       container.innerHTML = TEMPLATE;
@@ -236,7 +291,7 @@
         if (filterFrom.value) filters.from = filterFrom.value + 'T00:00:00';
         if (filterTo.value)   filters.to   = filterTo.value + 'T23:59:59';
         if (filterField.value) filters.fieldId = filterField.value;
-        // مؤكد/مكتمل حالتان مشتقّتان تُحسبان في الواجهة — لا تُمرَّران لقاعدة البيانات
+        // مؤكد/مكتمل/لم يحضر حالات مشتقّة تُحسب في الواجهة — لا تُمرَّر لقاعدة البيانات
         if (wantStatus === 'pending' || wantStatus === 'cancelled') filters.status = wantStatus;
 
         const hasFilters = Object.keys(filters).length > 0 || !!wantStatus;
@@ -245,9 +300,33 @@
         try {
           let bookings = await window.api.listBookings(filters);
           if (!alive) return;
-          if (wantStatus === 'confirmed' || wantStatus === 'completed') {
+          if (wantStatus === 'confirmed' || wantStatus === 'completed' || wantStatus === 'no_show') {
             bookings = bookings.filter((b) => window.utils.effectiveBookingStatus(b) === wantStatus);
           }
+
+          // أولوية العرض: معلّق (يحتاج قرارك) ← مؤكد لم يُؤكَّد للعميل بعد
+          // ← مؤكد يحتاج تحصيل ← مؤكد محصَّل ← ملغي ← مكتمل.
+          // داخل المجموعات النشطة الأقرب موعدًا أولًا (والمتأخر عن موعده في القمة)،
+          // وداخل الأرشيف الأحدث أولًا.
+          const rank = (b) => {
+            const eff = window.utils.effectiveBookingStatus(b);
+            if (eff === 'pending') return 0;
+            if (eff === 'confirmed') {
+              if (!b.whatsapp_confirmed_at) return 1;
+              // «عند التواصل» بلا سعر بعد = مالية معلّقة، يزاحم مجموعة التحصيل
+              const p = paymentInfo(b);
+              return (p && p.owed > 0) || b.total_price == null ? 2 : 3;
+            }
+            if (eff === 'cancelled') return 4;
+            if (eff === 'no_show') return 5;
+            return 6; // completed
+          };
+          bookings.sort((a, b) => {
+            const ra = rank(a), rb = rank(b);
+            if (ra !== rb) return ra - rb;
+            const diff = new Date(a.start_time) - new Date(b.start_time);
+            return ra <= 3 ? diff : -diff;
+          });
 
           if (!bookings.length) {
             tableContainer.innerHTML = `
@@ -268,7 +347,8 @@
 
           const active = bookings.filter((b) => b.status !== 'cancelled');
           const totals = active.reduce((acc, b) => {
-            acc.revenue += Number(b.total_price || 0);
+            // الغائب: قيمته المتحققة هي المحصَّل منه فقط (العربون) — سعره الكامل لن يأتي
+            acc.revenue += b.no_show_at ? Number(b.paid_amount || 0) : Number(b.total_price || 0);
             acc.paid    += Number(b.paid_amount || 0);
             return acc;
           }, { revenue: 0, paid: 0 });
@@ -318,7 +398,8 @@
                 <tbody>
                   ${bookings.map((b) => {
                     const hours = window.utils.hoursBetween(b.start_time, b.end_time);
-                    const accepted = isAccepted(b);
+                    // الغائب خارج دورة المال والتواصل: لا تحصيل ولا واتساب ولا مطالبة
+                    const accepted = isAccepted(b) && !b.no_show_at;
                     const pay = accepted ? paymentInfo(b) : null;
                     const effStatus = window.utils.effectiveBookingStatus(b);
                     // حجز مؤكد لم يُبلَّغ به العميل بعد عبر واتساب → نُنبّه الموظف للتأكيد
@@ -340,9 +421,11 @@
                         <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
                         <td data-label="المدفوع" class="tabular-nums cell-paid">
                           ${fmtMoney(b.paid_amount)}
-                          ${pay ? payBand(pay) : ''}
+                          ${pay ? payBand(pay) : (accepted && b.total_price == null ? `
+                            <span class="pay-band is-unpaid"><i data-lucide="tag"></i> حدّد السعر بعد التواصل</span>
+                          ` : '')}
                         </td>
-                        <td data-label="الحالة" class="card-tag">${statusChip(effStatus)}</td>
+                        <td data-label="الحالة" class="card-tag">${statusChip(effStatus, b)}</td>
                         <td class="actions-cell">
                           <div class="actions-inline">
                             ${b.status === 'pending' ? `
@@ -358,16 +441,40 @@
                                 <i data-lucide="banknote"></i><span class="btn-label">تحصيل</span>
                               </button>
                             ` : ''}
+                            ${accepted && b.total_price == null ? `
+                              <button class="btn btn--xs btn--accent-quiet" data-action="set-price" data-id="${b.id}" title="تحديد السعر">
+                                <i data-lucide="tag"></i><span class="btn-label">حدّد السعر</span>
+                              </button>
+                            ` : ''}
                             ${accepted && b.customers && b.customers.phone ? `
                               <a class="btn btn--xs ${needsConfirm ? 'btn--wa' : 'btn--wa-quiet'}" data-action="whatsapp" data-id="${b.id}" href="${window.utils.escapeHtml(buildWhatsAppUrl(b, venueName))}" target="_blank" rel="noopener" title="${needsConfirm ? 'أكّد الموعد للعميل عبر واتساب' : 'تواصل عبر واتساب (تم التأكيد سابقاً)'}">
                                 <i data-lucide="message-circle"></i><span class="btn-label">${needsConfirm ? 'أكّد الموعد للعميل' : 'تواصل واتساب'}</span>
                               </a>
                             ` : ''}
-                            ${effStatus !== 'completed' ? `
+                            ${effStatus === 'cancelled' ? `
+                              <button class="btn btn--xs btn--secondary" data-action="restore" data-id="${b.id}" title="استعادة">
+                                <i data-lucide="rotate-ccw"></i><span class="btn-label">استعادة الحجز</span>
+                              </button>
+                            ` : ''}
+                            ${effStatus === 'confirmed' && window.utils.isBookingPast(b) ? `
+                              <button class="btn btn--xs btn--danger-quiet" data-action="no-show" data-id="${b.id}" title="لم يحضر">
+                                <i data-lucide="user-x"></i><span class="btn-label">لم يحضر</span>
+                              </button>
+                            ` : ''}
+                            ${effStatus === 'no_show' ? `
+                              <button class="btn btn--xs btn--secondary" data-action="undo-no-show" data-id="${b.id}" title="تراجع">
+                                <i data-lucide="undo-2"></i><span class="btn-label">تراجع عن الوسم</span>
+                              </button>
+                            ` : ''}
+                            ${effStatus === 'confirmed' ? `
                               <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="تعديل">
                                 <i data-lucide="pencil"></i><span class="btn-label">تعديل الحجز</span>
                               </button>
-                            ` : ''}
+                            ` : `
+                              <button class="btn btn--xs btn--ghost" data-action="edit" data-id="${b.id}" title="التفاصيل">
+                                <i data-lucide="eye"></i><span class="btn-label">التفاصيل</span>
+                              </button>
+                            `}
                           </div>
                         </td>
                       </tr>
@@ -417,11 +524,84 @@
             });
           });
 
+          tableContainer.querySelectorAll('[data-action="restore"]').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const ok = await window.utils.confirm({
+                title: 'استعادة الحجز',
+                message: 'سيعود الحجز مؤكدًا ويحتاج تأكيدًا جديدًا للعميل عبر واتساب. استعادته؟',
+                confirmText: 'استعادة'
+              });
+              if (!ok) return;
+              btn.disabled = true;
+              try {
+                await window.api.restoreBooking(btn.dataset.id);
+                window.utils.toast('تمت استعادة الحجز — أكّد الموعد للعميل', 'success');
+                refresh();
+              } catch (err) {
+                btn.disabled = false;
+                // 23P01: قيد منع التعارض — حُجز الموعد لغير هذا العميل بعد الإلغاء
+                if (err && err.code === '23P01') {
+                  window.utils.toast('تعذّرت الاستعادة — الموعد لم يعد متاحًا، يوجد حجز يتعارض معه', 'error');
+                } else {
+                  window.utils.toast(window.utils.formatError(err), 'error');
+                }
+              }
+            });
+          });
+
           tableContainer.querySelectorAll('[data-action="pay"]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
               const booking = bookings.find((b) => b.id === btn.dataset.id);
               openPaymentDialog(booking, refresh);
+            });
+          });
+
+          tableContainer.querySelectorAll('[data-action="set-price"]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const booking = bookings.find((b) => b.id === btn.dataset.id);
+              openPriceDialog(booking, refresh);
+            });
+          });
+
+          tableContainer.querySelectorAll('[data-action="no-show"]').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const booking = bookings.find((x) => x.id === btn.dataset.id);
+              const owed = booking ? window.utils.bookingOwed(booking) : null;
+              const ok = await window.utils.confirm({
+                title: 'تسجيل عدم حضور',
+                message: `سيُؤرشف الحجز ويُسجَّل الغياب في سجل العميل${owed > 0 ? '، وتسقط المطالبة بالمتبقي (' + fmtMoney(owed) + ')' : ''}${Number(booking && booking.paid_amount || 0) > 0 ? '. المبلغ المحصَّل يبقى مسجلًا لك' : ''}. تسجيل؟`,
+                confirmText: 'لم يحضر',
+                danger: true
+              });
+              if (!ok) return;
+              btn.disabled = true;
+              try {
+                await window.api.markNoShow(btn.dataset.id);
+                window.utils.toast('سُجّل عدم الحضور', 'success');
+                refresh();
+              } catch (err) {
+                btn.disabled = false;
+                window.utils.toast(window.utils.formatError(err), 'error');
+              }
+            });
+          });
+
+          tableContainer.querySelectorAll('[data-action="undo-no-show"]').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              btn.disabled = true;
+              try {
+                await window.api.unmarkNoShow(btn.dataset.id);
+                window.utils.toast('تم التراجع عن وسم الغياب', 'success');
+                refresh();
+              } catch (err) {
+                btn.disabled = false;
+                window.utils.toast(window.utils.formatError(err), 'error');
+              }
             });
           });
 

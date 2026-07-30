@@ -271,6 +271,8 @@ body.sortable-active { cursor: grabbing !important; user-select: none; -webkit-u
 .table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="confirmed"] { --card-tint: var(--accent-500); }
 .table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="completed"] { --card-tint: var(--text-tertiary); }
 .table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="cancelled"] { --card-tint: var(--danger); }
+/* لم يحضر — أرشيف رمادي كالمكتمل؛ بادجه الأحمر وحده يحمل السلبية */
+.table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status="no_show"]   { --card-tint: var(--text-tertiary); }
 
 /* جسم الكرت — مسحة فاتحة من لون الحالة */
 .table-wrapper.cards-only.as-cards .table--cards tbody tr[data-status],

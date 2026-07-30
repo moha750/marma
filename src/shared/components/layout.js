@@ -234,16 +234,24 @@ window.layout = (function () {
     root.innerHTML = `
       <div class="app-shell" ${sidebarState ? `data-sidebar="${sidebarState}"` : ''}>
         <aside class="sidebar" id="sidebar">
-          <div class="sidebar-brand">
-            <span class="sidebar-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></span>
-            <div class="sidebar-brand-text">
-              <img src="${window.utils.path('/assets/logo-wordmark.svg')}" alt="مَرمى" class="brand-title">
-              <span class="tenant-name">
-                ${tenant && tenant.logo_url ? `<img class="tenant-name-logo" src="${window.utils.escapeHtml(tenant.logo_url)}" alt="">` : ''}
-                <span>${window.utils.escapeHtml(tenant ? tenant.name : '')}</span>
-              </span>
+          <!-- هوية العلامة: مع شعار الملعب تتصدر هويته و«مَرمى» سطر صغير؛ بدونه هوية مَرمى كاملة -->
+          ${tenant && tenant.logo_url ? `
+            <div class="sidebar-brand">
+              <span class="sidebar-brand-logo sidebar-brand-logo--tenant"><img src="${window.utils.escapeHtml(tenant.logo_url)}" alt="" aria-hidden="true"></span>
+              <div class="sidebar-brand-text">
+                <span class="tenant-brand-name">${window.utils.escapeHtml(tenant.name)}</span>
+                <span class="tenant-name">عبر مَرمى</span>
+              </div>
             </div>
-          </div>
+          ` : `
+            <div class="sidebar-brand">
+              <span class="sidebar-brand-logo"><img src="${window.utils.path('/assets/logo-mark.svg')}" alt="" aria-hidden="true"></span>
+              <div class="sidebar-brand-text">
+                <img src="${window.utils.path('/assets/logo-wordmark.svg')}" alt="مَرمى" class="brand-title">
+                <span class="tenant-name">${window.utils.escapeHtml(tenant ? tenant.name : '')}</span>
+              </div>
+            </div>
+          `}
 
           <nav class="sidebar-nav" aria-label="التنقل الرئيسي">
             ${navHtml}
