@@ -47,7 +47,7 @@ const PRECACHE_URLS = [
 const APP_ROUTES = [
   '/dashboard', '/calendar', '/bookings', '/customers',
   '/fields', '/schedule', '/reports', '/staff',
-  '/subscription', '/settings'
+  '/subscription', '/settings', '/loyalty'
 ];
 
 // ─── lifecycle ────────────────────────────────────────────
@@ -265,6 +265,10 @@ function isPublicPage(pathname) {
   return p === '/'
       || p === '/index.html'
       || p === '/book.html'
+      // بطاقة الولاء: صفحة عميل عامة، ولا يجوز أن يخدمها SW من cache —
+      // الرصيد والقسيمة يتغيّران، وبطاقة قديمة معروضة أسوأ من انتظار الشبكة
+      || p === '/card.html'
+      || p === '/card'
       || p.startsWith('/admin/');
 }
 

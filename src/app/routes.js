@@ -24,6 +24,10 @@ window.appRoutes = [
   { name: 'fields',           path: '/fields',           title: 'الأرضيات',          ownerOnly: true },
   { name: 'schedule',         path: '/schedule',         title: 'أيام وفترات العمل', ownerOnly: true },
   { name: 'offers',           path: '/offers',           title: 'العروض',            ownerOnly: true },
+  { name: 'loyalty',          path: '/loyalty',          title: 'برنامج الولاء',     ownerOnly: true },
+  { name: 'loyalty-cards',    path: '/loyalty/cards',    title: 'بطاقات الولاء',     ownerOnly: true, activeNav: 'loyalty' },
+  // الماسح متاح للموظفين عمداً — هم من يصرفون المكافآت عند الكاونتر
+  { name: 'loyalty-scan',     path: '/loyalty/scan',     title: 'مسح البطاقة',       activeNav: 'loyalty-scan' },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },
   { name: 'visits',           path: '/visits',           title: 'الزيارات',          ownerOnly: true },
   { name: 'staff',            path: '/staff',            title: 'الموظفون',          ownerOnly: true },

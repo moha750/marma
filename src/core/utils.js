@@ -447,6 +447,10 @@ window.utils = {
     if (msg.includes('STAFF_LIMIT_REACHED')) return 'بلغت الحد الأقصى المسموح من الموظفين لباقتك. ارفع الباقة من صفحة الاشتراك';
     if (msg.includes('INVALID_UNIT_COUNT')) return 'عدد الأرضيات أو الموظفين غير صالح';
 
+    // برنامج الولاء
+    if (msg.includes('LOYALTY_NOT_IN_PLAN')) return 'برنامج الولاء غير متاح في باقتك الحالية. ارفع الباقة من صفحة الاشتراك';
+    if (msg.includes('LOYALTY_CARD_LIMIT_REACHED')) return 'بلغت الحد الأقصى من بطاقات الولاء لباقتك. ارفع الباقة من صفحة الاشتراك';
+
     // رسائل auth شائعة
     if (msg.includes('Invalid login credentials')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
     if (msg.includes('User already registered')) return 'هذا البريد الإلكتروني مسجل مسبقاً';

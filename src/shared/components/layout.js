@@ -19,6 +19,8 @@ window.layout = (function () {
     { key: 'fields',       group: 'إدارة',  label: 'الأرضيات',             icon: 'goal',             path: '/fields',       ownerOnly: true },
     { key: 'schedule',     group: 'إدارة',  label: 'أيام وفترات العمل',    icon: 'clock',            path: '/schedule',     ownerOnly: true },
     { key: 'offers',       group: 'إدارة',  label: 'العروض',               icon: 'badge-percent',    path: '/offers',       ownerOnly: true },
+    { key: 'loyalty',      group: 'إدارة',  label: 'برنامج الولاء',        icon: 'credit-card',      path: '/loyalty',      ownerOnly: true },
+    { key: 'loyalty-scan', group: 'تشغيلي', label: 'مسح البطاقة',          icon: 'scan-line',        path: '/loyalty/scan' },
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
     { key: 'visits',       group: 'إدارة',  label: 'الزيارات',             icon: 'eye',              path: '/visits',       ownerOnly: true },
     { key: 'staff',        group: 'إدارة',  label: 'الموظفون',             icon: 'user',             path: '/staff',        ownerOnly: true },

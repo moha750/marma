@@ -101,6 +101,26 @@ window.realtime = (function () {
       table: 'notifications',
       invalidates: [],
       event: 'notifications:change'
+    },
+    // الولاء: ثلاثة جداول تُطلق حدثاً واحداً — صفحات الولاء تهمّها النتيجة
+    // لا مصدرها (ختم جديد، قسيمة صدرت، بطاقة أُصدرت كلّها تعني «أعد التحميل»)
+    {
+      channel: 'rt-loyalty-transactions',
+      table: 'loyalty_transactions',
+      invalidates: [],
+      event: 'loyalty:change'
+    },
+    {
+      channel: 'rt-loyalty-rewards',
+      table: 'loyalty_rewards',
+      invalidates: [],
+      event: 'loyalty:change'
+    },
+    {
+      channel: 'rt-loyalty-cards',
+      table: 'loyalty_cards',
+      invalidates: [],
+      event: 'loyalty:change'
     }
   ];
 
