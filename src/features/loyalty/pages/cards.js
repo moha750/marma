@@ -37,6 +37,9 @@
             <div class="page-subtitle">كل عميل انضم للبرنامج، ورصيده وقسائمه</div>
           </div>
           <div class="actions">
+            <a class="btn btn--ghost" href="${window.utils.path('/loyalty')}">
+              <i data-lucide="settings-2"></i> إعدادات البرنامج
+            </a>
             <button class="btn btn--primary" id="add-card"><i data-lucide="user-plus"></i> إصدار بطاقة</button>
           </div>
         </div>
