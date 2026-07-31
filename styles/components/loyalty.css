@@ -1,0 +1,439 @@
+/* ═══ برنامج الولاء ═══════════════════════════════════════════════════════
+   .wcard = محاكاة بطاقة المحفظة. ألوانها تأتي من متغيّرات inline يحسبها
+   program.js (خلفية من لوحة معتمدة، ونصّ وتسميات مشتقّة حسابياً) — فلا يمكن
+   لأي اختيار أن ينتج بطاقة غير مقروءة.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── الإحصاءات ───────────────────────────────────────────── */
+.loy-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+.loy-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.loy-stat-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-50);
+  color: var(--accent-600);
+  flex: none;
+}
+.loy-stat-icon i { inline-size: 1.15rem; block-size: 1.15rem; }
+.loy-stat-value { font-size: var(--text-xl); font-weight: 600; line-height: 1.2; }
+.loy-stat-label { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+/* ── التخطيط: نموذج + معاينة لاصقة ───────────────────────── */
+.loy-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .loy-grid { grid-template-columns: minmax(0, 1fr); }
+  .loy-side { order: -1; }   /* المعاينة أولاً على الجوال */
+}
+.loy-side { position: sticky; inset-block-start: var(--space-4); }
+.loy-preview-head {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-block-end: var(--space-2);
+}
+.loy-preview-note {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-block-start: var(--space-3);
+  line-height: 1.6;
+}
+.loy-preview-off {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--warning-tint);
+  color: var(--warning);
+  font-size: var(--text-xs);
+}
+.loy-preview-off i { inline-size: 1rem; block-size: 1rem; }
+
+/* ── التبويبات ───────────────────────────────────────────── */
+.loy-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-block-end: var(--space-3);
+  border-block-end: 1px solid var(--border-subtle);
+}
+.loy-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-block-end: 2px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-block-end: -1px;
+}
+.loy-tab:hover { color: var(--text-primary); }
+.loy-tab.is-active { color: var(--accent-600); border-block-end-color: var(--accent-500); font-weight: 600; }
+
+/* ── مفتاح التفعيل ───────────────────────────────────────── */
+.loy-switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block-end: var(--space-4);
+  margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--border-subtle);
+}
+.loy-checks { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.loy-checks .check { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); cursor: pointer; }
+
+/* ── القوالب ─────────────────────────────────────────────── */
+.loy-templates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  margin-block-end: var(--space-2);
+}
+.loy-template {
+  text-align: start;
+  padding: var(--space-3);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .15s, background .15s;
+}
+.loy-template:hover { border-color: var(--border-strong); }
+.loy-template.is-active { border-color: var(--accent-500); background: var(--accent-50); }
+.loy-template i { inline-size: 1.25rem; block-size: 1.25rem; color: var(--accent-600); }
+.loy-template-name { font-weight: 600; font-size: var(--text-sm); margin-block-start: var(--space-2); }
+.loy-template-desc { font-size: var(--text-xs); color: var(--text-tertiary); line-height: 1.5; }
+
+/* حقل يشغل عرض الصف كاملاً داخل .form-row.cols-2 */
+.loy-span-2 { grid-column: 1 / -1; }
+
+/* ── لوحة الألوان ────────────────────────────────────────── */
+.loy-swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.loy-swatch {
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12);
+  cursor: pointer;
+  padding: 0;
+}
+.loy-swatch.is-active { border-color: var(--accent-500); outline: 2px solid var(--surface-1); outline-offset: -4px; }
+.loy-contrast {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.loy-contrast i { inline-size: .9rem; block-size: .9rem; color: var(--success); }
+
+/* ── رفع الأصول ──────────────────────────────────────────── */
+.loy-asset { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.loy-asset-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.loy-asset-preview--logo {
+  inline-size: 4rem; block-size: 4rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+}
+.loy-asset-preview--hero {
+  inline-size: 12rem; block-size: 3.9rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+}
+.loy-asset-empty {
+  display: grid; place-items: center;
+  inline-size: 4rem; block-size: 4rem;
+  border: 1.5px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+}
+.loy-asset-empty--wide { inline-size: 12rem; block-size: 3.9rem; }
+
+/* ── بطاقة المحفظة (المعاينة) ────────────────────────────── */
+.wcard {
+  background: var(--wc-bg);
+  color: var(--wc-fg);
+  border-radius: 1rem;
+  padding: var(--space-4);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .18);
+  position: relative;
+  overflow: hidden;
+}
+.wcard-top { display: flex; align-items: center; gap: var(--space-3); }
+.wcard-logo {
+  inline-size: 2.25rem; block-size: 2.25rem;
+  border-radius: 50%;
+  background: rgb(255 255 255 / .16);
+  display: grid; place-items: center;
+  overflow: hidden;
+  flex: none;
+  font-weight: 600;
+}
+.wcard-logo img { inline-size: 100%; block-size: 100%; object-fit: cover; }
+.wcard-org { flex: 1; min-inline-size: 0; }
+.wcard-org-name {
+  font-weight: 600; font-size: var(--text-sm);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wcard-org-by { font-size: var(--text-3xs); color: var(--wc-label); }
+.wcard-balance { text-align: end; flex: none; }
+.wcard-mini-label {
+  font-size: var(--text-3xs);
+  color: var(--wc-label);
+  letter-spacing: .02em;
+}
+.wcard-mini-value { font-size: var(--text-sm); font-weight: 600; }
+
+.wcard-strip {
+  block-size: 4.5rem;
+  margin: var(--space-3) calc(var(--space-4) * -1) 0;
+  background-size: cover;
+  background-position: center;
+}
+.wcard-strip--empty {
+  display: grid; place-items: center;
+  background: rgb(255 255 255 / .08);
+  color: var(--wc-label);
+  font-size: var(--text-xs);
+}
+.wcard-strip--stamps {
+  display: flex; flex-wrap: wrap; align-content: center;
+  justify-content: center; gap: .4rem;
+  padding: var(--space-2) var(--space-3);
+  background: rgb(255 255 255 / .07);
+  block-size: auto;
+  min-block-size: 3rem;
+}
+.wcard-dot {
+  inline-size: .8rem; block-size: .8rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--wc-label);
+}
+.wcard-dot.is-filled { background: var(--wc-fg); border-color: var(--wc-fg); }
+
+.wcard-primary { margin-block-start: var(--space-4); }
+.wcard-primary-value { font-size: var(--text-lg); font-weight: 600; line-height: 1.3; }
+.wcard-row { display: flex; justify-content: space-between; gap: var(--space-3); margin-block-start: var(--space-3); }
+.wcard-qr {
+  margin-block-start: var(--space-4);
+  display: grid; place-items: center;
+  background: rgb(255 255 255 / .92);
+  color: #111;
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+.wcard-qr i { inline-size: 3rem; block-size: 3rem; }
+
+/* ── صفحة البطاقات ───────────────────────────────────────── */
+.loy-toolbar { padding: var(--space-3); margin-block-end: var(--space-3); }
+.loy-detail-head {
+  display: flex; flex-wrap: wrap; gap: var(--space-5);
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--border-subtle);
+}
+.loy-detail-balance { font-size: var(--text-2xl); font-weight: 600; line-height: 1; }
+.loy-detail-serial { font-size: var(--text-lg); font-weight: 600; font-family: var(--font-mono); }
+.loy-detail-cap { font-size: var(--text-xs); color: var(--text-tertiary); margin-block-start: .15rem; }
+.loy-detail-section { margin-block-start: var(--space-4); }
+
+.loy-adjust { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block-start: var(--space-3); }
+
+.loy-rewards { display: grid; gap: var(--space-2); }
+.loy-reward {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+.loy-reward-code { font-family: var(--font-mono); font-weight: 600; letter-spacing: .06em; }
+.loy-reward-label { font-size: var(--text-sm); }
+.loy-reward-meta { font-size: var(--text-xs); color: var(--text-tertiary); }
+.loy-reward-side { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+
+.loy-txs { display: grid; gap: 1px; background: var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+.loy-tx {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-1);
+  font-size: var(--text-sm);
+}
+.loy-tx-delta { font-weight: 600; font-variant-numeric: tabular-nums; min-inline-size: 2.5rem; }
+.loy-tx-delta.is-plus { color: var(--success); }
+.loy-tx-delta.is-minus { color: var(--text-secondary); }
+.loy-tx-reason { flex: 1; min-inline-size: 0; }
+.loy-tx-date { color: var(--text-tertiary); font-size: var(--text-xs); flex: none; }
+
+.loy-picker { display: grid; gap: var(--space-1); max-block-size: 18rem; overflow-y: auto; }
+.loy-picker-row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+}
+.loy-picker-row:hover:not(:disabled) { border-color: var(--accent-500); background: var(--accent-50); }
+.loy-picker-row:disabled { opacity: .55; cursor: default; }
+.loy-picker-row i { inline-size: 1rem; block-size: 1rem; color: var(--accent-600); }
+
+/* ═══ صفحة البطاقة العامة (card.html) ═══════════════════════════════════ */
+.lcard-page { max-inline-size: 26rem; margin-inline: auto; padding-block: var(--space-8) var(--space-10); }
+.lcard-head { text-align: center; margin-block-end: var(--space-5); }
+.lcard-logo {
+  inline-size: 4.5rem; block-size: 4.5rem;
+  border-radius: 50%; object-fit: cover;
+  margin-block-end: var(--space-3);
+  border: 2px solid var(--surface-1);
+  box-shadow: 0 2px 12px rgb(0 0 0 / .12);
+}
+.lcard-title { font-size: var(--text-xl); margin: 0; }
+.lcard-sub { color: var(--text-tertiary); font-size: var(--text-sm); margin-block-start: .15rem; }
+
+.lcard-actions { margin-block-start: var(--space-4); }
+.lcard-wallet {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: transform .12s ease;
+}
+.lcard-wallet:active { transform: scale(.985); }
+.lcard-wallet i { inline-size: 1.5rem; block-size: 1.5rem; flex: none; }
+.lcard-wallet b { display: block; font-size: var(--text-base); }
+.lcard-wallet small { display: block; opacity: .75; font-size: var(--text-xs); margin-block-start: .1rem; }
+.lcard-wallet--apple { background: #000; color: #fff; }
+.lcard-wallet--soon { background: var(--surface-2); color: var(--text-secondary); cursor: default; }
+
+.lcard-note {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.lcard-note--warn { background: var(--warning-tint); color: var(--warning); }
+.lcard-note i { inline-size: 1.1rem; block-size: 1.1rem; flex: none; }
+
+.lcard-terms { margin-block-start: var(--space-4); font-size: var(--text-sm); }
+.lcard-terms summary { cursor: pointer; color: var(--text-secondary); }
+.lcard-terms p { color: var(--text-tertiary); margin-block-start: var(--space-2); line-height: 1.7; }
+
+.lcard-links {
+  display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap;
+  margin-block-start: var(--space-5);
+}
+.lcard-foot {
+  text-align: center; color: var(--text-tertiary);
+  font-size: var(--text-xs); margin-block-start: var(--space-4); line-height: 1.7;
+}
+.lcard-serial { font-family: var(--font-mono); font-weight: 600; color: #111; }
+
+/* رمز QR داخل بطاقة المعاينة على الصفحة العامة */
+.lcard-page .wcard-qr img,
+.lcard-page .wcard-qr canvas { display: block; }
+
+/* ═══ ماسح البطاقة (/loyalty/scan) ═══════════════════════════════════════ */
+.scan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  gap: var(--space-3);
+  align-items: start;
+  margin-block-end: var(--space-3);
+}
+@media (max-width: 52rem) { .scan-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.scan-cam-card { padding: var(--space-3); }
+.scan-viewport {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #0b0d0a;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.scan-viewport video {
+  inline-size: 100%; block-size: 100%;
+  object-fit: cover;
+  display: none;
+}
+.scan-viewport.is-live video { display: block; }
+.scan-frame {
+  position: absolute;
+  inset: 18%;
+  border: 2px solid rgb(255 255 255 / .85);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / .35);
+  display: none;
+}
+.scan-viewport.is-live .scan-frame { display: block; }
+.scan-hint {
+  display: grid; place-items: center; gap: var(--space-2);
+  color: rgb(255 255 255 / .7);
+  font-size: var(--text-sm);
+}
+.scan-hint i { inline-size: 2rem; block-size: 2rem; }
+.scan-cam-actions { display: flex; justify-content: center; margin-block-start: var(--space-3); }
+.scan-manual { display: flex; gap: var(--space-2); }
+.scan-manual .form-control { flex: 1; min-inline-size: 0; }
+
+.scan-card { padding: var(--space-4); }
+.scan-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--border-subtle);
+}
+.scan-name { font-size: var(--text-lg); font-weight: 600; }
+.scan-phone { color: var(--text-tertiary); font-size: var(--text-sm); }
+.scan-balance { text-align: center; flex: none; }
+.scan-balance-value { font-size: var(--text-2xl); font-weight: 600; line-height: 1; color: var(--accent-600); }
+.scan-balance-cap { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+.scan-rewards { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.scan-reward {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--success-tint);
+  border-radius: var(--radius-md);
+}
+.scan-reward-label { font-weight: 600; }
+.scan-reward-code { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-secondary); letter-spacing: .06em; }
+.scan-none {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-block: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+.scan-none i { inline-size: 1rem; block-size: 1rem; }
+.scan-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}

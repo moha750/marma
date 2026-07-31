@@ -11,3 +11,14 @@ verify_jwt = false
 
 [functions.send-staff-invitation]
 verify_jwt = false
+
+# Apple Wallet: تُنادى من أجهزة العملاء ومن خوادم PassKit — لا JWT من Supabase.
+# المصادقة داخلية: توقيع HMAC على رابط التنزيل، و Authorization: ApplePass
+# على مسارات خدمة الويب.
+[functions.wallet-apple]
+verify_jwt = false
+
+# مزامنة المحافظ: تُنادى من التريجر عبر pg_net ومن cron — لا JWT من Supabase،
+# والمصادقة بسرّ داخلي مشترك (INTERNAL_HOOK_SECRET) داخل الدالة.
+[functions.wallet-sync]
+verify_jwt = false

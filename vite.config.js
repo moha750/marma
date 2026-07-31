@@ -11,6 +11,7 @@ const APP_ROUTES = [
   'fields',
   'schedule',
   'offers',
+  'loyalty',
   'reports',
   'visits',
   'staff',
@@ -71,6 +72,7 @@ export default defineConfig(({ mode }) => {
           forgot: resolve(__dirname, 'auth/forgot.html'),
           reset: resolve(__dirname, 'auth/reset.html'),
           book: resolve(__dirname, 'book.html'),
+          card: resolve(__dirname, 'card.html'),
           app: resolve(__dirname, 'app.html'),
           admin: resolve(__dirname, 'admin.html')
         }

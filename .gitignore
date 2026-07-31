@@ -4,6 +4,17 @@ config.js
 # Apple Sign in — المفتاح الخاص (لا يُرفع أبداً)
 *.p8
 
+# شهادات ومفاتيح بطاقات المحفظة (Pass Type ID / APNs / Google SA)
+# المفتاح الخاص لشهادة الـ Pass = القدرة على إصدار بطاقات باسمك. لا يُرفع أبداً.
+certs/
+*.key
+*.csr
+*.cer
+*.pem
+*.p12
+*.pfx
+google-service-account*.json
+
 # IDE
 .vscode/
 .idea/
