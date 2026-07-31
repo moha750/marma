@@ -175,7 +175,11 @@ self.addEventListener('fetch', (event) => {
 
 async function handleNavigation(req, url) {
   try {
-    const fresh = await fetch(req);
+    // cache:'no-cache' لنفس سبب networkFirst أدناه: Cloudflare يكتب Browser Cache
+    // TTL فوق max-age=0 الذي نضعه في _headers، فيخدم المتصفّح HTML قديماً يشير
+    // إلى أصول مُهَشَّمة حُذفت في النشر الجديد — فتظهر الصفحة بلا أنماط إطلاقاً.
+    // الصفحة ٣ ك.ب والرد غالباً 304، فالكلفة معدومة.
+    const fresh = await fetch(req, { cache: 'no-cache' });
     if (fresh && fresh.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
       cache.put(req, fresh.clone());

@@ -25,6 +25,9 @@
 /book.html
   Cache-Control: public, max-age=0, must-revalidate
 
+/card.html
+  Cache-Control: public, max-age=0, must-revalidate
+
 # صفحات الـ auth و admin
 /auth/*
   Cache-Control: public, max-age=0, must-revalidate

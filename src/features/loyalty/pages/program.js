@@ -153,7 +153,12 @@
 
       function render() {
         if (!state.enabled) return renderUpsell();
-        actions.innerHTML = `<button class="btn btn--primary" id="loy-save"><i data-lucide="save"></i> حفظ</button>`;
+        // صفحة البطاقات لا يصلها الشريط الجانبي (عنصر واحد للولاء)، فمدخلها من هنا
+        actions.innerHTML = `
+          <a class="btn btn--ghost" href="${window.utils.path('/loyalty/cards')}">
+            <i data-lucide="credit-card"></i> البطاقات
+          </a>
+          <button class="btn btn--primary" id="loy-save"><i data-lucide="save"></i> حفظ</button>`;
         window.utils.renderIcons(actions);
         actions.querySelector('#loy-save').addEventListener('click', save);
 

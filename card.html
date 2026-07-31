@@ -21,6 +21,9 @@
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <script>(function(){if(!('serviceWorker' in navigator))return;var done=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(done)return;done=true;location.reload();});})();</script>
   <link rel="stylesheet" href="styles/main.css">
+  <!-- شبكة أمان: HTML قديم من الكاش يشير إلى ملف أنماط حُذف في النشر الجديد ⇒ صفحة
+       بلا أنماط. نكشف غياب أي stylesheet مُطبَّق ونُعيد التحميل مرة واحدة فقط. -->
+  <script>addEventListener("load",function(){try{var ok=Array.prototype.some.call(document.styleSheets,function(s){try{return s.cssRules&&s.cssRules.length>0}catch(_){return true}});if(!ok&&!sessionStorage.getItem("marma:css-retry")){sessionStorage.setItem("marma:css-retry","1");location.reload()}}catch(_){}});</script>
 </head>
 <body>
   <div class="bp">
