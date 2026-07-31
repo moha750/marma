@@ -96,12 +96,13 @@
                 ${c.status === 'active' ? 'نشطة' : 'موقوفة'}</span>
             </td>
             <td data-label="الانضمام" class="text-tertiary">${esc(window.utils.formatDate(c.created_at))}</td>
-            <td data-label="" class="actions-cell text-end">
-              <button class="btn btn--ghost btn--sm" data-share="${esc(c.serial)}"
-                data-name="${esc(c.customer_name)}" data-phone="${esc(c.customer_phone)}"
-                title="إرسال رابط البطاقة عبر واتساب">
-                <i data-lucide="send"></i>
-              </button>
+            <td data-label="" class="actions-cell">
+              <div class="actions-inline">
+                <button class="btn btn--ghost btn--sm" data-share="${esc(c.serial)}"
+                  data-name="${esc(c.customer_name)}" data-phone="${esc(c.customer_phone)}">
+                  <i data-lucide="send"></i> إرسال للعميل
+                </button>
+              </div>
             </td>
           </tr>`).join('');
         body.innerHTML = `
