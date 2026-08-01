@@ -252,9 +252,23 @@ Deno.serve(async (req) => {
   try {
     // ── تنزيل البطاقة: /pkpass/<serial>.<sig> ──
     if (req.method === "GET" && parts[0] === "pkpass" && parts[1]) {
-      const [serial, sig] = parts[1].replace(/\.pkpass$/, "").split(".");
-      if (!serial || !sig) return new Response("bad request", { status: 400 });
-      if (!safeEqual(sig, await linkSig(serial))) return new Response("forbidden", { status: 403 });
+      // يقبل «serial» و«serial.signature» معاً.
+      //
+      // لماذا التوقيع اختياري؟ الرقم التسلسلي ٢٤ خانة سداسية عشرية = ٩٦ بت
+      // عشوائية، فهو نفسه مفتاح الوصول ولا يُخمَّن. والتوقيع لا يضيف سرّية —
+      // ومن يملكه يملك السلسلة كاملة أصلاً. اشتراطه كان يكسر الرابط الذي
+      // ترسله اللوحة عبر واتساب، لأنها لا تملك السرّ لتوقّعه. ونفس المنطق
+      // مطبَّق سلفاً في loyalty_public_card. فإن وُجد تحقّقنا منه، وإلا كفى
+      // الشكل الصارم للرقم.
+      const raw = parts[1].replace(/\.pkpass$/, "");
+      const dot = raw.indexOf(".");
+      const serial = (dot === -1 ? raw : raw.slice(0, dot)).toLowerCase();
+      const sig = dot === -1 ? "" : raw.slice(dot + 1);
+
+      if (!/^[0-9a-f]{24}$/.test(serial)) return new Response("bad request", { status: 400 });
+      if (sig && !safeEqual(sig, await linkSig(serial))) {
+        return new Response("forbidden", { status: 403 });
+      }
 
       const card = await loadCard(serial);
       if (!card) return new Response("not found", { status: 404 });
