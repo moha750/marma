@@ -73,6 +73,36 @@
         </div>
 
         <div class="card" style="margin-top:var(--space-4)">
+          <div class="card-header"><h3>النظام والخصوصية</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
+              <a class="btn btn--ghost btn--sm" href="${window.utils.path('/legal/privacy.html')}">
+                <i data-lucide="shield-check"></i> سياسة الخصوصية
+              </a>
+              <a class="btn btn--ghost btn--sm" href="${window.utils.path('/legal/terms.html')}">
+                <i data-lucide="file-text"></i> شروط الاستخدام
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card danger-zone" style="margin-top:var(--space-4)">
+          <div class="card-header"><h3>حذف الحساب</h3></div>
+          <div class="card-body">
+            <p class="text-muted text-sm" style="margin-bottom:var(--space-3)">
+              ${profile.role === 'owner'
+                ? 'حذف حسابك يمحو ملعبك وكل بياناته نهائياً: الحجوزات، العملاء، الأرضيات، التقارير، وحسابات موظفيك. لا يمكن استرجاع شيء بعد التنفيذ.'
+                : 'حذف حسابك يُلغي عضويتك في هذا الملعب ويمحو بياناتك الشخصية. حجوزات الملعب تبقى ملكاً لمالكه.'}
+            </p>
+            <div class="card-actions">
+              <button type="button" class="btn btn--danger" id="delete-account-btn">
+                <i data-lucide="trash-2"></i> حذف حسابي نهائياً
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:var(--space-4)">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">
             <h3>الأجهزة المسجّلة</h3>
             <button type="button" class="btn btn--ghost btn--sm" id="sessions-signout-others">
@@ -252,6 +282,96 @@
           } finally {
             signoutOthersBtn.disabled = false;
           }
+        });
+      }
+
+      // ── حذف الحساب ──
+      // متطلَّب إلزامي في متجرَي أبل وقوقل (أبل 5.1.1(v)): الحذف يُبدأ ويكتمل
+      // من داخل التطبيق، لا بمراسلة الدعم. والتنفيذ في Edge Function باسم
+      // delete-account لأن حذف هوية المصادقة يحتاج مفتاح service_role.
+      const deleteBtn = container.querySelector('#delete-account-btn');
+      if (deleteBtn) {
+        const isOwner = profile.role === 'owner';
+        deleteBtn.addEventListener('click', async () => {
+          // حاجزان للمالك (منشأة كاملة تُمحى)، وحاجز واحد للموظّف.
+          const first = await window.utils.confirm({
+            title: 'حذف الحساب نهائياً',
+            message: isOwner
+              ? `سيُحذف ملعب «${window.utils.escapeHtml(tenant.name || '')}» وكل بياناته، وحساباتُ موظفيك. لا رجوع بعد ذلك.`
+              : 'سيُحذف حسابك وتُلغى عضويتك في الملعب. لا رجوع بعد ذلك.',
+            confirmText: 'متابعة', danger: true
+          });
+          if (!first) return;
+
+          // المالك يكتب كلمة التأكيد بيده: نقرتان متتاليتان تحدثان بالخطأ،
+          // وكتابةُ كلمةٍ لا تحدث بالخطأ.
+          if (isOwner) {
+            const typed = await promptConfirmWord();
+            if (typed !== 'حذف') {
+              if (typed !== null) window.utils.toast('لم تُطابق كلمة التأكيد — لم يُحذف شيء', 'warning');
+              return;
+            }
+          }
+
+          deleteBtn.disabled = true;
+          const label = deleteBtn.innerHTML;
+          deleteBtn.innerHTML = 'جارٍ الحذف…';
+          try {
+            // ألغِ اشتراك الإشعارات والجلسة الفعّالة قبل فقد الرمز
+            try { if (window.push && window.push.teardown) await window.push.teardown(); } catch (_) {}
+
+            const { data, error } = await window.sb.functions.invoke('delete-account', {
+              body: { delete_business: isOwner }
+            });
+            if (error) throw error;
+            if (data && data.error) throw new Error(data.error);
+
+            window.utils.toast('تم حذف حسابك', 'success');
+            // الرمز صار لهوية محذوفة — نظّف محلياً ثم اخرج
+            try { await window.sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+            if (window.store) window.store.clearAll();
+            const base = (window.__BASE__ || '');
+            const loginPath = window.native ? window.native.docPath('/auth/login') : '/auth/login';
+            window.location.replace(base + loginPath);
+          } catch (err) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = label;
+            const msg = String((err && err.message) || err);
+            window.utils.toast(
+              msg.includes('identity_delete_failed')
+                ? 'حُذفت بياناتك لكن تعذّر حذف هوية الدخول — راسل الدعم لإكمالها'
+                : window.utils.formatError(err),
+              'error'
+            );
+          }
+        });
+      }
+
+      // نافذة كتابة كلمة التأكيد — تُرجع النص، أو null عند الإلغاء
+      function promptConfirmWord() {
+        return new Promise((resolve) => {
+          let settled = false;
+          const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+          const ctrl = window.utils.openModal({
+            title: 'تأكيد أخير',
+            body: `
+              <p class="text-sm" style="margin-bottom:var(--space-3)">
+                اكتب كلمة <strong>حذف</strong> لتأكيد محو الملعب وكل بياناته.
+              </p>
+              <input type="text" class="form-control" id="confirm-word" autocomplete="off" dir="rtl">`,
+            footer: `
+              <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+              <button type="button" class="btn btn--danger" data-action="confirm">حذف نهائياً</button>`,
+            onClose: () => done(null)
+          });
+          const input = ctrl.modal.querySelector('#confirm-word');
+          input.focus();
+          ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', () => { ctrl.close(); done(null); });
+          ctrl.modal.querySelector('[data-action="confirm"]').addEventListener('click', () => {
+            const v = (input.value || '').trim();
+            ctrl.close();
+            done(v);
+          });
         });
       }
 

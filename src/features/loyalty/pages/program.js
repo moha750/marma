@@ -197,9 +197,11 @@
               <h3>برنامج الولاء متاح في الباقة الأعلى</h3>
               <p>بطاقة أختام رقمية باسم ملعبك تُضاف إلى محفظة عميلك على iPhone و Android،
                  وتُحدَّث نفسها بعد كل حجز — بلا تطبيق وبلا عمل يدوي من موظفيك.</p>
-              <a class="btn btn--primary" href="${window.utils.path('/subscription')}">
+              ${window.native && window.native.isNative
+                ? '<p class="text-muted text-sm">ترقية الباقة تتم من لوحة التحكم على الويب.</p>'
+                : `<a class="btn btn--primary" href="${window.utils.path('/subscription')}">
                 <i data-lucide="arrow-up-circle"></i> ترقية الباقة
-              </a>
+              </a>`}
             </div>
           </div>`;
         window.utils.renderIcons(body);

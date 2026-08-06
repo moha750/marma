@@ -114,7 +114,11 @@ window.layout = (function () {
           const unlock   = isLocked && item.key === 'subscription';
           const hrefAttr = locked ? '' : ` href="${window.utils.path(item.path)}"`;
           const cls      = locked ? ' class="nav-link--locked"' : (unlock ? ' class="nav-link--unlock"' : '');
-          const title    = locked ? 'جدّد اشتراكك للوصول' : item.label;
+          // في التطبيق: صيغة خبريّة بلا أمرٍ بالتجديد (قاعدة أبل 3.1.1 — لا دعوة
+          // إجراء نحو شراءٍ خارج مشتريات أبل؛ والتجديد يقع على الويب أصلاً)
+          const title    = locked
+            ? (window.native && window.native.isNative ? 'مقفل — الاشتراك منتهٍ' : 'جدّد اشتراكك للوصول')
+            : item.label;
           const lockAttr = locked ? ' aria-disabled="true" tabindex="-1"' : '';
           const lockIcon = locked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
           // شارة الإشعارات غير المقروءة الخاصّة بوجهة هذا التبويب

@@ -428,3 +428,13 @@
   width: 36px;
   height: 36px;
 }
+
+/* منطقة الإجراءات المدمّرة (حذف الحساب) — حدٌّ أحمر خفيف يجعلها لا تُخطَأ
+   بما حولها من بطاقات الإعدادات العادية. */
+.card.danger-zone {
+  border: 1px solid color-mix(in oklab, var(--color-danger) 35%, transparent);
+}
+
+.card.danger-zone > .card-header h3 {
+  color: var(--color-danger);
+}

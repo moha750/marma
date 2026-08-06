@@ -102,15 +102,22 @@
         if (status && status.phase === 'lifetime') {
           return banner('lifetime', 'gem', 'حسابك يتمتّع بوصول دائم — كل المميزات مفتوحة بلا حدود.');
         }
+        // صيغة التطبيق خبريّة لا آمِرة: «اشترك» و«جدّد» دعوتا إجراءٍ نحو شراء،
+        // وهو ما تمنعه قاعدة أبل 3.1.1 داخل التطبيق. المعنى نفسه يوصَل بلا أمر.
+        const nativeApp = !!(window.native && window.native.isNative);
         if (!status || !status.is_active) {
-          return banner('danger', 'triangle-alert', 'انتهى اشتراكك والخدمة مغلقة حالياً. اشترك لإعادة تفعيل حسابك.');
+          return banner('danger', 'triangle-alert', nativeApp
+            ? 'انتهى اشتراك منشأتك والخدمة مغلقة حالياً.'
+            : 'انتهى اشتراكك والخدمة مغلقة حالياً. اشترك لإعادة تفعيل حسابك.');
         }
 
         const phase = status.phase;
         // فترة السماح: العدّ حتى القفل الكامل (days_remaining)
         if (phase && phase.startsWith('grace_')) {
           const lock = daysLabel(Math.max(0, Number(status.days_remaining) || 0));
-          return banner('grace', 'triangle-alert', `أنت في فترة السماح — يرجى تجديد الاشتراك خلال ${lock}.`);
+          return banner('grace', 'triangle-alert', nativeApp
+            ? `أنت في فترة السماح — يُقفَل الحساب بعد ${lock}.`
+            : `أنت في فترة السماح — يرجى تجديد الاشتراك خلال ${lock}.`);
         }
 
         // نشِط/تجربة: المتبقّي حتى نهاية الاشتراك (days_until_expiry)، واللون حسب القرب
@@ -125,7 +132,9 @@
         }
         return banner(tone, icon, tone === 'ok'
           ? `اشتراكك نشط — متبقٍ ${left}.`
-          : `يقترب انتهاء اشتراكك — متبقٍ ${left}. جدّد قبل الانقطاع.`);
+          : (nativeApp
+              ? `يقترب انتهاء اشتراكك — متبقٍ ${left}.`
+              : `يقترب انتهاء اشتراكك — متبقٍ ${left}. جدّد قبل الانقطاع.`));
       }
 
       function renderStatusCard(status) {
@@ -295,13 +304,41 @@
         `;
       }
 
+      // في تطبيق أبل/قوقل لا تُعرض أي وسيلة شراء: لا سعر، ولا آيبان، ولا زر طلب.
+      //
+      // قاعدة أبل 3.1.1 تحصر بيع أي خدمة رقمية داخل التطبيق على مشترياتها هي،
+      // وتَعُدّ عرض حسابٍ بنكيّ لتحويل قيمة الاشتراك وسيلةَ دفعٍ خارجية — وهو
+      // سبب رفضٍ مباشر. وقاعدة قوقل 4.1 مثلها. فالتسجيل والتجديد يبقيان على
+      // marma.help، والتطبيق أداةُ تشغيلٍ لمنشأةٍ مشتركةٍ أصلاً.
+      //
+      // ما يبقى ظاهراً: حالة الاشتراك وتاريخه — معلومات حساب، لا عرض بيع.
+      // ولا نضع رابطاً للموقع: القاعدة تمنع «دعوة الإجراء» نحو شراءٍ خارجي،
+      // والجملة الخبرية بلا رابط هي الصيغة التي تمرّ بلا جدال.
+      function renderWebOnlyNotice() {
+        return `
+          <div class="card mb-md">
+            <div class="card-header"><h3>إدارة الاشتراك</h3></div>
+            <div class="card-body">
+              <p class="text-muted text-sm mb-0">
+                باقة منشأتك وتجديدها تُدارَان من لوحة التحكم على الويب.
+                وللمساعدة راسل الدعم على support@marma.help.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+
       function renderPage(status, history) {
         // الوصول الدائم لا يحتاج باقة/تجديد — نخفي بطاقة الطلب
         const lifetime = status && status.phase === 'lifetime';
+        const isNativeApp = !!(window.native && window.native.isNative);
+        const planSection = lifetime
+          ? ''
+          : (isNativeApp ? renderWebOnlyNotice() : renderConfigCard(status));
         return `
           ${renderCallout(status)}
           ${renderStatusCard(status)}
-          ${lifetime ? '' : renderConfigCard(status)}
+          ${planSection}
           ${renderHistoryCard(history)}
         `;
       }
