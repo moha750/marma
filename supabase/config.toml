@@ -22,3 +22,29 @@ verify_jwt = false
 # والمصادقة بسرّ داخلي مشترك (INTERNAL_HOOK_SECRET) داخل الدالة.
 [functions.wallet-sync]
 verify_jwt = false
+
+# ─── دوال يناديها التريجر أو cron، وكانت ناقصة من هذا الملف ─────────────────
+#
+# كلّها تُنادى من قاعدة البيانات عبر pg_net برأس `Bearer <INTERNAL_HOOK_SECRET>`،
+# وهذا ليس JWT. فبلا verify_jwt=false ترفضها بوّابة Supabase قبل أن يصل الطلب
+# إلى كودنا أصلاً، بالرد: UNAUTHORIZED_INVALID_JWT_FORMAT.
+#
+# كان التعطيل مضبوطاً يدوياً من لوحة التحكم لا في هذا الملف — وهذا فرقٌ خطير:
+# أي `supabase functions deploy` يُعيد الإعداد إلى الافتراضي (true) فتصمت
+# الدالة صمتاً تامّاً. لا خطأ في سجلّ الدالة (لأنها لم تعمل)، ولا شيء يظهر
+# للمستخدم — فقط إشعارات لا تصل. والملف هو مصدر الحقيقة الوحيد الذي يصمد أمام
+# النشر الآلي من GitHub Actions.
+#
+# المصادقة الفعلية لم تضعف: كل دالة تتحقّق من INTERNAL_HOOK_SECRET في أول سطر.
+
+[functions.send-booking-push]
+verify_jwt = false
+
+[functions.send-weekly-summary]
+verify_jwt = false
+
+[functions.send-monthly-summary]
+verify_jwt = false
+
+[functions.send-subscription-warning]
+verify_jwt = false

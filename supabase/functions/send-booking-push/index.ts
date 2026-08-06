@@ -11,6 +11,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { apnsConfigured, apnsSendAlert, apnsToken } from "../_shared/apns.ts";
+import { fcmConfigured, fcmSession } from "../_shared/fcm.ts";
+
+// معرّف التطبيق في المتجرين — هو موضوع إشعار APNs (لا معرّف بطاقة المحفظة)
+const APP_BUNDLE_ID = Deno.env.get("APP_BUNDLE_ID") ?? "help.marma.app";
 
 interface RequestBody {
   booking_id: string;
@@ -28,8 +33,10 @@ const REMINDER_ELAPSED: Record<number, string> = {
 interface PushSubscriptionRow {
   id: string;
   endpoint: string;
-  p256dh_key: string;
-  auth_key: string;
+  p256dh_key: string | null;
+  auth_key: string | null;
+  /** web = Web Push · ios = رمز APNs · android = رمز FCM */
+  platform: "web" | "ios" | "android";
 }
 
 function formatArabicDateTime(iso: string): string {
@@ -99,10 +106,10 @@ Deno.serve(async (req) => {
       throw new Error(`فشل تحميل الحجز ${booking_id}: ${bookingErr?.message ?? "not found"}`);
     }
 
-    // اقرأ كل subscriptions لهذا الـ tenant
+    // اقرأ كل subscriptions لهذا الـ tenant (الويب والأجهزة الأصلية معاً)
     const { data: subscriptions, error: subsErr } = await supabase
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh_key, auth_key")
+      .select("id, endpoint, p256dh_key, auth_key, platform")
       .eq("tenant_id", booking.tenant_id);
 
     if (subsErr) throw new Error(`فشل قراءة الاشتراكات: ${subsErr.message}`);
@@ -149,45 +156,120 @@ Deno.serve(async (req) => {
       });
     }
 
-    // أرسل بالتوازي، نظّف الـ subscriptions الميتة
+    // ─── الإرسال: ثلاث قنوات، حمولة واحدة ───────────────────────────────────
+    //
+    // كل منصّة تُخاطَب بقناتها: الويب بـ Web Push، وأبل بـ APNs مباشرةً، وأندرويد
+    // بـ FCM. الحمولة المنطقية واحدة (عنوان + نص + وجهة نقر) فلا يتفرّق نصّ
+    // الإشعار بين المنصّات — تفرُّقه هو ما يجعل صياغةً تُصلَح في مكان وتبقى
+    // خاطئة في مكانين.
+    const parsed = JSON.parse(payload) as {
+      title: string; body: string; url: string; tag: string;
+    };
+
+    // نُجهّز توكنَي القناتين مرّةً واحدة لكل دفعة، وفقط إن وُجد لهما مشترك فعلاً:
+    // لا معنى لرحلة شبكةٍ إلى أبل وقوقل لملعبٍ كل أجهزته على الويب.
+    const hasIos = subscriptions.some((s: PushSubscriptionRow) => s.platform === "ios");
+    const hasAndroid = subscriptions.some((s: PushSubscriptionRow) => s.platform === "android");
+
+    let jwt: string | null = null;
+    if (hasIos) {
+      if (apnsConfigured()) {
+        try { jwt = await apnsToken(); } catch (err) {
+          console.error("[push] فشل توكن APNs:", err);
+        }
+      } else {
+        console.warn("[push] أجهزة أبل مسجّلة لكن أسرار APNs غير مضبوطة");
+      }
+    }
+
+    const fcm = hasAndroid
+      ? (fcmConfigured() ? await fcmSession() : (console.warn("[push] أجهزة أندرويد مسجّلة لكن FCM_SERVICE_ACCOUNT غير مضبوط"), null))
+      : null;
+
+    // نتيجة موحّدة لكل قناة: نجاح، أو جهاز ميّت يُحذف، أو فشل يُعَدّ
+    const markOk = (id: string) =>
+      supabase.from("push_subscriptions")
+        .update({ last_used_at: new Date().toISOString(), failed_count: 0 })
+        .eq("id", id);
+    const markGone = (id: string) =>
+      supabase.from("push_subscriptions").delete().eq("id", id);
+    const markFailed = async (id: string) =>
+      supabase.from("push_subscriptions")
+        .update({ failed_count: (await getFailedCount(supabase, id)) + 1 })
+        .eq("id", id);
+
     const results = await Promise.allSettled(
       subscriptions.map(async (sub: PushSubscriptionRow) => {
+        // ── أبل ──
+        if (sub.platform === "ios") {
+          if (!jwt) return { id: sub.id, ok: false, skipped: true };
+          const r = await apnsSendAlert(jwt, sub.endpoint, APP_BUNDLE_ID, {
+            title: parsed.title,
+            body: parsed.body,
+            threadId: parsed.tag,
+            url: parsed.url,
+          });
+          if (r.status === 200) { await markOk(sub.id); return { id: sub.id, ok: true }; }
+          if (r.gone) { await markGone(sub.id); return { id: sub.id, ok: false, deleted: true }; }
+          await markFailed(sub.id);
+          return { id: sub.id, ok: false, error: `apns ${r.status} ${r.error ?? ""}` };
+        }
+
+        // ── أندرويد ──
+        if (sub.platform === "android") {
+          if (!fcm) return { id: sub.id, ok: false, skipped: true };
+          const r = await fcm.send(sub.endpoint, {
+            title: parsed.title,
+            body: parsed.body,
+            tag: parsed.tag,
+            url: parsed.url,
+          });
+          if (r.status >= 200 && r.status < 300) { await markOk(sub.id); return { id: sub.id, ok: true }; }
+          if (r.gone) { await markGone(sub.id); return { id: sub.id, ok: false, deleted: true }; }
+          await markFailed(sub.id);
+          return { id: sub.id, ok: false, error: `fcm ${r.status} ${r.error ?? ""}` };
+        }
+
+        // ── الويب ──
+        // صفّ ويبٍ بلا مفاتيح لا يمكن إرساله؛ يمنعه قيد قاعدة البيانات، والفحص
+        // هنا يحمي من صفٍّ قديم سابقٍ للقيد.
+        if (!sub.p256dh_key || !sub.auth_key) {
+          await markGone(sub.id);
+          return { id: sub.id, ok: false, deleted: true };
+        }
         const pushSub = {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh_key, auth: sub.auth_key },
         };
         try {
           await webpush.sendNotification(pushSub, payload, { TTL: 60 * 60 });
-          // حدّث last_used_at عند النجاح
-          await supabase
-            .from("push_subscriptions")
-            .update({ last_used_at: new Date().toISOString(), failed_count: 0 })
-            .eq("id", sub.id);
+          await markOk(sub.id);
           return { id: sub.id, ok: true };
         } catch (err: unknown) {
           const statusCode = (err as { statusCode?: number }).statusCode;
           if (statusCode === 404 || statusCode === 410) {
-            // الـ subscription لم تعد صالحة — احذفها
-            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            await markGone(sub.id);
             return { id: sub.id, ok: false, deleted: true };
           }
-          // فشل آخر — زِد العدّاد
-          await supabase
-            .from("push_subscriptions")
-            .update({ failed_count: (await getFailedCount(supabase, sub.id)) + 1 })
-            .eq("id", sub.id);
+          await markFailed(sub.id);
           return { id: sub.id, ok: false, error: String(err) };
         }
       }),
     );
 
-    const sent = results.filter((r) => r.status === "fulfilled" && (r.value as { ok: boolean }).ok).length;
+    const ok = (r: PromiseSettledResult<unknown>) =>
+      r.status === "fulfilled" && (r.value as { ok: boolean }).ok;
+    const sent = results.filter(ok).length;
     const failed = subscriptions.length - sent;
 
-    return new Response(JSON.stringify({ sent, failed, total: subscriptions.length }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // تفصيل بالمنصّة: عند شكوى «لا تصلني إشعارات» هذا السجلّ يقول أي قناةٍ صمتت
+    const byPlatform = { web: 0, ios: 0, android: 0 } as Record<string, number>;
+    results.forEach((r, i) => { if (ok(r)) byPlatform[subscriptions[i].platform]++; });
+
+    return new Response(
+      JSON.stringify({ sent, failed, total: subscriptions.length, byPlatform }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("send-booking-push failed:", err);
     return new Response(JSON.stringify({ error: String(err) }), {

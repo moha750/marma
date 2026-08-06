@@ -16,6 +16,7 @@
 //          APPLE_PASS_TYPE_ID، INTERNAL_HOOK_SECRET
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { apnsConfigured, apnsToken } from "../_shared/apns.ts";
 
 const db = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -23,52 +24,16 @@ const db = createClient(
   { auth: { persistSession: false } },
 );
 
-const TEAM_ID = Deno.env.get("APPLE_TEAM_ID") ?? "";
-const KEY_ID = Deno.env.get("APPLE_APNS_KEY_ID") ?? "";
-const P8 = Deno.env.get("APPLE_APNS_KEY_P8") ?? "";
 const TOPIC = Deno.env.get("APPLE_PASS_TYPE_ID") ?? "pass.help.marma.loyalty";
 const HOOK_SECRET = Deno.env.get("INTERNAL_HOOK_SECRET") ?? "";
 const APNS_HOST = "https://api.push.apple.com";
 
 const MAX_ATTEMPTS = 5;
 
-// ─── توكن APNs ───────────────────────────────────────────────────────────
-
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-const b64urlStr = (s: string) => b64url(new TextEncoder().encode(s));
-
-function pemToPkcs8(pem: string): Uint8Array {
-  const body = pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
-  const bin = atob(body);
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-}
-
-// التوكن صالح ساعة عند آبل، وهي ترفض توليداً أكثر من مرة كل ٢٠ دقيقة.
-// نحتفظ به على مستوى الوحدة فيُعاد استخدامه ما دام العزل حياً.
-let cached: { token: string; exp: number } | null = null;
-
-async function apnsToken(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  if (cached && cached.exp > now + 60) return cached.token;
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8", pemToPkcs8(P8) as BufferSource,
-    { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"],
-  );
-  const header = b64urlStr(JSON.stringify({ alg: "ES256", kid: KEY_ID }));
-  const payload = b64urlStr(JSON.stringify({ iss: TEAM_ID, iat: now }));
-  const sig = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" }, key,
-    new TextEncoder().encode(`${header}.${payload}`),
-  );
-  // ES256 في JWT = r‖s خامّين (٦٤ بايت)، وهو ما تُخرجه WebCrypto مباشرةً
-  const token = `${header}.${payload}.${b64url(new Uint8Array(sig))}`;
-  cached = { token, exp: now + 45 * 60 };
-  return token;
-}
+// توكن APNs يأتي من الوحدة المشتركة _shared/apns.ts — استُخرج من هنا ليخدم
+// إشعارات التطبيق أيضاً بالمفتاح نفسه (المفتاح مربوط بالفريق لا بتطبيق واحد،
+// ويتغيّر الموضوع apns-topic فقط). نسختان من توقيع ES256 تعني عيباً يُصلَح في
+// واحدة ويبقى في الأخرى.
 
 // ─── إرسال النبضة ────────────────────────────────────────────────────────
 
@@ -176,7 +141,7 @@ Deno.serve(async (req) => {
   if (!HOOK_SECRET || auth !== `Bearer ${HOOK_SECRET}`) {
     return new Response("unauthorized", { status: 401 });
   }
-  if (!P8 || !KEY_ID || !TEAM_ID) {
+  if (!apnsConfigured()) {
     console.error("wallet-sync: APNs secrets missing");
     return Response.json({ error: "apns_not_configured" }, { status: 503 });
   }
