@@ -1,0 +1,43 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["72T373ZM34.help.marma.app"],
+        "components": [
+          { "/": "/dashboard*", "comment": "لوحة التحكم" },
+          { "/": "/calendar*", "comment": "التقويم" },
+          { "/": "/bookings*", "comment": "الحجوزات" },
+          { "/": "/customers*", "comment": "العملاء" },
+          { "/": "/fields*", "comment": "الأرضيات" },
+          { "/": "/schedule*", "comment": "جدول العمل" },
+          { "/": "/offers*", "comment": "العروض" },
+          { "/": "/loyalty*", "comment": "برنامج الولاء" },
+          { "/": "/reports*", "comment": "التقارير" },
+          { "/": "/visits*", "comment": "الزيارات" },
+          { "/": "/staff*", "comment": "الموظفون" },
+          { "/": "/subscription*", "comment": "الاشتراك" },
+          { "/": "/account*", "comment": "الحساب" },
+          { "/": "/settings*", "comment": "الإعدادات" },
+          {
+            "/": "/book*",
+            "exclude": true,
+            "comment": "صفحة حجز العميل — تبقى في المتصفّح: يفتحها العملاء لا المالك"
+          },
+          {
+            "/": "/card*",
+            "exclude": true,
+            "comment": "بطاقة ولاء العميل — تبقى في المتصفّح"
+          },
+          {
+            "/": "/auth/*",
+            "exclude": true,
+            "comment": "استعادة كلمة المرور وتأكيد البريد تحمل رموزها في الرابط — تبقى في المتصفّح"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["72T373ZM34.help.marma.app"]
+  }
+}

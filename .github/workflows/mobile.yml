@@ -1,0 +1,239 @@
+name: Build Mobile Apps
+
+# يتحقّق أن نسختَي أبل وقوقل تُبنيان فعلاً عند كل تغيير يلمسهما.
+#
+# لماذا هذا مهمّ أكثر من المعتاد: خطأ في مشروع أندرويد أو iOS لا يظهر في بناء
+# الويب ولا في المتصفّح — يظهر أول مرّة عند محاولة الرفع للمتجر، وهي أسوأ لحظة
+# لاكتشافه. والـ runner هنا يحمل JDK و Android SDK جاهزين، فأندرويد يُبنى ويُختبر
+# بلا تركيب أي شيء على جهاز المطوّر.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'styles/**'
+      - 'assets/**'
+      - '*.html'
+      - 'auth/**'
+      - 'legal/**'
+      - 'ios/**'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/**'
+      - '.github/workflows/mobile.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'styles/**'
+      - '*.html'
+      - 'auth/**'
+      - 'legal/**'
+      - 'ios/**'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'scripts/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ── حزمة الويب الخاصة بالتطبيق + فحوص لا تحتاج منصّة ──────────────────────
+  web-bundle:
+    name: حزمة native + فحوص
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: اختبارات الوحدة
+        run: npm test
+
+      - name: فحص صياغة كل ملفات JavaScript
+        # المشروع بلا مُحزِّم لملفات src/ (تُحمَّل كوسوم script)، فلا شيء يكتشف
+        # خطأ صياغةٍ فيها قبل أن يفتح المستخدم الصفحة. node --check يكتشفه هنا.
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            node --check "$f" || { echo "❌ خطأ صياغة: $f"; fail=1; }
+          done < <(find src scripts -name '*.js' -o -name '*.mjs')
+          exit $fail
+
+      - name: بناء حزمة native
+        run: node scripts/build-native.mjs --no-sync
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+
+      - name: التحقّق من سلامة الحزمة
+        # ثلاثة أخطاء يرتكبها البناء بصمت وكلٌّ منها سببُ رفضٍ أو تطبيقٍ مكسور:
+        #   • بقاء رابط CDN (أبل تمنع تنزيل كود وقت التشغيل — قاعدة 2.5.2)
+        #   • غياب index.html (Capacitor يفتحه دائماً؛ غيابه = شاشة بيضاء)
+        #   • تسرُّب صفحة التسويق وفيها الأسعار (قاعدة 3.1.1)
+        run: |
+          set -e
+          test -f dist-native/index.html || { echo "❌ dist-native/index.html مفقود"; exit 1; }
+          if grep -rlE "https://(cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" dist-native --include='*.html' --include='*.js' | grep -q .; then
+            echo "❌ رابط CDN داخل حزمة التطبيق:"
+            grep -rlE "https://(cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)" dist-native --include='*.html' --include='*.js'
+            exit 1
+          fi
+          for f in dist-native/index.html dist-native/auth/login.html; do
+            grep -q "__NATIVE__" "$f" || { echo "❌ علامة __NATIVE__ مفقودة في $f"; exit 1; }
+          done
+          if grep -q "service-worker" dist-native/index.html; then
+            echo "❌ service worker مُسجَّل في حزمة التطبيق"; exit 1
+          fi
+          # لوحة المشرف مقصودة في الحزمة، لكن يجب ألّا تحمل واجهة شراء
+          test -f dist-native/admin.html || { echo "❌ لوحة المشرف مفقودة من الحزمة"; exit 1; }
+          if grep -qE "SA77|IBAN|البنك العربي" dist-native/admin.html dist-native/index.html 2>/dev/null; then
+            echo "❌ بيانات تحويل بنكي داخل حزمة التطبيق (قاعدة أبل 3.1.1)"; exit 1
+          fi
+          # الصفحات العامة للعملاء لا مكان لها في تطبيق المالك
+          for f in book.html card.html; do
+            test ! -f "dist-native/$f" || { echo "❌ صفحة عملاء ($f) داخل الحزمة"; exit 1; }
+          done
+          echo "✅ الحزمة سليمة"
+
+      - name: التحقّق من ملفَّي ربط النطاق
+        # الروابط العامة تفشل **صامتةً**: لا خطأ في أي سجلّ، فقط رابط يفتح
+        # المتصفّح بدل التطبيق. فالفحص هنا هو الطريقة الوحيدة لاكتشاف الخطأ
+        # قبل أن يصل مستخدماً حقيقياً.
+        run: |
+          set -e
+          AASA=public/.well-known/apple-app-site-association
+          LINKS=public/.well-known/assetlinks.json
+
+          node -e "JSON.parse(require('fs').readFileSync('$AASA','utf8'))" \
+            || { echo "❌ $AASA ليس JSON صالحاً — أبل ترفضه بلا رسالة"; exit 1; }
+          node -e "JSON.parse(require('fs').readFileSync('$LINKS','utf8'))" \
+            || { echo "❌ $LINKS ليس JSON صالحاً"; exit 1; }
+
+          # معرّف التطبيق في ملف أبل يجب أن يطابق معرّف الحزمة فعلاً
+          BUNDLE=$(node -e "console.log(require('./capacitor.config.json').appId)")
+          grep -q "$BUNDLE" "$AASA" \
+            || { echo "❌ $AASA لا يذكر معرّف الحزمة $BUNDLE"; exit 1; }
+          grep -q "\"package_name\": *\"$BUNDLE\"" "$LINKS" \
+            || { echo "❌ $LINKS لا يذكر الحزمة $BUNDLE"; exit 1; }
+
+          # بصمة توقيع أندرويد لا تُعرَف إلا بعد إنشاء التطبيق في Play Console.
+          # نحذّر ولا نُفشل: الحزمة تعمل بلا App Links، وإفشال البناء كله لأجل
+          # ميزة تفضيلية يعطّل النشر بلا داعٍ.
+          if grep -q "REPLACE_WITH_PLAY_APP_SIGNING_SHA256" "$LINKS"; then
+            echo "::warning title=App Links غير مفعّلة::بصمة توقيع أندرويد ما زالت بديلاً في $LINKS — خُذها من Play Console → Setup → App integrity → App signing key certificate (SHA-256)، وإلى أن تُضبَط تفتح روابط marma.help في المتصفّح على أندرويد."
+          else
+            echo "✅ بصمة توقيع أندرويد مضبوطة"
+          fi
+          echo "✅ ملفّا ربط النطاق سليمان"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-native
+          path: dist-native
+          retention-days: 7
+
+  # ── أندرويد ───────────────────────────────────────────────────────────────
+  android:
+    name: أندرويد (APK تصحيح)
+    needs: web-bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-native
+          path: dist-native
+
+      - name: مزامنة Capacitor
+        run: npx cap sync android
+
+      - name: بناء APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  # ── أبل ───────────────────────────────────────────────────────────────────
+  ios:
+    name: أبل (بناء بلا توقيع)
+    needs: web-bundle
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-native
+          path: dist-native
+
+      - name: مزامنة Capacitor
+        run: npx cap sync ios
+
+      - name: بناء للمحاكي
+        # بلا توقيع: الهدف التحقّق من أن المشروع يُترجم، لا إنتاج نسخة قابلة
+        # للتوزيع. التوقيع والرفع إلى TestFlight في release-ios.yml بأسرارك.
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tail -30
+
+      - name: التحقّق من بيان الخصوصية
+        # أبل ترفض الرفع بلا PrivacyInfo.xcprivacy داخل حزمة التطبيق (منذ
+        # مايو ٢٠٢٤)، والملف يُفلت بسهولة من مرحلة Resources عند أي تعديل
+        # على مشروع Xcode — ففحصه هنا أرخص من رفضٍ من App Store Connect.
+        run: |
+          test -f ios/App/App/PrivacyInfo.xcprivacy || { echo "❌ PrivacyInfo.xcprivacy مفقود"; exit 1; }
+          plutil -lint ios/App/App/PrivacyInfo.xcprivacy
+          plutil -lint ios/App/App/Info.plist
+          grep -q "NSCameraUsageDescription" ios/App/App/Info.plist || { echo "❌ نصّ إذن الكاميرا مفقود — انهيار فوري عند فتح الماسح"; exit 1; }
+          echo "✅ ملفات أبل سليمة"
