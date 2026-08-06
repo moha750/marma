@@ -15,11 +15,14 @@
   </div>
 
   <!-- CDN libraries -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/vendor/lucide.min.js"></script>
+  <script src="/assets/vendor/supabase.js"></script>
 
   <!-- Config (يبقى في الجذر — في .gitignore) -->
   <script src="/config.js"></script>
+
+  <!-- جسر البيئة الأصلية (Capacitor) — قبل بقية الكود -->
+  <script src="/src/core/native.js"></script>
 
   <!-- Core infrastructure (الترتيب مهم) -->
   <script src="/src/core/supabase-client.js"></script>

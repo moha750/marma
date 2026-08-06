@@ -113,12 +113,14 @@
         }
       }
 
-      // jsQR بديل لأجهزة iOS — BarcodeDetector غير مدعوم على Safari
+      // jsQR بديل لأجهزة iOS — BarcodeDetector غير مدعوم على Safari.
+      // يُحمَّل بتأجيل (٢٥١ ك.ب لا تُدفع إلا عند فتح الماسح فعلاً) ومن نطاقنا:
+      // في النسخة الأصلية لا شبكة تُنتظر، وفي الويب لا CDN يتعطّل أو يتغيّر.
       function loadJsQr() {
         if (window.jsQR) return Promise.resolve();
         return new Promise((resolve) => {
           const s = document.createElement('script');
-          s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+          s.src = (window.__BASE__ || '') + '/assets/vendor/jsQR.js';
           s.onload = resolve;
           s.onerror = () => resolve();   // نكمل بالإدخال اليدوي
           document.head.appendChild(s);

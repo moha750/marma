@@ -23,13 +23,17 @@
   </div>
 
   <!-- CDN libraries -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/ar.global.min.js"></script>
+  <script src="/assets/vendor/lucide.min.js"></script>
+  <script src="/assets/vendor/supabase.js"></script>
+  <script src="/assets/vendor/fullcalendar.global.min.js"></script>
+  <script src="/assets/vendor/fullcalendar-locale-ar.global.min.js"></script>
 
   <!-- Config (يبقى في الجذر — في .gitignore) -->
   <script src="/config.js"></script>
+
+  <!-- جسر البيئة الأصلية (Capacitor) — قبل كل شيء، فبقية الكود يسأله عن نفسه.
+       على الويب يضبط isNative=false ولا يفعل شيئاً آخر. -->
+  <script src="/src/core/native.js"></script>
 
   <!-- Core infrastructure (الترتيب مهم) -->
   <script src="/src/core/supabase-client.js"></script>

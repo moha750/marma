@@ -1,6 +1,25 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { cp, copyFile, readFile, writeFile } from 'fs/promises';
+import { cp, copyFile, readFile, writeFile, rm } from 'fs/promises';
+import { readdirSync, readFileSync } from 'fs';
+import { createHash } from 'crypto';
+
+// بصمة محتوى لكل ملف في assets/vendor — تُلحَق كـ ?v= على وسوم <script>.
+// مكتبات الطرف الثالث تحمل أسماء ثابتة (lucide.min.js) فلا تحصل على hash من
+// Vite؛ وبصمة المحتوى تعطينا أفضل ما في العالمين: الرابط يتغيّر فقط عند ترقية
+// المكتبة فعلاً (فلا تنزيل ١ م.ب مع كل نشرة)، ويتغيّر فوراً عند الترقية (فلا
+// نسخة قديمة عالقة في كاش سنة كامل).
+function vendorFingerprints(root) {
+  const dir = resolve(root, 'assets/vendor');
+  const map = {};
+  try {
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.js')) continue;
+      map[name] = createHash('sha256').update(readFileSync(resolve(dir, name))).digest('hex').slice(0, 8);
+    }
+  } catch (_) { /* لا مجلد vendor بعد — البناء يشغّل sync-vendor قبله */ }
+  return map;
+}
 
 // المسارات التي يخدمها الـ SPA shell (app.html) — تُعاد كتابتها في dev و production.
 const APP_ROUTES = [
@@ -42,7 +61,26 @@ function spaFallbackMiddleware(req, _res, next) {
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
-  const base = isProd ? PROD_BASE : '/';
+
+  // ─── هدف البناء: web (الافتراضي) أو native (حزمة تطبيق أبل/قوقل) ───
+  //
+  // النسخة الأصلية ليست الموقع نفسه في قوقعة. ثلاثة فروق جوهرية:
+  //
+  //  1) نقطة الدخول: app.html تُخرَج باسم index.html، لأن Capacitor يفتح
+  //     index.html دائماً. تُولَّد من app.html نفسه لا من نسخة يدوية، فلا يمكن
+  //     أن تتباعد النسختان عند إضافة سكربت جديد.
+  //
+  //  2) ما يُستبعَد: صفحة التسويق (وفيها الأسعار — ومنع أبل صريح في 3.1.1)،
+  //     ولوحة المشرف العام، وصفحتا الحجز والبطاقة العامّتان (للعملاء على الويب).
+  //     كل ملف زائد في الحزمة سطحُ مراجعةٍ إضافي بلا مقابل.
+  //
+  //  3) المسارات: Capacitor يخدم index.html لأي مسار بلا امتداد (تحقّقنا من
+  //     CapacitorRouter.route في iOS و WebViewLocalServer في أندرويد). هذا يجعل
+  //     مسارات الراوتر (/dashboard) تعمل تلقائياً، لكنه يكسر روابط المستندات
+  //     الحقيقية (/auth/login → قوقعة التطبيق بدل صفحة الدخول). فنعيد كتابتها
+  //     إلى .html هنا وقت البناء، ونكمل الجانب البرمجي في src/core/native.js.
+  const isNative = process.env.MARMA_TARGET === 'native';
+  const base = isProd && !isNative ? PROD_BASE : '/';
   // BASE_NO_SLASH للاستخدام في window.__BASE__ — بدون trailing slash
   // مثال: '/marma' في prod، '' في dev
   const baseNoSlash = base.replace(/\/$/, '');
@@ -55,6 +93,8 @@ export default defineConfig(({ mode }) => {
     (process.env.GITHUB_SHA && process.env.GITHUB_SHA.slice(0, 8)) ||
     Date.now().toString(36);
 
+  const VENDOR_FP = vendorFingerprints(__dirname);
+
   return {
     appType: 'mpa',
     base,
@@ -64,18 +104,39 @@ export default defineConfig(({ mode }) => {
       open: '/'
     },
     build: {
+      outDir: isNative ? 'dist-native' : 'dist',
+      emptyOutDir: true,
       rollupOptions: {
-        input: {
-          landing: resolve(__dirname, 'index.html'),
-          login: resolve(__dirname, 'auth/login.html'),
-          signup: resolve(__dirname, 'auth/signup.html'),
-          forgot: resolve(__dirname, 'auth/forgot.html'),
-          reset: resolve(__dirname, 'auth/reset.html'),
-          book: resolve(__dirname, 'book.html'),
-          card: resolve(__dirname, 'card.html'),
-          app: resolve(__dirname, 'app.html'),
-          admin: resolve(__dirname, 'admin.html')
-        }
+        input: isNative
+          ? {
+              // app.html يُعاد تسميته index.html في closeBundle أدناه
+              app: resolve(__dirname, 'app.html'),
+              // لوحة المشرف العام: مالك المنصّة يدير ملاعبه من جوّاله كذلك.
+              // لا تعرض آيبان ولا زرّ شراء (تراجع إيصالات الآخرين فقط)، فقاعدة
+              // أبل 3.1.1 لا تنطبق عليها، وهي خلف حساب لا يبلغه المراجع.
+              admin: resolve(__dirname, 'admin.html'),
+              login: resolve(__dirname, 'auth/login.html'),
+              signup: resolve(__dirname, 'auth/signup.html'),
+              forgot: resolve(__dirname, 'auth/forgot.html'),
+              reset: resolve(__dirname, 'auth/reset.html'),
+              // الصفحتان النظاميتان داخل الحزمة أيضاً: أبل تطلب وصولاً إليهما من
+              // داخل التطبيق، وحملهما محلياً يعني ظهورهما بلا شبكة كذلك
+              privacy: resolve(__dirname, 'legal/privacy.html'),
+              terms: resolve(__dirname, 'legal/terms.html')
+            }
+          : {
+              landing: resolve(__dirname, 'index.html'),
+              login: resolve(__dirname, 'auth/login.html'),
+              signup: resolve(__dirname, 'auth/signup.html'),
+              forgot: resolve(__dirname, 'auth/forgot.html'),
+              reset: resolve(__dirname, 'auth/reset.html'),
+              book: resolve(__dirname, 'book.html'),
+              card: resolve(__dirname, 'card.html'),
+              app: resolve(__dirname, 'app.html'),
+              admin: resolve(__dirname, 'admin.html'),
+              privacy: resolve(__dirname, 'legal/privacy.html'),
+              terms: resolve(__dirname, 'legal/terms.html')
+            }
       }
     },
     plugins: [
@@ -102,6 +163,38 @@ export default defineConfig(({ mode }) => {
               `<head>\n  <script>window.__BASE__=${JSON.stringify(baseNoSlash)};</script>`
             );
 
+            if (isNative) {
+              // علامة البيئة الأصلية — تُقرأ قبل أي كود آخر، فيتصرّف الكود
+              // المشترك بحسبها (لا service worker، لا واجهة دفع، ماسح أصلي…).
+              html = html.replace(
+                /<head>/i,
+                '<head>\n  <script>window.__NATIVE__=true;</script>'
+              );
+
+              // روابط المستندات النظيفة → ملفات .html صريحة.
+              // Capacitor يخدم index.html لأي مسار بلا امتداد، فـ href="/auth/login"
+              // كان سيفتح قوقعة التطبيق بدل صفحة الدخول.
+              html = html.replace(
+                /(<a\s+(?:[^>]*?\s)?href=")(\/auth\/[a-z-]+)(")/gi,
+                (_m, prefix, path, suffix) => `${prefix}${path}.html${suffix}`
+              );
+
+              // service worker لا مكان له داخل قوقعة Capacitor: الأصول تُخدَم من
+              // حزمة التطبيق (capacitor://) لا من الشبكة، فطبقة كاش ثانية تعني
+              // كوداً قديماً عالقاً بعد تحديث من المتجر — وهي أعصى ما يُشخَّص.
+              html = html.replace(
+                /\s*<!--[^>]*PWA[^>]*-->\s*<script src="[^"]*\/core\/pwa\.js[^"]*"><\/script>/i,
+                ''
+              );
+              html = html.replace(
+                /\s*<script src="[^"]*\/core\/pwa\.js[^"]*"><\/script>/i,
+                ''
+              );
+
+              // manifest الويب لا معنى له في تطبيق مثبَّت من المتجر
+              html = html.replace(/\s*<link rel="manifest"[^>]*>/i, '');
+            }
+
             // ?v=<buildHash> على السكربتات غير المُهَشَّمة (/src/**.js و/config.js).
             // بدونها يبقى الرابط ثابتاً بين النشرات، فيخدم المتصفّح نسخته المخزّنة
             // ويظهر كود قديم إلى أن يعمل المستخدم hard reload — وHTML نفسه طازج
@@ -113,6 +206,15 @@ export default defineConfig(({ mode }) => {
                   /^https?:/i.test(url) || url.includes('?')
                     ? match
                     : `${prefix}${url}?v=${buildHash}${suffix}`
+              );
+
+              // مكتبات vendor: بصمة محتوى بدل بصمة البناء (انظر vendorFingerprints)
+              html = html.replace(
+                /(<script\b[^>]*\bsrc=")([^"]*assets\/vendor\/([^"?/]+\.js))(")/gi,
+                (match, prefix, url, file, suffix) => {
+                  const fp = VENDOR_FP[file];
+                  return !fp || url.includes('?') ? match : `${prefix}${url}?v=${fp}${suffix}`;
+                }
               );
             }
 
@@ -149,7 +251,7 @@ export default defineConfig(({ mode }) => {
         apply: 'build',
         async closeBundle() {
           const root = __dirname;
-          const dist = resolve(root, 'dist');
+          const dist = resolve(root, isNative ? 'dist-native' : 'dist');
           const copyIfExists = async (rel) => {
             try {
               await cp(resolve(root, rel), resolve(dist, rel), { recursive: true });
@@ -160,6 +262,16 @@ export default defineConfig(({ mode }) => {
           await copyIfExists('src');
           await copyIfExists('config.js');
           await copyIfExists('assets');
+
+          if (isNative) {
+            // Capacitor يفتح index.html دائماً — وقوقعة التطبيق هي app.html.
+            await copyFile(resolve(dist, 'app.html'), resolve(dist, 'index.html'));
+            await rm(resolve(dist, 'app.html'), { force: true });
+            // لا حاجة لصفحة التسويق ولا لوحة المشرف ولا الصفحات العامّة داخل الحزمة
+            console.log('[marma] حزمة native: index.html = قوقعة التطبيق');
+            return;
+          }
+
           await copyIfExists('CNAME');
           // PWA: manifest + service worker يجب أن يصلا dist/ بأسمائهما الأصلية
           await copyIfExists('manifest.webmanifest');

@@ -37,6 +37,23 @@ dist/
 build/
 node_modules/
 
+# حزمة الويب الخاصة بالتطبيق الأصلي (MARMA_TARGET=native) — مولَّدة، وCapacitor
+# ينسخها إلى ios/App/App/public و android/.../assets/public عند كل cap sync.
+dist-native/
+
+# مخرجات PWA من @capacitor/assets — لا يشير إليها شيء (أيقونات الويب في assets/pwa)
+icons/
+
+# مكتبات الطرف الثالث المنسوخة من node_modules (scripts/sync-vendor.mjs).
+# مولَّدة عند كل بناء من الإصدارات المثبَّتة في package.json — لا تُلتزم كي لا
+# تتباعد عن التبعيات أبداً. qrcode.min.js وحده مُلتزم (لا حزمة npm له).
+assets/vendor/lucide.min.js
+assets/vendor/supabase.js
+assets/vendor/fullcalendar.global.min.js
+assets/vendor/fullcalendar-locale-ar.global.min.js
+assets/vendor/jsQR.js
+assets/vendor/VERSIONS.json
+
 # Environment
 .env
 .env.local

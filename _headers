@@ -42,6 +42,24 @@
 /src/*
   Cache-Control: public, no-cache, must-revalidate
 
+# ملفّا ربط النطاق بالتطبيقين (Universal Links / App Links).
+# apple-app-site-association بلا امتداد، فتخدمه Cloudflare كـ octet-stream —
+# وأبل ترفضه صامتةً بلا نوع JSON، فتفتح الروابط في المتصفّح ولا يظهر أي خطأ
+# يدلّك على السبب. الكاش قصير كي يسري تصحيحُ البصمة في ساعة لا في سنة.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+
+# مكتبات الطرف الثالث: كاش سنة كاملة. أسماؤها ثابتة لكن البناء يُلحق بصمة محتوى
+# (?v=<sha256>) بكل وسم script، فالرابط يتغيّر عند ترقية المكتبة فقط — وهذا هو
+# الشرط الذي يجعل immutable آمناً هنا.
+/assets/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Manifest و config — كاش قصير
 /manifest.webmanifest
   Cache-Control: public, max-age=3600

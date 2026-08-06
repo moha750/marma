@@ -141,13 +141,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // طلبات خارج origin — نتدخل فقط لـ CDN libs المعروفة
-  if (url.origin !== self.location.origin) {
-    if (isCdnAsset(url)) {
-      event.respondWith(staleWhileRevalidate(req));
-    }
-    return; // باقي الطلبات الخارجية (Supabase, analytics, …) تمر مباشرة
-  }
+  // كل الطلبات الخارجية تمر مباشرة (Supabase, خرائط قوقل, …).
+  // لم نعد نخزّن مكتبات CDN لأننا لم نعد نحمّل أياً منها: كلها في /assets/vendor
+  // من نطاقنا (انظر scripts/sync-vendor.mjs)، فتُخدَم من فرع cacheFirst أدناه —
+  // وهو صحيح لها لأن البناء يلحق ببصمة المحتوى ?v= فيتغيّر الرابط عند الترقية.
+  if (url.origin !== self.location.origin) return;
 
   // لا نخزّن config.js أبداً — يحوي مفاتيح ويُولَّد وقت البناء
   if (url.pathname.endsWith('/config.js')) return;
@@ -248,20 +246,6 @@ async function networkFirst(req) {
   }
 }
 
-async function staleWhileRevalidate(req) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const cached = await cache.match(req);
-  const networkPromise = fetch(req)
-    .then((fresh) => {
-      if (fresh && (fresh.ok || fresh.type === 'opaque')) {
-        cache.put(req, fresh.clone());
-      }
-      return fresh;
-    })
-    .catch(() => cached);
-  return cached || networkPromise;
-}
-
 // ─── helpers ──────────────────────────────────────────────
 
 function isPublicPage(pathname) {
@@ -289,9 +273,4 @@ function isDynamicAsset(pathname) {
       || p.startsWith('/styles/')
       || p.endsWith('/book.js')
       || p.endsWith('/main.css');
-}
-
-function isCdnAsset(url) {
-  return /(^|\.)unpkg\.com$/.test(url.hostname)
-      || /(^|\.)jsdelivr\.net$/.test(url.hostname);
 }
