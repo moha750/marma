@@ -1,0 +1,157 @@
+/* أنماط البيئة الأصلية (تطبيق أبل/قوقل) — كلها محصورة تحت html.native.
+   الحصر مقصود: نسخة الويب في الإنتاج لا يلمسها أي سطر هنا.
+   الصنف يُضاف من src/core/native.js عند الإقلاع داخل قوقعة Capacitor. */
+
+/* ─── المناطق الآمنة ──────────────────────────────────────────────────
+   التطبيق يمتد تحت شريط الحالة (overlaysWebView) بدل أن يبدأ تحته. الاختيار
+   مقصود لا كمالي: أندرويد ١٥+ يفرض edge-to-edge على كل تطبيق يستهدف
+   API 35، فالتعامل مع الحشوات الآن أرخص من مطاردة تخطيط مكسور عند أول
+   رفع لـ targetSdk. وعلى الآيفون هي الطريقة الوحيدة لاحترام النَقش
+   والشريط السفلي معاً. */
+
+html.native {
+  /* متغيّرات نقرأها في القواعد أدناه — env() لا يعمل داخل بعض الدوال */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --keyboard-height: 0px;
+}
+
+/* لماذا الحشوة على الحاوية لا على الترويسة؟
+   لأن الترويسة ليست دائماً أعلى ما في الشاشة: فوقها شريط الاشتراك
+   (#trial-banner-slot) حين يظهر. وضْعُ الحشوة على الترويسة وحدها كان يعطي
+   خطأين معاً — نصّ الشريط يصطدم بالساعة، والترويسة تحته بفراغٍ لا لزوم له.
+
+   والحشوة وحدها لا تكفي: الشريط يمرّ مع التمرير، فتصعد الترويسة اللاصقة إلى
+   حافة الشاشة وتدخل تحت الساعة. لذلك ثلاث قواعد متلازمة:
+     ١) حشوة على .main-area  → لا يبدأ أي محتوى تحت الساعة
+     ٢) الترويسة تلتصق عند حدّ المنطقة الآمنة لا عند الصفر
+     ٣) شريط ثابت مصمت يغطّي منطقة الساعة → لا يظهر محتوى مارٌّ خلفها */
+
+html.native .main-area {
+  padding-block-start: var(--safe-top);
+}
+
+html.native .app-header {
+  inset-block-start: var(--safe-top);   /* موضع الالتصاق */
+}
+
+/* الشريط الثابت خلف الساعة. z-index بين الترويسة (٤٠) والقائمة السفلية (٥٠)
+   من جهة، وتحت الأدراج (٩٠) والنوافذ (١٠٠) من جهة أخرى — فهو يغطّي المحتوى
+   المارّ ولا يعلو على طبقةٍ تفتحها فوقه.
+   مقصورٌ على قوقعة التطبيق: صفحات الدخول خلفيتها ملعبٌ أخضر يمتد إلى الحافة
+   عمداً، وشريطٌ رماديّ فوقها يقطعها بلا سبب. */
+html.native .app-shell::before {
+  content: '';
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--safe-top);
+  background: var(--surface-1);
+  z-index: 45;
+  pointer-events: none;
+}
+
+/* الشريط الجانبي fixed بكامل الطول — يحتاج الحشوتين معاً */
+html.native .sidebar {
+  padding-block-start: var(--safe-top);
+  padding-block-end: var(--safe-bottom);
+}
+
+/* الطبقات المطلقة (نوافذ، أدراج، لوحة الأوامر) تبدأ من حدّ الشاشة الفعلي،
+   فبلا حشوة تختفي ترويستها تحت شريط الحالة. */
+html.native .modal-backdrop,
+html.native .drawer-backdrop,
+html.native .palette-backdrop {
+  padding-block-start: var(--safe-top);
+  padding-block-end: var(--safe-bottom);
+}
+
+/* التنبيهات المنبثقة (toast) تظهر أعلى الشاشة في بعض المقاسات */
+html.native .toast-container {
+  padding-block-start: var(--safe-top);
+}
+
+/* ─── لوحة المفاتيح ───────────────────────────────────────────────────
+   عند ظهورها ترتفع الأشرطة السفلية الثابتة فوقها، وإلا اختفت تحتها تماماً
+   (نموذج حجزٍ بزرّ حفظٍ غير مرئي = ميزة معطّلة عملياً).
+   الارتفاع يضبطه مستمع Keyboard في src/core/native.js. */
+html.native.keyboard-open .bottom-nav {
+  transform: translateY(100%);   /* الشريط السفلي لا معنى له والكيبورد ظاهر */
+}
+
+html.native.keyboard-open .bp-action-bar,
+html.native.keyboard-open .drawer-footer {
+  transform: translateY(calc(-1 * var(--keyboard-height)));
+  transition: transform 180ms ease-out;
+}
+
+/* ─── إحساس أصلي ──────────────────────────────────────────────────────
+   الفروق الصغيرة هي ما يفرّق بين «تطبيق» و«موقع في قوقعة» في نظر
+   المستخدم — وفي نظر مراجع أبل أيضاً. */
+
+/* لا وميض أزرق عند اللمس */
+html.native {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* لا تحديد نصّ ولا قائمة لمسٍ مطوّلة إلا في مواضع الإدخال والقراءة الفعلية.
+   على iOS تُظهر اللمسة المطوّلة عدسة تكبير ومقبضَي تحديد فوق أي نص — وهو
+   أوضح ما يفشي أن ما تراه صفحة وِب. */
+html.native,
+html.native .btn,
+html.native .nav-label,
+html.native .card-title,
+html.native table th {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+html.native input,
+html.native textarea,
+html.native select,
+html.native [contenteditable],
+html.native code,
+html.native .selectable {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* لا ارتداد مطاطي على مستوى الصفحة (يكشف حدود الـ webview)، مع إبقاء
+   التمرير الداخلي طبيعياً في المناطق القابلة للتمرير. */
+html.native,
+html.native body {
+  overscroll-behavior: none;
+}
+
+html.native .page-content,
+html.native .modal-body,
+html.native .drawer-body,
+html.native .table-wrapper {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* لا سحب-لإعادة-التحميل: التطبيق يحدّث نفسه عند العودة للمقدّمة
+   (native:resume في boot.js) */
+html.native body {
+  touch-action: pan-x pan-y;
+}
+
+/* ─── ما لا معنى له داخل تطبيق مثبَّت ───────────────────────────────── */
+
+/* دعوة «ثبّت التطبيق» — المستخدم مثبِّتٌ أصلاً.
+   نُخفي الحاوية كلها لا الزرّ وحده، وإلا بقيت مساحتها فراغاً في الشريط. */
+html.native #install-cta,
+html.native #ios-install-help {
+  display: none !important;
+}
+
+/* شريط تمرير مرئي: لا وجود له على الجوال أصلاً، وإظهاره يبدو دخيلاً */
+html.native ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

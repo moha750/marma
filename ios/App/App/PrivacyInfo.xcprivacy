@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  بيان الخصوصية (Privacy Manifest) — تُلزم به أبل كل تطبيق يُرفَع منذ مايو ٢٠٢٤،
+  وغيابه يُرفَض عند الرفع لا في المراجعة (فيصلك الرفض من App Store Connect فوراً).
+
+  محتواه يجب أن يطابق ما تعلنه في نموذج «خصوصية التطبيق» في App Store Connect —
+  التعارض بينهما سببُ رفضٍ في المراجعة.
+
+  مَرمى لا يتعقّب: لا شبكات إعلانات، ولا تحليلات طرفٍ ثالث، ولا مشاركة بيانات مع
+  أحد. وتتبّع الزيارات في المشروع (src/core/analytics.js) للصفحات العامة على
+  الويب وحدها — يتوقّف تلقائياً داخل التطبيق لأن نطاقه localhost.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- بريد المالك/الموظّف — لإنشاء الحساب وتسجيل الدخول -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- الأسماء: اسم المالك والموظّفين، وأسماء عملاء الملعب في الحجوزات -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- أرقام الجوال: للتواصل مع العميل حول حجزه (واتساب/اتصال) -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhoneNumber</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- معرّف المستخدم في قاعدة البيانات -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- رمز الجهاز للإشعارات (APNs) — لإيصال إشعار الحجز لهذا الجهاز -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<!--
+	  واجهات «السبب المطلوب» (Required Reason APIs). أبل تفحص الثنائي آلياً وترفض
+	  استخدام أيٍّ منها بلا سببٍ معلن هنا.
+	  UserDefaults: يستخدمه Capacitor نفسه وملحق Preferences لتخزين حالة التطبيق.
+	  السبب CA92.1 = «قراءة/كتابة بيانات التطبيق نفسه فقط» — وهو وصفٌ دقيق لحالتنا.
+	-->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

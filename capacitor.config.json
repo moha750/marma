@@ -1,0 +1,44 @@
+{
+  "appId": "help.marma.app",
+  "appName": "مَرمى",
+  "webDir": "dist-native",
+  "backgroundColor": "#FAFAF7",
+  "zoomEnabled": false,
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "never",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 200,
+      "backgroundColor": "#FAFAF7",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": false,
+      "splashImmersive": false
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DEFAULT",
+      "backgroundColor": "#FAFAF7"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

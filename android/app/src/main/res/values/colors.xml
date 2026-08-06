@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- لون صبغ أيقونة الإشعار في شريط الحالة ومركز الإشعارات.
+         أندرويد يرسم قناة الشفافية من ic_stat_notify مصبوغةً بهذا اللون. -->
+    <color name="notification_color">#0F9D58</color>
+</resources>

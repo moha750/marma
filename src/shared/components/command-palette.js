@@ -306,10 +306,13 @@ window.commandPalette = (function () {
       backdrop.dataset.open = 'true';
       input.focus();
     });
+    // طبقة مفتوحة — زرّ الرجوع في أندرويد يُغلقها أولاً
+    if (window.utils && window.utils.pushLayer) window.utils.pushLayer(close);
   }
 
   function close() {
     if (!backdrop) return;
+    if (window.utils && window.utils.popLayer) window.utils.popLayer(close);
     backdrop.dataset.open = 'false';
   }
 

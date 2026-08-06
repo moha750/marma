@@ -87,6 +87,7 @@ window.drawer = (function () {
     function close() {
       if (closed) return;
       closed = true;
+      if (window.utils && window.utils.popLayer) window.utils.popLayer(close);
       backdrop.dataset.open = 'false';
       document.body.style.overflow = prevOverflow;
       document.removeEventListener('keydown', onKey);
@@ -107,6 +108,9 @@ window.drawer = (function () {
       }
     }
     document.addEventListener('keydown', onKey);
+
+    // سجّل الدرج كطبقة — زرّ الرجوع في أندرويد يُغلقه بدل أن يُغلق التطبيق
+    if (window.utils && window.utils.pushLayer) window.utils.pushLayer(close);
 
     // إغلاق بزر X
     header.querySelector('.drawer-close').addEventListener('click', close);

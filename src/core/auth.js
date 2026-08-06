@@ -7,9 +7,15 @@ window.auth = (function () {
   let currentIsAdmin = null;      // ذاكرة مؤقتة لـ super-admin
 
   // يضيف base path (لـ GitHub Pages /marma/) إلى المسار المطلق
-  // في dev أو custom domain يبقى المسار كما هو
+  // في dev أو custom domain يبقى المسار كما هو.
+  //
+  // وفي التطبيق الأصلي يمرّ المسار كذلك على native.docPath: Capacitor يخدم
+  // index.html لأي مسار بلا امتداد، فـ '/auth/login' كان سيفتح قوقعة التطبيق بدل
+  // صفحة الدخول — وهذه الدالة هي مصبّ كل ملاحة مستندات في هذا الملف، فإصلاحها
+  // هنا يُصلح المسارات الستّة معاً.
   function withBase(path) {
-    return (window.__BASE__ || '') + path;
+    const resolved = window.native ? window.native.docPath(path) : path;
+    return (window.__BASE__ || '') + resolved;
   }
 
   // خطأ عابر (شبكة) لا يعني أن الجلسة باطلة — لا يجوز تسجيل الخروج عنده
@@ -231,13 +237,88 @@ window.auth = (function () {
     }
   }
 
-  // دخول/تسجيل عبر مزوّد OAuth — يحوّل إلى المزوّد ثم يعود لنفس الصفحة
+  // دخول/تسجيل عبر مزوّد OAuth.
+  //
+  // على الويب: تحويلٌ عادي ثم عودة لنفس الصفحة.
+  //
+  // في التطبيق الأصلي لا يجوز أن يحدث ذلك داخل الـ webview: قوقل تحجب OAuth في
+  // العروض المضمّنة صراحةً وترد disallowed_useragent — فيبقى زرّ «المتابعة بحساب
+  // Google» زرًّا لا يعمل، وميزةٌ معطّلة سببُ رفضٍ في المراجعة قبل أن تكون عيباً
+  // للمستخدم. والحلّ المعتمد: نفتح صفحة المزوّد في متصفّح النظام (Safari View
+  // Controller / Chrome Custom Tab)، ويعود بنا رابطٌ مخصّص إلى التطبيق فنبادل
+  // الرمز بجلسة. نفس تدفّق PKCE الحالي — يتغيّر مكان تنفيذه لا آليّته.
+  const NATIVE_REDIRECT = 'help.marma.app://auth/callback';
+
   async function signInWithProvider(provider) {
-    const { error } = await window.sb.auth.signInWithOAuth({
+    const isNativeApp = !!(window.native && window.native.isNative);
+
+    if (!isNativeApp) {
+      const { error } = await window.sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+      if (error && window.utils) window.utils.toast(window.utils.formatError(error), 'error');
+      return;
+    }
+
+    const { data, error } = await window.sb.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: {
+        redirectTo: NATIVE_REDIRECT,
+        // لا تُحوّل الـ webview بنفسك — نحن نفتح الرابط في متصفّح النظام
+        skipBrowserRedirect: true
+      }
     });
-    if (error && window.utils) window.utils.toast(window.utils.formatError(error), 'error');
+    if (error || !data || !data.url) {
+      if (window.utils) window.utils.toast(window.utils.formatError(error || new Error('تعذّر بدء تسجيل الدخول')), 'error');
+      return;
+    }
+
+    const Browser = window.native.plugin('Browser');
+    if (!Browser) {
+      window.location.href = data.url;   // احتياط بعيد الاحتمال
+      return;
+    }
+
+    // العودة تصل كحدث appUrlOpen — نلتقطها مرّة واحدة ونبادل الرمز بجلسة
+    const App = window.native.plugin('App');
+    let listener = null;
+    const finish = async (url) => {
+      try {
+        const parsed = new URL(url);
+        // الرمز قد يأتي في الاستعلام (PKCE) — وقد يحمل الرابط خطأً من المزوّد
+        const code = parsed.searchParams.get('code');
+        const errDesc = parsed.searchParams.get('error_description') || parsed.searchParams.get('error');
+        if (errDesc) {
+          if (window.utils) window.utils.toast(decodeURIComponent(errDesc), 'error');
+          return;
+        }
+        if (!code) return;
+        const { error: exErr } = await window.sb.auth.exchangeCodeForSession(code);
+        if (exErr) {
+          if (window.utils) window.utils.toast(window.utils.formatError(exErr), 'error');
+          return;
+        }
+        const dest = await getPostLoginDestination();
+        window.location.replace(dest || withBase('/dashboard'));
+      } finally {
+        try { await Browser.close(); } catch (_) {}
+        if (listener && listener.remove) { try { await listener.remove(); } catch (_) {} }
+      }
+    };
+
+    if (App) {
+      listener = await App.addListener('appUrlOpen', ({ url }) => {
+        if (typeof url === 'string' && url.startsWith('help.marma.app://auth')) finish(url);
+      });
+    }
+
+    try {
+      await Browser.open({ url: data.url, presentationStyle: 'popover' });
+    } catch (err) {
+      if (window.utils) window.utils.toast(window.utils.formatError(err), 'error');
+      if (listener && listener.remove) { try { await listener.remove(); } catch (_) {} }
+    }
   }
   function signInWithGoogle() { return signInWithProvider('google'); }
   function signInWithApple() { return signInWithProvider('apple'); }

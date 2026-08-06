@@ -76,6 +76,15 @@ function initPasswordToggles(root) {
 // بعدّاد لأن النوافذ تتراكب (حوار تأكيد فوق نافذة الحجز مثلًا)
 let openModalsCount = 0;
 
+// مكدّس الطبقات المفتوحة (نوافذ، أدراج، لوحة الأوامر) — كل طبقة تُسجّل دالة
+// إغلاقها. الحاجة إليه من أندرويد: زرّ الرجوع العتادي بلا معالج يُغلق التطبيق من
+// فوق نافذة مفتوحة، وهو سلوك يقرؤه المستخدم تعطّلاً. فنُغلق الطبقة العلوية أولاً.
+//
+// ملاحظة مقصودة: النوافذ هنا لا تُغلق بالنقر خارجها ولا بمفتاح Escape (كي لا
+// يُفقَد إدخال بالخطأ)، لكن زرّ الرجوع العتادي إشارةٌ صريحة من المستخدم لا زلّةَ
+// فأر — وإغلاقه للنافذة هو ما يتوقّعه كل مستخدم أندرويد.
+const layerStack = [];
+
 window.utils = {
   renderIcons,
   initPasswordToggles,
@@ -293,6 +302,24 @@ window.utils = {
     }, 4000);
   },
 
+  // ====== مكدّس الطبقات ======
+  // يستهلكه زرّ الرجوع في أندرويد (src/core/native.js). تسجيل الطبقة اختياري:
+  // أي مكوّن لا يسجّل نفسه يبقى سلوكه كما هو، فالإضافة غير قاسرة.
+  pushLayer(closeFn) {
+    if (typeof closeFn === 'function') layerStack.push(closeFn);
+  },
+  popLayer(closeFn) {
+    const i = layerStack.lastIndexOf(closeFn);
+    if (i !== -1) layerStack.splice(i, 1);
+  },
+  // يُغلق الطبقة العلوية إن وُجدت. يُرجع true إذا أُغلق شيء (فلا يتراجع الراوتر).
+  closeTopLayer() {
+    const closeFn = layerStack[layerStack.length - 1];
+    if (!closeFn) return false;
+    try { closeFn(); } catch (_) { layerStack.pop(); }
+    return true;
+  },
+
   // ====== Modal generic ======
   // يفتح modal، يعيد دالة close
   openModal({ title, body, footer, onClose, size }) {
@@ -323,6 +350,7 @@ window.utils = {
     const close = () => {
       if (!backdrop.isConnected) return; // حماية من الاستدعاء المزدوج
       backdrop.remove();
+      this.popLayer(close);
       openModalsCount = Math.max(0, openModalsCount - 1);
       if (openModalsCount === 0) {
         document.body.style.overflow = '';
@@ -330,6 +358,7 @@ window.utils = {
       }
       if (typeof onClose === 'function') onClose();
     };
+    this.pushLayer(close);
     // الإغلاق عبر الأزرار فقط (زر × في الترويسة أو أزرار التذييل).
     // عمداً لا نُغلق بالنقر خارج النافذة ولا بمفتاح Escape، حتى لا يُفقَد إدخالٌ بالخطأ.
     backdrop.querySelector('.modal-close').addEventListener('click', close);

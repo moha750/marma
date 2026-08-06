@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">مَرمى</string>
+    <string name="title_activity_main">مَرمى</string>
+    <string name="package_name">help.marma.app</string>
+    <string name="custom_url_scheme">help.marma.app</string>
+</resources>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>مَرمى</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- الرابط المخصّص help.marma.app:// — به يعود تسجيل الدخول من متصفّح النظام
+	     إلى التطبيق. بلا هذا التصريح لا يعرف iOS لمن يوجّه العودة، فيبقى المستخدم
+	     في Safari وقد سجّل دخوله فعلاً. (أندرويد يضبطه Capacitor تلقائياً في
+	     strings.xml باسم custom_url_scheme.) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>help.marma.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>help.marma.app</string>
+			</array>
+		</dict>
+	</array>
+	<!-- نصوص أذونات النظام. غيابها ليس تحذيراً بل انهيارٌ فوري: iOS يُسقِط
+	     التطبيق لحظة أول طلبٍ لإذنٍ بلا نصّ يشرحه، وأبل ترفض الرفع أصلاً.
+	     والنصّ يجب أن يذكر الغرض تحديداً — «للكاميرا» وحدها سببُ رفض. -->
+	<key>NSCameraUsageDescription</key>
+	<string>نستخدم الكاميرا لمسح رمز بطاقة ولاء العميل عند الكاونتر لصرف أختامه وقسائمه.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نطلب الوصول إلى الصور لاختيار شعار ملعبك وصورة غلافه التي تظهر في صفحة الحجز.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>نطلب الإذن لحفظ صورة رمز بطاقة الولاء أو صفحة الحجز في صورك لمشاركتها مع عملائك.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>نستخدم Face ID لفتح التطبيق بسرعة وحماية بيانات حجوزات ملعبك.</string>
+	<!-- الإشعارات: نتسلّم رمز الجهاز في الخلفية عند تغيّره فلا يفقد المالك
+	     إشعارات حجوزاته بعد تحديث النظام. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+            <key>UISceneConfigurationName</key>
+            <string>Default Configuration</string>
+            <key>UISceneDelegateClassName</key>
+            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+            <key>UISceneStoryboardFile</key>
+            <string>Main</string>
+        </dict>
+      </array>
+    </dict>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<!-- arm64 لا armv7: القالب الافتراضي يحمل قيمةً من زمن الأجهزة ٣٢-بت،
+	     وكل جهاز يشغّل iOS 15+ (هدف النشر عندنا) هو arm64 حصراً. -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

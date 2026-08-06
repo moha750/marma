@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- الرابط المخصّص help.marma.app:// — به يعود تسجيل الدخول من
+                 Chrome Custom Tab إلى التطبيق. بلا هذا المرشِّح تبقى صفحة
+                 المزوّد مفتوحةً بعد نجاح الدخول ولا يعود المستخدم أبداً.
+                 قيمة custom_url_scheme يضبطها Capacitor في strings.xml. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/custom_url_scheme" />
+            </intent-filter>
+
+            <!-- روابط التطبيق (App Links): رابط marma.help يفتح في التطبيق مباشرةً
+                 بلا شاشة «بأي تطبيق تفتح؟». autoVerify يجعل أندرويد يتحقّق من
+                 ملكيتنا للنطاق عبر /.well-known/assetlinks.json عند التثبيت.
+
+                 المسارات محدّدة عمداً ولا نأخذ النطاق كلّه: صفحتا /book و /card
+                 للعملاء لا للمالك، ومن يفتحهما غالباً لا يملك التطبيق — واستيلاء
+                 التطبيق عليهما يعني رابط حجزٍ يرسله المالك لعميلٍ ثم يفتح في
+                 تطبيق المالك على جهازه هو. وصفحات /auth تبقى في المتصفّح لأن
+                 روابط استعادة كلمة المرور تحمل رموزها في الرابط. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="marma.help" />
+                <data android:scheme="https" android:host="www.marma.help" />
+                <data android:pathPrefix="/dashboard" />
+                <data android:pathPrefix="/calendar" />
+                <data android:pathPrefix="/bookings" />
+                <data android:pathPrefix="/customers" />
+                <data android:pathPrefix="/fields" />
+                <data android:pathPrefix="/schedule" />
+                <data android:pathPrefix="/offers" />
+                <data android:pathPrefix="/loyalty" />
+                <data android:pathPrefix="/reports" />
+                <data android:pathPrefix="/visits" />
+                <data android:pathPrefix="/staff" />
+                <data android:pathPrefix="/subscription" />
+                <data android:pathPrefix="/account" />
+                <data android:pathPrefix="/settings" />
+            </intent-filter>
+        </activity>
+
+        <!-- أيقونة الإشعار ولونها. بلا هذين المفتاحين يستخدم أندرويد أيقونة
+             التطبيق الملوّنة، فيرسم قناة شفافيتها وحدها = مربّع أبيض مصمت في
+             شريط الحالة. القيمتان الافتراضيتان تنطبقان على كل إشعار لا نحدّد
+             له أيقونةً صراحةً. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notify" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- الإشعارات: أندرويد ١٣ (API 33) نقلها إلى إذنٍ يُطلَب وقت التشغيل.
+         بلا تصريحها هنا لا يظهر طلب الإذن مطلقاً، فلا يستقبل المالك أي إشعار
+         حجزٍ على أندرويد ١٣+ — وهو صمتٌ لا رسالةَ خطأ فيه. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- الكاميرا: لمسح رمز بطاقة ولاء العميل عند الكاونتر -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- الاهتزاز: تغذية لمسية عند نجاح المسح -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- الكاميرا ليست شرطاً لتشغيل التطبيق: الإدخال اليدوي لرمز البطاقة بديلٌ
+         كامل. required="false" يُبقي التطبيق متاحاً لأجهزة بلا كاميرا في متجر
+         قوقل بدل أن يُحجَب عنها. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+</manifest>

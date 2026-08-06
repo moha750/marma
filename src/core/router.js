@@ -98,6 +98,24 @@ window.router = (function () {
     }
   }
 
+  // ملاحة بمسار جاهز (مع استعلامه) بدل اسم مسار — يستهلكها فتح الروابط العامة
+  // (Universal Links / App Links) في التطبيق الأصلي: الرابط يصل كنصّ كامل من
+  // النظام، لا كاسم مسار. مسارٌ غير معروف يذهب للافتراضي بدل صفحة فارغة.
+  function navigateToPath(fullPath) {
+    if (typeof fullPath !== 'string' || !fullPath) return;
+    const [pathname, search = ''] = fullPath.split('?');
+    const matched = matchRoute(stripBase(pathname));
+    const target = matched
+      ? withBase(pathname) + (search ? '?' + search : '')
+      : buildPath(defaultRouteName());
+    if (location.pathname + location.search === target) {
+      go();
+    } else {
+      history.pushState(null, '', target);
+      go();
+    }
+  }
+
   async function go() {
     if (!started) return;
     const { name, params, query } = parseLocation();
@@ -219,10 +237,19 @@ window.router = (function () {
 
   function currentRouteName() { return currentName; }
 
+  // إعادة تركيب الصفحة الحالية من جديد. يستهلكها التطبيق الأصلي عند العودة من
+  // الخلفية: البيانات المعروضة قد تكون بعمر يوم، والصفحة نفسها هي المكان الذي
+  // يعرف كيف يجلب بياناته.
+  function refresh() {
+    if (started) go();
+  }
+
   return {
     register,
     getRoutes,
     navigate,
+    navigateToPath,
+    refresh,
     start,
     parseLocation,
     currentRouteName,

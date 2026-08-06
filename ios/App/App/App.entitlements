@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  صلاحيات التطبيق (Entitlements). كل مفتاح هنا يجب أن يكون مفعّلاً كذلك في
+  App ID داخل حساب المطوّر (Certificates, Identifiers & Profiles) — وإلا فشل
+  التوقيع برسالة «profile doesn't match entitlements» عند أول محاولة رفع.
+-->
+<plist version="1.0">
+<dict>
+	<!-- الإشعارات. القيمة development محليّاً، وأداة الأرشفة تستبدلها بـ production
+	     عند بناء نسخة التوزيع؛ ولهذا لا تصل الإشعارات لنسخة Debug إن أرسلتَ إلى
+	     مضيف الإنتاج (وبالعكس) — انظر APNS_HOST في _shared/apns.ts. -->
+	<key>aps-environment</key>
+	<string>development</string>
+
+	<!-- الروابط العامة (Universal Links): تفتح روابط marma.help في التطبيق بدل
+	     المتصفّح. يلزمها ملف apple-app-site-association منشورٌ على النطاق —
+	     موجود في public/.well-known/ ويُنشَر مع الموقع. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:marma.help</string>
+		<string>applinks:www.marma.help</string>
+	</array>
+</dict>
+</plist>
