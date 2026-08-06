@@ -19,12 +19,23 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildPkpass, pngSolid, fetchPng, hexToRgb, rgbCss } from "../_shared/pkpass.ts";
+import {
+  authToken,
+  availableReward,
+  type CardRow,
+  linkSig,
+  loadCard,
+  safeEqual,
+  SITE,
+  splitPayload,
+  tenantLocations,
+  verifyLinkSig,
+} from "../_shared/loyalty-card.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TEAM_ID = Deno.env.get("APPLE_TEAM_ID") ?? "";
 const PASS_TYPE_ID = Deno.env.get("APPLE_PASS_TYPE_ID") ?? "pass.help.marma.loyalty";
-const SITE = Deno.env.get("PUBLIC_SITE_URL") ?? "https://marma.help";
 
 const CERTS = {
   certPem: Deno.env.get("APPLE_PASS_CERT_PEM") ?? "",
@@ -34,80 +45,8 @@ const CERTS = {
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
-// ─── التواقيع ────────────────────────────────────────────────────────────
-
-async function hmac(secretName: string, message: string): Promise<string> {
-  const secret = Deno.env.get(secretName) ?? "";
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-const linkSig = (serial: string) => hmac("QR_SECRET", serial);
-const authToken = (serial: string, version: number) =>
-  hmac("WALLET_AUTH_SECRET", `${serial}:${version}`);
-
-// مقارنة ثابتة الزمن — المقارنة العادية تُسرّب طول البادئة الصحيحة
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-// ─── جلب البطاقة كاملةً ──────────────────────────────────────────────────
-
-interface CardRow {
-  id: string; serial: string; balance: number; rewards_available: number;
-  redeem_pin: string | null; status: string; token_version: number;
-  pass_updated_at: string; tenant_id: string;
-  customers: { full_name: string } | null;
-  loyalty_programs: Record<string, unknown> | null;
-  tenants: { name: string } | null;
-}
-
-async function loadCard(serial: string): Promise<CardRow | null> {
-  const { data, error } = await db
-    .from("loyalty_cards")
-    .select(`id, serial, balance, rewards_available, redeem_pin, status, token_version,
-             pass_updated_at, tenant_id,
-             customers ( full_name ),
-             loyalty_programs ( * ),
-             tenants ( name )`)
-    .eq("serial", serial)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as unknown as CardRow;
-}
-
-async function availableReward(cardId: string) {
-  const { data } = await db
-    .from("loyalty_rewards")
-    .select("code, label")
-    .eq("card_id", cardId).eq("status", "available")
-    .order("issued_at", { ascending: true })
-    .limit(1).maybeSingle();
-  return data;
-}
-
-// أقرب ١٠ مواقع للملعب — تجعل البطاقة تقترح نفسها على شاشة القفل عند وصول العميل
-async function tenantLocations(tenantId: string, tenantName: string) {
-  const { data } = await db
-    .from("fields")
-    .select("latitude, longitude")
-    .eq("tenant_id", tenantId).eq("is_active", true)
-    .not("latitude", "is", null).not("longitude", "is", null)
-    .limit(10);
-  return (data ?? []).map((f: { latitude: number; longitude: number }) => ({
-    latitude: Number(f.latitude),
-    longitude: Number(f.longitude),
-    relevantText: `بطاقتك جاهزة — أنت عند ${tenantName}`,
-  }));
-}
+// التواقيع وقراءة صفّ البطاقة في _shared/loyalty-card.ts — تخدم دوال المحافظ
+// الثلاث. المصادقة كما كانت: authenticationToken مُشتقّ حسابياً بلا تخزين.
 
 // ─── بناء البطاقة ────────────────────────────────────────────────────────
 
@@ -123,8 +62,8 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
   const balance = Math.max(0, Math.round(Number(card.balance ?? 0)));
   const template = String(prog.template ?? "classic");
 
-  const reward = await availableReward(card.id);
-  const locations = await tenantLocations(card.tenant_id, tenantName);
+  const reward = await availableReward(db, card.id);
+  const locations = await tenantLocations(db, card.tenant_id, tenantName);
   const [r, g, b] = hexToRgb(bg);
   const fgRgb = hexToRgb(fg);
 
@@ -252,11 +191,11 @@ Deno.serve(async (req) => {
   try {
     // ── تنزيل البطاقة: /pkpass/<serial>.<sig> ──
     if (req.method === "GET" && parts[0] === "pkpass" && parts[1]) {
-      const [serial, sig] = parts[1].replace(/\.pkpass$/, "").split(".");
+      const [serial, sig] = splitPayload(parts[1]);
       if (!serial || !sig) return new Response("bad request", { status: 400 });
-      if (!safeEqual(sig, await linkSig(serial))) return new Response("forbidden", { status: 403 });
+      if (!await verifyLinkSig(serial, sig)) return new Response("forbidden", { status: 403 });
 
-      const card = await loadCard(serial);
+      const card = await loadCard(db, serial);
       if (!card) return new Response("not found", { status: 404 });
       if (card.status !== "active") return new Response("gone", { status: 410 });
 
@@ -268,7 +207,7 @@ Deno.serve(async (req) => {
     if (parts[0] === "v1" && parts[1] === "devices" && parts[3] === "registrations" && parts[5]) {
       const deviceId = parts[2];
       const serial = parts[5];
-      const card = await loadCard(serial);
+      const card = await loadCard(db, serial);
       if (!card) return new Response(null, { status: 404 });
       if (!await checkApplePass(req, card)) return new Response(null, { status: 401 });
 
@@ -324,7 +263,7 @@ Deno.serve(async (req) => {
     // ── PassKit: أحدث نسخة من البطاقة ──
     // /v1/passes/{passTypeId}/{serial}
     if (req.method === "GET" && parts[0] === "v1" && parts[1] === "passes" && parts[3]) {
-      const card = await loadCard(parts[3]);
+      const card = await loadCard(db, parts[3]);
       if (!card) return new Response(null, { status: 404 });
       if (!await checkApplePass(req, card)) return new Response(null, { status: 401 });
 

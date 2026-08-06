@@ -4,9 +4,12 @@
 // البطاقة إلى محفظته في أقل عدد ممكن من اللمسات.
 //
 // كشف المنصّة يحدّد الزرّ المعروض:
-//   iOS      → Apple Wallet (ملف .pkpass موقَّع من دالتنا)
-//   Android  → Google Wallet (يُفعَّل عند وصول موافقة جوجل)
-//   غير ذلك  → بطاقة الويب نفسها بنفس الـ QR — لا أحد يُترك بلا بطاقة
+//   iOS      → Apple Wallet  (ملف .pkpass موقَّع من دالتنا)
+//   Android  → Google Wallet (رابط pay.google.com يُصدره wallet-google)
+//   غير ذلك  → الزرّان معاً — البطاقة تُفتح لاحقاً على الجوال
+//
+// وفي كل الأحوال البطاقة أعلاه بنفس الـ QR: لا أحد يُترك بلا بطاقة لو تعثّرت
+// المحفظة. ولهذا يعود مسار جوجل عند الفشل إلى هنا بـ ?gw= بدل صفحة خطأ.
 (function () {
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = (v) => window.utils.escapeHtml(v == null ? '' : String(v));
@@ -87,7 +90,7 @@
             <i data-lucide="pause"></i>
             ${d.opted_out ? 'أنت غير مشترك في البرنامج حالياً.' : 'هذه البطاقة موقوفة.'}
           </div>`
-          : `<div class="lcard-actions">${walletButtons()}</div>`}
+          : `${gwNote()}<div class="lcard-actions">${walletButtons()}</div>`}
 
         ${prog.terms ? `
           <details class="lcard-terms">
@@ -114,24 +117,34 @@
   }
 
   function walletButtons() {
-    const pkpass = `/api/wallet/pkpass/${encodeURIComponent(payload)}`;
-    if (isIOS) {
-      return `<a class="lcard-wallet lcard-wallet--apple" href="${pkpass}">
-        <i data-lucide="wallet"></i>
-        <span><b>إضافة إلى Apple Wallet</b><small>تُحدَّث تلقائياً بعد كل حجز</small></span>
-      </a>`;
-    }
-    if (isAndroid) {
-      // زرّ جوجل يُفعَّل فور اعتماد حساب المُصدِر؛ حتى ذلك الحين البطاقة أعلاه كاملة
-      return `<div class="lcard-wallet lcard-wallet--soon">
-        <i data-lucide="clock"></i>
-        <span><b>Google Wallet — قريباً</b><small>احفظ هذه الصفحة الآن، بطاقتك تعمل كما هي</small></span>
-      </div>`;
-    }
-    return `<a class="lcard-wallet lcard-wallet--apple" href="${pkpass}">
+    const enc = encodeURIComponent(payload);
+    const apple = `<a class="lcard-wallet lcard-wallet--apple" href="/api/wallet/pkpass/${enc}">
       <i data-lucide="wallet"></i>
-      <span><b>تنزيل البطاقة</b><small>افتحها على iPhone لإضافتها للمحفظة</small></span>
+      <span><b>إضافة إلى Apple Wallet</b><small>تُحدَّث تلقائياً بعد كل حجز</small></span>
     </a>`;
+    const google = `<a class="lcard-wallet lcard-wallet--google" href="/api/wallet/google/${enc}">
+      <i data-lucide="wallet-cards"></i>
+      <span><b>إضافة إلى Google Wallet</b><small>تُحدَّث تلقائياً بعد كل حجز</small></span>
+    </a>`;
+
+    if (isIOS) return apple;
+    if (isAndroid) return google;
+    // سطح المكتب: الزرّان معاً — لا نُخمّن أي جوال سيفتح به البطاقة
+    return apple + google;
+  }
+
+  // رسائل عودة مسار جوجل (wallet-google يُعيد التوجيه إلى هنا عند التعثّر)
+  const GW_NOTES = {
+    off: 'خدمة Google Wallet غير مُفعَّلة بعد على هذا الملعب — بطاقتك أعلاه تعمل كما هي.',
+    err: 'تعذّرت إضافة البطاقة إلى Google Wallet الآن — جرّب لاحقاً، وبطاقتك أعلاه تعمل كما هي.'
+  };
+
+  function gwNote() {
+    const code = (new URLSearchParams(location.search).get('gw') || '').trim();
+    if (!GW_NOTES[code]) return '';
+    return `<div class="lcard-note lcard-note--warn">
+      <i data-lucide="info"></i>${esc(GW_NOTES[code])}
+    </div>`;
   }
 
   function drawQr() {

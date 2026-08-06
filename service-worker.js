@@ -150,6 +150,13 @@ self.addEventListener('fetch', (event) => {
   // لا نخزّن config.js أبداً — يحوي مفاتيح ويُولَّد وقت البناء
   if (url.pathname.endsWith('/config.js')) return;
 
+  // دوال الحافة (/api/*) تمرّ كما هي: ليست صفحات ولا أصولاً.
+  //   • /api/wallet/pkpass/… ملف بطاقة موقَّع يتغيّر مع كل ختم — تخزينه يعني
+  //     تسليم العميل بطاقةً قديمة.
+  //   • /api/wallet/google/… يردّ 302 إلى pay.google.com، والتقاطه هنا يجعل
+  //     إعادة التوجيه تمرّ عبر منطق التنقّل بلا سبب.
+  if (url.pathname.startsWith('/api/')) return;
+
   // الصفحات العامة (landing, public booking, admin) — لا تدخل في نطاق التطبيق
   if (isPublicPage(url.pathname)) return;
 

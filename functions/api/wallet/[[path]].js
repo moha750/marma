@@ -1,4 +1,4 @@
-// Cloudflare Pages Function — وسيط شفّاف لخدمة Apple Wallet.
+// Cloudflare Pages Function — وسيط شفّاف لخدمتَي Apple Wallet و Google Wallet.
 // ----------------------------------------------------------------------------
 // لماذا وسيط بدل توجيه آبل مباشرةً إلى *.functions.supabase.co؟
 //
@@ -9,10 +9,11 @@
 //     Last-Modified / 304) التي تعتمد عليها آبل لتقليل الطلبات.
 //
 // شفّاف عمداً: لا يفسّر المسار ولا يتحقّق من شيء — كل المنطق في Edge Function
-// حيث الأسرار. وظيفته نقل الطلب والرد كما هما.
+// حيث الأسرار. وظيفته نقل الطلب والرد كما هما. الاستثناء الوحيد أول جزء من
+// المسار: google/* تذهب إلى دالة جوجل وما عداها إلى خدمة PassKit.
 
 const FORWARD_REQ = ['authorization', 'content-type', 'if-modified-since', 'user-agent'];
-const FORWARD_RES = ['content-type', 'content-disposition', 'last-modified', 'cache-control'];
+const FORWARD_RES = ['content-type', 'content-disposition', 'last-modified', 'cache-control', 'location'];
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -21,9 +22,12 @@ export async function onRequest(context) {
   if (!base) return new Response('wallet service unavailable', { status: 503 });
 
   // params.path مصفوفة الأجزاء بعد /api/wallet
-  const tail = Array.isArray(params.path) ? params.path.join('/') : (params.path || '');
+  const segs = Array.isArray(params.path) ? params.path : (params.path ? [params.path] : []);
+  const isGoogle = segs[0] === 'google';
+  const fn = isGoogle ? 'wallet-google' : 'wallet-apple';
+  const tail = (isGoogle ? segs.slice(1) : segs).join('/');
   const src = new URL(request.url);
-  const target = `${base}/functions/v1/wallet-apple/${tail}${src.search}`;
+  const target = `${base}/functions/v1/${fn}/${tail}${src.search}`;
 
   const headers = new Headers();
   for (const h of FORWARD_REQ) {
@@ -39,6 +43,9 @@ export async function onRequest(context) {
       method: request.method,
       headers,
       body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+      // redirect يدوي: مسار جوجل يردّ 302 إلى pay.google.com، والاتّباع التلقائي
+      // كان سيجلب صفحة جوجل ويقدّمها من نطاقنا بدل تحويل المتصفّح إليها.
+      redirect: 'manual',
     });
   } catch (_) {
     return new Response('wallet service unreachable', { status: 502 });

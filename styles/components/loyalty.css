@@ -314,7 +314,8 @@
 .lcard-title { font-size: var(--text-xl); margin: 0; }
 .lcard-sub { color: var(--text-tertiary); font-size: var(--text-sm); margin-block-start: .15rem; }
 
-.lcard-actions { margin-block-start: var(--space-4); }
+/* على سطح المكتب يظهر الزرّان معاً — الشبكة تضمن تباعدهما بلا هوامش مفردة */
+.lcard-actions { display: grid; gap: var(--space-2); margin-block-start: var(--space-4); }
 .lcard-wallet {
   display: flex; align-items: center; gap: var(--space-3);
   padding: var(--space-4);
@@ -327,7 +328,9 @@
 .lcard-wallet b { display: block; font-size: var(--text-base); }
 .lcard-wallet small { display: block; opacity: .75; font-size: var(--text-xs); margin-block-start: .1rem; }
 .lcard-wallet--apple { background: #000; color: #fff; }
-.lcard-wallet--soon { background: var(--surface-2); color: var(--text-secondary); cursor: default; }
+/* رمادي جوجل الداكن (#202124) لا أسود آبل — زرّان متجاوران بلونٍ واحد يبدوان
+   زرّاً واحداً مكرّراً، والفرق البسيط يكفي لتمييز الوجهتين */
+.lcard-wallet--google { background: #202124; color: #fff; }
 
 .lcard-note {
   display: flex; align-items: center; gap: var(--space-2);

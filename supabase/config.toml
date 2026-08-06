@@ -18,6 +18,12 @@ verify_jwt = false
 [functions.wallet-apple]
 verify_jwt = false
 
+# Google Wallet: يفتحها العميل من متصفّح جواله بلا حساب — لا JWT من Supabase.
+# المصادقة داخلية: توقيع HMAC على الرابط، ثم التحقّق من حالة البطاقة قبل
+# إصدار رابط pay.google.com.
+[functions.wallet-google]
+verify_jwt = false
+
 # مزامنة المحافظ: تُنادى من التريجر عبر pg_net ومن cron — لا JWT من Supabase،
 # والمصادقة بسرّ داخلي مشترك (INTERNAL_HOOK_SECRET) داخل الدالة.
 [functions.wallet-sync]

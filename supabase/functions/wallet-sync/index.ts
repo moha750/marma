@@ -4,6 +4,9 @@
 // GET /v1/passes/{ptid}/{serial} ويجلب النسخة الجديدة بنفسه. لذلك لا حاجة
 // لتضمين الرصيد هنا — يكفي أن نقول «تغيّرت».
 //
+// جوجل معكوسة تماماً: لا إشعار ولا سحب — نكتب الحالة الجديدة على خادمها (PUT)
+// فتظهر على جهاز العميل من نفسها. لذلك فرع جوجل هنا يحمل المحتوى، وفرع آبل لا.
+//
 // المصادقة بالتوكن (‎.p8/ES256) لا بالشهادة: الشهادة تفرض mTLS وهو غير متاح
 // في Deno، والتوكن يعمل بـ fetch عادي. الموضوع (apns-topic) هو معرّف الـ Pass
 // لا معرّف تطبيق — لا يوجد تطبيق أصلاً.
@@ -13,10 +16,13 @@
 //   POST {drain:true} ← من cron كل ٥ دقائق، شبكة أمان لما فشل
 //
 // الأسرار: APPLE_APNS_KEY_P8، APPLE_APNS_KEY_ID، APPLE_TEAM_ID،
-//          APPLE_PASS_TYPE_ID، INTERNAL_HOOK_SECRET
+//          APPLE_PASS_TYPE_ID، INTERNAL_HOOK_SECRET،
+//          GOOGLE_SA_JSON، GOOGLE_ISSUER_ID
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { apnsConfigured, apnsToken } from "../_shared/apns.ts";
+import { loadCardById } from "../_shared/loyalty-card.ts";
+import { googleWalletConfigured, syncGoogleCard } from "../_shared/google-wallet.ts";
 
 const db = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -83,6 +89,22 @@ async function pushCard(cardId: string): Promise<PushResult> {
   return out;
 }
 
+// ─── دفع الحالة إلى جوجل ─────────────────────────────────────────────────
+
+/**
+ * لا نُنشئ كائناً هنا (create:false): البطاقة التي لم يحفظها صاحبها في محفظته
+ * لا كائن لها، وإنشاؤه من طرفنا يعني بطاقةً معلّقة في حساب جوجل لم يطلبها أحد.
+ * الإنشاء يقع مرة واحدة عند ضغط زرّ «أضف إلى Google Wallet» في wallet-google.
+ */
+async function pushGoogle(cardId: string): Promise<{ synced: boolean; error?: string }> {
+  const card = await loadCardById(db, cardId);
+  if (!card) return { synced: false, error: "card not found" };
+  if (!card.google_object_id) return { synced: false };   // لم تُحفظ بعد — ليس خطأ
+
+  const res = await syncGoogleCard(db, card, { create: false });
+  return { synced: res.synced, error: res.ok ? undefined : res.error };
+}
+
 // ─── تصريف الطابور ───────────────────────────────────────────────────────
 
 async function drain(cardId?: string): Promise<Record<string, number>> {
@@ -104,6 +126,13 @@ async function drain(cardId?: string): Promise<Record<string, number>> {
   const google = rows.filter((r) => r.target === "google");
 
   for (const row of apple) {
+    if (!apnsConfigured()) {
+      skipped++;
+      await db.from("wallet_sync_queue")
+        .update({ done_at: new Date().toISOString(), last_error: "apple: apns not configured" })
+        .eq("id", row.id);
+      continue;
+    }
     const res = await pushCard(row.card_id);
     sent += res.sent;
     if (res.failed > 0) {
@@ -121,13 +150,29 @@ async function drain(cardId?: string): Promise<Record<string, number>> {
     }
   }
 
-  // جوجل معلّقة على اعتماد حساب المُصدِر. نُعلّم الصفوف منجَزة بملاحظة صريحة
-  // كي لا يتضخّم الطابور ويُخفي أعطالاً حقيقية في مسار آبل.
-  if (google.length) {
-    skipped = google.length;
+  // جوجل: لا نبضة — نكتب الحالة على خادمها مباشرةً. وإن كان المُصدِر غير مضبوط
+  // بعد، نُعلّم الصفوف منجَزة بملاحظة صريحة كي لا يتضخّم الطابور ويُخفي أعطالاً
+  // حقيقية في مسار آبل.
+  if (google.length && !googleWalletConfigured()) {
+    skipped += google.length;
     await db.from("wallet_sync_queue")
-      .update({ done_at: new Date().toISOString(), last_error: "google: pending issuer approval" })
+      .update({ done_at: new Date().toISOString(), last_error: "google: issuer not configured" })
       .in("id", google.map((r) => r.id));
+  } else {
+    for (const row of google) {
+      const res = await pushGoogle(row.card_id);
+      if (res.error) {
+        failed++;
+        await db.from("wallet_sync_queue")
+          .update({ attempts: row.attempts + 1, last_error: res.error.slice(0, 300) })
+          .eq("id", row.id);
+      } else {
+        if (res.synced) sent++; else skipped++;
+        await db.from("wallet_sync_queue")
+          .update({ done_at: new Date().toISOString(), last_error: null })
+          .eq("id", row.id);
+      }
+    }
   }
 
   return { rows: rows.length, sent, failed, skipped };
@@ -141,9 +186,11 @@ Deno.serve(async (req) => {
   if (!HOOK_SECRET || auth !== `Bearer ${HOOK_SECRET}`) {
     return new Response("unauthorized", { status: 401 });
   }
-  if (!apnsConfigured()) {
-    console.error("wallet-sync: APNs secrets missing");
-    return Response.json({ error: "apns_not_configured" }, { status: 503 });
+  // منصّة واحدة مضبوطة تكفي لتشغيل الدالة: إسقاطها لأن أسرار آبل ناقصة كان
+  // سيوقف مزامنة أندرويد أيضاً — وهما مساران مستقلّان تماماً.
+  if (!apnsConfigured() && !googleWalletConfigured()) {
+    console.error("wallet-sync: لا أسرار آبل ولا جوجل");
+    return Response.json({ error: "no_wallet_configured" }, { status: 503 });
   }
 
   try {
