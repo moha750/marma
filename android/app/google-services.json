@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1038364873412",
+    "project_id": "marma-e9c70",
+    "storage_bucket": "marma-e9c70.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038364873412:android:c6aa07171abb1e47caaf91",
+        "android_client_info": {
+          "package_name": "help.marma.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5DuckUVn24oVj6rEMPLpE3uN3lqwefgg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

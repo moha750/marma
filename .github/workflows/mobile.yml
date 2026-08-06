@@ -181,9 +181,42 @@ jobs:
       - name: مزامنة Capacitor
         run: npx cap sync android
 
+      - name: التحقّق من إعداد Firebase
+        # قالب Capacitor يطبّق إضافة google-services **فقط إن وُجد الملف**،
+        # وإلا يكتفي بسطر logger.info. أي أن غيابه يُنتج حزمةً تُبنى وتعمل
+        # وتُثبَّت — وإشعاراتها لا تصل أبداً، بلا خطأ يراه أحد. الفحص هنا هو
+        # ما يحوّل ذلك الصمت إلى فشل بناءٍ صريح.
+        run: |
+          set -e
+          F=android/app/google-services.json
+          test -f "$F" || { echo "❌ $F مفقود — الحزمة ستُبنى بلا إشعارات"; exit 1; }
+          node -e "
+            const g = require('./$F');
+            const pkgs = (g.client||[]).map(c => c.client_info.android_client_info.package_name);
+            const want = require('./capacitor.config.json').appId;
+            if (!pkgs.includes(want)) {
+              console.error('❌ google-services.json لا يذكر الحزمة ' + want + ' (فيه: ' + pkgs.join(', ') + ')');
+              process.exit(1);
+            }
+            console.log('✅ Firebase مربوط بـ ' + want + ' (مشروع ' + g.project_info.project_id + ')');
+          "
+
       - name: بناء APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: التأكّد أن الحزمة تحمل FCM فعلاً
+        # الفحص أعلاه يثبت وجود الملف؛ هذا يثبت أن Gradle طبّق الإضافة فعلاً
+        # وأن خدمة استقبال الرسائل صارت داخل الحزمة.
+        run: |
+          set -e
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | tail -1)
+          if "$AAPT" dump badging "$APK" | grep -q "com.google.android.c2dm.permission.RECEIVE"; then
+            echo "✅ الحزمة تستقبل إشعارات FCM"
+          else
+            echo "❌ الحزمة بلا استقبال FCM — لم تُطبَّق إضافة google-services"; exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
