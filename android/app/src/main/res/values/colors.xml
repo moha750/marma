@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ألوان السِمة. تعريفها هنا ليس تجميلاً: styles.xml يشير إلى
+         @color/colorPrimary، وبلا هذا الملف تُحَل من قيم مكتبة Capacitor
+         الافتراضية — وهي نيليّة (#3F51B5) لا خضراء. فكان أي عنصر نظامٍ يأخذ
+         لون العلامة (شريط الحالة، مربّعات الاختيار، مؤشّر التحميل) يظهر
+         بلون إطار العمل بدل لون مَرمى. -->
+    <color name="colorPrimary">#0F9D58</color>
+    <color name="colorPrimaryDark">#0B7B45</color>
+    <color name="colorAccent">#0F9D58</color>
+
     <!-- لون صبغ أيقونة الإشعار في شريط الحالة ومركز الإشعارات.
          أندرويد يرسم قناة الشفافية من ic_stat_notify مصبوغةً بهذا اللون. -->
     <color name="notification_color">#0F9D58</color>

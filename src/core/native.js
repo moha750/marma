@@ -207,16 +207,22 @@
     }
   }
 
-  // شريط الحالة يتبع سمة التطبيق: نص أسود على الفاتح، أبيض على الداكن
+  // شريط الحالة يتبع سمة التطبيق: أيقونات داكنة على الفاتح، فاتحة على الداكن.
+  //
+  // نضبط الأسلوب (لون الأيقونات) فقط، ولا نلوّن الخلفية. سبب ذلك أن تلوينها
+  // كان يُنتج تطبيقين مختلفَي المظهر: على أندرويد يرسم شريطاً فاتحاً فوق صفحة
+  // الدخول الخضراء، وعلى iOS لا توجد هذه الواجهة أصلاً فيمتدّ الأخضر تحته.
+  // ولو أبقيناه لصار للمظهر مصدرا حقيقة — CSS ونداءٌ أصلي — يتناقضان.
+  //
+  // فالخلفية تملكها الأنماط وحدها: صفحات القوقعة يغطّي منطقتَها الشريط الثابت
+  // في native.css، وصفحات الدخول يمتدّ خلفها الملعب الأخضر عمداً. وهذا أمتن
+  // مستقبلاً: setBackgroundColor مُهمَلة في أندرويد ١٥+ مع فرض edge-to-edge.
   function syncStatusBarToTheme() {
     const StatusBar = plugin('StatusBar');
     if (!StatusBar) return;
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     try {
       StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' });
-      if (platform === 'android') {
-        StatusBar.setBackgroundColor({ color: dark ? '#14160F' : '#FAFAF7' });
-      }
     } catch (_) {}
   }
 

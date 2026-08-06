@@ -13,6 +13,15 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+
+        <!-- أشرطة النظام شفّافة: الأنماط هي التي تملك مظهر تلك المنطقة على
+             المنصّتين معاً (الشريط الثابت في native.css لصفحات القوقعة، وخلفية
+             الملعب الخضراء لصفحات الدخول). وبلا هذا يلوّنها أندرويد بـ
+             colorPrimaryDark فيظهر شريطٌ مصمت فوق التصميم — ويبقى فاتحاً في
+             الوضع الداكن فيشقّ الشاشة. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
 
