@@ -70,3 +70,6 @@ supabase/.temp/
 # Wrangler local dev cache (npx wrangler pages dev)
 .wrangler/
 store-assets/
+
+# أدوات التطوير
+.playwright-mcp/
