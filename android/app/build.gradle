@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// ─── مفتاح التوقيع ──────────────────────────────────────────────────────────
+// يُقرأ من ملفٍ خارج المستودع (~/.marma-keys/keystore.properties) لا من داخله:
+// مفتاح الرفع = القدرة على نشر تحديثات باسمك، وأي ملفٍ داخل شجرة المشروع
+// معرَّضٌ لالتزامٍ بالخطأ أو لمشاركة المجلّد.
+//
+// وغيابه لا يُفشل البناء: بناء التصحيح (debug) يجب أن يعمل لأي مطوّر أو على
+// CI بلا مفتاح، ولا يُطلَب المفتاح إلا عند بناء نسخة الإصدار فعلاً.
+def keystorePropsFile = file("${System.properties['user.home']}/.marma-keys/keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     namespace = "help.marma.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +29,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystoreProps['storeFile']) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // بلا هذا السطر يُوقَّع الإصدار بمفتاح debug — ويرفضه Play Console
+            // برسالة غامضة عن «مفتاح تصحيح»، وهي من أكثر ما يُربك أول رفع.
+            if (keystoreProps['storeFile']) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
