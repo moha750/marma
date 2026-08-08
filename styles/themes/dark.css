@@ -23,7 +23,7 @@
   /* النصوص */
   --text-primary:   #ECEDE8;
   --text-secondary: #A8AAA3;
-  --text-tertiary:  #6E7068;
+  --text-tertiary:  #8A8C83;    /* كان #6E7068 = 3.35:1 — راسب. الآن 5.14:1 على surface-1 */
   --text-disabled:  #4C504A;
   --text-on-accent: #0E1112;
 
@@ -41,6 +41,7 @@
 
   --warning: #E8A04B;
   --warning-tint: #4A2E0E;
+  --warning-ink: #E8A04B;       /* الداكن سليم أصلاً: 5.66:1 على tint */
 
   --danger: #E26056;
   --danger-tint: #4A1E1A;

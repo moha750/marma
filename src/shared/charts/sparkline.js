@@ -8,7 +8,8 @@
 //     color:     'var(--accent-500)' // اختياري — اللون الافتراضي accent
 //     fill:      true,      // تعبئة المساحة تحت الخط
 //     height:    32,        // ارتفاع SVG (افتراضي 32)
-//     showDot:   true       // نقطة في نهاية الخط
+//     showDot:   true,      // نقطة في نهاية الخط (آخر قيمة = الأحدث)
+//     rtl:       true        // اتجاه الزمن — الافتراضي من اتجاه المستند
 //   });
 
 (function () {
@@ -22,7 +23,8 @@
       fill = true,
       height = 32,
       showDot = true,
-      strokeWidth = 1.75
+      strokeWidth = 1.75,
+      rtl = (document.documentElement.getAttribute('dir') || document.dir) === 'rtl'
     } = opts || {};
 
     if (!container) return;
@@ -41,9 +43,18 @@
 
     const stepX = (w - pad * 2) / (data.length - 1);
 
-    // نُسلِّط النقاط من اليسار لليمين كالعادة؛ في RTL، CSS يقلب الـ SVG (انظر CSS).
+    // اتجاه الزمن يتبع اتجاه القراءة.
+    //
+    // التعليق السابق هنا كان يقول إنّ CSS يقلب الـ SVG في RTL — ولا وجود
+    // لتلك القاعدة في styles/ كلها (بُحث عنها). فكان الأقدم يقع يساراً
+    // والأحدث يميناً داخل صفحةٍ تُقرأ من اليمين: العين تبدأ عند «اليوم»
+    // وتسير رجوعاً في الزمن، فيُقرأ الصعود هبوطاً.
+    //
+    // والقلب هنا لا في CSS: transform يقلب النصّ والنقطة معه، وحساب x
+    // يبقيهما سليمين. والنقطة تظلّ على آخر قيمة (الأحدث) في الحالتين.
     const points = data.map((v, i) => {
-      const x = pad + i * stepX;
+      const idx = rtl ? (data.length - 1 - i) : i;
+      const x = pad + idx * stepX;
       const y = h - pad - ((v - min) / range) * (h - pad * 2);
       return [x, y];
     });
