@@ -1,6 +1,9 @@
 /* Bottom Navigation — للجوال فقط (< 768px)
-   4 عناصر تنقل.
+   ٤ وجهات + زرّ «المزيد» يفتح ورقة سفلية (يحلّ محلّ الهامبرغر أعلى اليسار).
    يحترم safe-area-inset لـ iPhone notch.
+
+   الخانات تُشتقّ من عدد العناصر (grid-auto-columns) لا برقمٍ مكتوب: إضافة وجهة
+   خامسة في layout.js كانت ستضغط الخامس خارج الشبكة بصمت.
 */
 
 .bottom-nav {
@@ -18,7 +21,8 @@
 
 .bottom-nav-list {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   height: var(--bottom-nav-height);
 }
 
@@ -39,6 +43,21 @@
   font-weight: var(--weight-medium);
   position: relative;
   transition: color var(--duration-fast) var(--ease-out);
+  /* الحدّ الأدنى للمسّ: ٤٤pt عند أبل، ٤٨dp عند قوقل. الخانة ٦٤px فالارتفاع
+     مضمون، والنصّ يُقصّ بدل أن يوسّع الخانة ويكسر الشبكة. */
+  min-height: 48px;
+  min-width: 48px;
+  padding-inline: 2px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.bottom-nav a > span:last-child,
+.bottom-nav button > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bottom-nav a:hover,
@@ -46,11 +65,13 @@
   color: var(--text-primary);
 }
 
-.bottom-nav a.active {
+.bottom-nav a.active,
+.bottom-nav button.active {
   color: var(--accent-500);
 }
 
-.bottom-nav a.active::before {
+.bottom-nav a.active::before,
+.bottom-nav button.active::before {
   content: '';
   position: absolute;
   inset-block-start: 0;
@@ -58,6 +79,17 @@
   height: 2px;
   background: var(--accent-500);
   border-radius: 0 0 var(--radius-full) var(--radius-full);
+}
+
+/* ردّ فعل اللمس — الويب يعتمد :hover الذي لا وجود له على الجوال، فالضغطة
+   تمرّ بلا أي إقرار بصري. هذا أوضح فرقٍ يفصل «تطبيقاً» عن «صفحة». */
+.bottom-nav a:active .nav-icon,
+.bottom-nav button:active .nav-icon {
+  transform: scale(0.88);
+}
+
+.bottom-nav .nav-icon {
+  transition: transform var(--duration-instant) var(--ease-out);
 }
 
 .bottom-nav .nav-icon {
@@ -75,4 +107,152 @@
 /* إظهار على الجوال فقط */
 @media (max-width: 767px) {
   .bottom-nav { display: block; }
+
+}
+
+/* ─── ورقة «المزيد» ───────────────────────────────────────
+   محتواها وجهات NAV_ITEMS التي لا يسعها الشريط. تُعرض داخل drawer القائم،
+   وهو ورقة سفلية منزلقة تحت ٦٤٠px أصلاً (drawer.css) — فلا شيء جديد هنا
+   عدا مقاس اللمس: صفوف ٤٨px لا ٣٤px كما في الشريط الجانبي. */
+
+.more-sheet-nav .nav-group + .nav-group {
+  margin-block-start: var(--space-4);
+}
+
+.more-sheet-nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  position: relative;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.more-sheet-nav a:active {
+  background: var(--surface-2);
+}
+
+.more-sheet-nav a.active {
+  background: var(--accent-50);
+  color: var(--accent-700);
+  font-weight: var(--weight-semibold);
+}
+
+.more-sheet-nav .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.more-sheet-nav a.active .nav-icon {
+  color: var(--accent-700);
+}
+
+.more-sheet-nav .nav-icon svg.lucide {
+  width: 18px;
+  height: 18px;
+}
+
+.more-sheet-nav .nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* «الاشتراك» عند القفل — المخرج الوحيد، ويجب أن يُقرأ كذلك */
+.more-sheet-nav a.nav-link--unlock {
+  color: var(--accent-700);
+  font-weight: var(--weight-semibold);
+}
+
+.more-sheet-nav a.nav-link--locked {
+  color: var(--text-tertiary);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* لوحة المشرف + تسجيل الخروج — كانا في قائمة الشريط الجانبي وحده */
+.more-sheet-footer {
+  border-block-start: 1px solid var(--border-subtle);
+  padding-block-start: var(--space-3);
+}
+
+.more-sheet-install {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  text-align: start;
+}
+
+.more-sheet-install .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.more-sheet-install .nav-icon svg.lucide {
+  width: 18px;
+  height: 18px;
+}
+
+.more-sheet-install:active {
+  background: var(--surface-2);
+}
+
+.more-sheet-signout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  text-align: start;
+}
+
+.more-sheet-signout .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  color: var(--danger);
+}
+
+.more-sheet-signout .nav-icon svg.lucide {
+  width: 18px;
+  height: 18px;
+}
+
+.more-sheet-signout:active {
+  background: var(--danger-tint);
 }

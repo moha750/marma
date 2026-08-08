@@ -636,6 +636,15 @@
   box-shadow: var(--ring-focus);
 }
 
+/* أزرار الترويسة الأيقونية ٣٦×٣٦ — دون حدّ اللمس. نوسّع منطقة الضغط على
+   الجوال بلا تكبير الأيقونة نفسها (شكل الترويسة يبقى كما هو). */
+@media (max-width: 767px) {
+  .header-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .header-icon-btn svg.lucide {
   width: 18px;
   height: 18px;
@@ -1079,9 +1088,9 @@
   .main-area {
     margin-inline-start: 0 !important;
   }
-  .menu-toggle {
-    display: inline-flex !important;
-  }
+  /* الهامبرغر أُزيل من الجوال: بديله زرّ «المزيد» في الشريط السفلي — نفس
+     الوجهات على بُعد إبهام بدل أعلى اليسار. والشريط الجانبي يبقى مركَّباً
+     (سطح المكتب يستخدمه، ولوحة الأوامر تقرأ منه) لكن لا فاتح له هنا. */
   .sidebar.open .sidebar-brand,
   .sidebar.open .sidebar-nav a {
     justify-content: flex-start;

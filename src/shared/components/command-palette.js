@@ -35,11 +35,12 @@ window.commandPalette = (function () {
     const ctx = (window.layout.getContext && window.layout.getContext()) || {};
     const role = ctx.profile && ctx.profile.role;
     const locked = subscriptionLocked();
-    return window.layout.NAV_ITEMS
+    const out = [];
+    window.layout.NAV_ITEMS
       .filter((it) => !it.ownerOnly || role === 'owner')
-      .map((it) => {
+      .forEach((it) => {
         const itemLocked = locked && it.key !== 'subscription';
-        return {
+        out.push({
           id: `nav:${it.key}`,
           group: 'التنقل',
           title: it.label,
@@ -47,8 +48,26 @@ window.commandPalette = (function () {
           icon: it.icon,
           locked: itemLocked,
           run: () => { if (!itemLocked) navigate(it.path); }
-        };
+        });
+
+        // الوجهات المدمجة تخفي تبويباتها عن NAV_ITEMS — ولولا إدراجها هنا
+        // لاختفى «تقويم» و«الفترات والأسعار» و«البطاقات» من البحث تماماً.
+        if (!Array.isArray(it.tabs)) return;
+        it.tabs
+          .filter((t) => t.path !== it.path)     // التبويب الأول هو الوجهة نفسها
+          .forEach((t) => {
+            out.push({
+              id: `nav:${it.key}:${t.path}`,
+              group: 'التنقل',
+              title: `${it.label} — ${t.label}`,
+              sub: itemLocked ? 'مقفول — جدّد اشتراكك' : t.path,
+              icon: it.icon,
+              locked: itemLocked,
+              run: () => { if (!itemLocked) navigate(t.path); }
+            });
+          });
       });
+    return out;
   }
 
   function collectCustomers() {
