@@ -96,6 +96,7 @@
           </div>
           <div class="actions" id="loy-actions"></div>
         </div>
+        ${window.layout.pageTabs(window.layout.LOYALTY_TABS, '/loyalty')}
         <div id="loy-body"><div class="loader-center"><div class="loader loader--lg"></div></div></div>
       `;
       const body = container.querySelector('#loy-body');
@@ -153,11 +154,8 @@
 
       function render() {
         if (!state.enabled) return renderUpsell();
-        // صفحة البطاقات لا يصلها الشريط الجانبي (عنصر واحد للولاء)، فمدخلها من هنا
+        // مدخل البطاقات صار تبويباً أعلى الصفحة — لا زرّاً في شريط الأفعال
         actions.innerHTML = `
-          <a class="btn btn--ghost" href="${window.utils.path('/loyalty/cards')}">
-            <i data-lucide="credit-card"></i> البطاقات
-          </a>
           <button class="btn btn--primary" id="loy-save"><i data-lucide="save"></i> حفظ</button>`;
         window.utils.renderIcons(actions);
         actions.querySelector('#loy-save').addEventListener('click', save);

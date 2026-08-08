@@ -14,6 +14,9 @@
   const page = {
     async mount(container, ctx) {
       ctx = ctx || (window.layout && window.layout.getContext()) || {};
+      // الماسح متاح للموظف عمداً، و/loyalty/cards للمالك وحده — فرابط
+      // «التفاصيل» كان يقذف الموظف إلى لوحة التحكم بلا تفسير.
+      const isOwner = !!(ctx.profile && ctx.profile.role === 'owner');
       let alive = true;
       let stream = null, rafId = null, detector = null, busy = false;
       let current = null;             // آخر بطاقة مقروءة
@@ -219,9 +222,10 @@
 
             <div class="scan-foot">
               <span>رمز البطاقة <b dir="ltr">${esc((c.serial || '').substring(0, 8))}</b></span>
+              ${isOwner ? `
               <a class="btn btn--ghost btn--sm" href="${window.utils.path('/loyalty/cards')}">
                 <i data-lucide="external-link"></i> التفاصيل
-              </a>
+              </a>` : ''}
             </div>
           </div>`;
         window.utils.renderIcons(result);

@@ -1,20 +1,19 @@
-// الأرضيات — جدول مع أفعال inline تظهر على hover + status chip + link لـ schedule
+// الأرضيات — جدول مع أفعال inline تظهر على hover + status chip.
+// تبويب داخل «ملاعبي»: الأرضيات هنا، وفتراتها وأسعارها في التبويب المجاور.
 (function () {
   const TEMPLATE = `
     <div class="page-header">
       <div>
-        <h2>الأرضيات</h2>
+        <h2>ملاعبي</h2>
         <div class="page-subtitle">أرضيات الملعب القابلة للحجز</div>
       </div>
       <div class="actions">
-        <a href="${window.utils.path('/schedule')}" class="btn btn--secondary">
-          <i data-lucide="clock"></i> أيام وفترات العمل
-        </a>
         <button class="btn btn--primary" id="add-field-btn">
           <i data-lucide="plus"></i> إضافة أرضية
         </button>
       </div>
     </div>
+    ${window.layout.pageTabs(window.layout.PITCH_TABS, '/fields')}
     <div id="fields-container">
       <div class="loader-center"><div class="loader loader--lg"></div></div>
     </div>
@@ -435,7 +434,7 @@
                 ? 'الصورة الأولى تظهر كغلاف. تُحفظ التغييرات فوراً — JPG/PNG/WebP، حد 5 ميجابايت لكل صورة.'
                 : 'الصورة الأولى تظهر كغلاف'}</span>
             </div>
-            <span class="form-help">مدة الموعد والسعر يُضبطان من <a href="${window.utils.path('/schedule')}">صفحة أيام وفترات العمل</a>.</span>
+            <span class="form-help">مدة الموعد والسعر يُضبطان من تبويب «الفترات والأسعار».</span>
           </form>
         `;
         const footer = `
