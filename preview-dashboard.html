@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>معاينة القوقعة</title>
+<script>
+// الأنماط تُحقن مباشرةً ببصمة زمنية بدل <link> على main.css:
+// المتصفّح يخزّن ملفات @import في كاش الجلسة فلا تظهر تعديلات CSS بأي إعادة
+// تحميل — وهو ما يجعل المِشبك يكذب عليك بصمت أثناء العمل على التخطيط.
+document.write([
+  'fonts', 'tokens', 'themes/dark', 'base', 'layout',
+  'components/button', 'components/form', 'components/location-picker',
+  'components/card', 'components/table', 'components/badge', 'components/chip',
+  'components/modal', 'components/cropper', 'components/drawer',
+  'components/skeleton', 'components/bottom-nav', 'components/command-palette',
+  'components/charts', 'components/schedule', 'components/calendar',
+  'components/timeline', 'components/utilities', 'components/broadcast',
+  'components/public', 'components/subscription', 'components/loyalty',
+  'components/public-shell', 'components/landing', 'components/booking-page',
+  'components/legal', 'components/native'
+].map((f) => `<link rel="stylesheet" href="/styles/${f}.css?t=${Date.now()}">`).join(''));
+</script>
+</head>
+<body class="app-body">
+<div id="app-root"></div>
+
+<script src="/assets/vendor/lucide.min.js"></script>
+<script>
+// سكربتات المشروع ببصمة زمنية — كالأنماط تماماً: بدونها يخدم المتصفّح نسخةً
+// قديمة من كاش الجلسة فيُريك المِشبك كودًا عدّلته للتوّ ولم يتغيّر.
+// (تُكتب بـ document.write كي تُنفَّذ بالترتيب قبل ما بعدها.)
+window.__pv = (p) => document.write(`<script src="${p}?t=${Date.now()}"><\/script>`);
+__pv('/src/core/utils.js');
+__pv('/src/shared/charts/sparkline.js');
+__pv('/src/shared/components/drawer.js');
+</script>
+<script>
+// ── مِشبك معاينة: يركّب القوقعة الحقيقية (layout.js) ببيانات وهمية ──────
+// الغرض رؤية التخطيط على مقاسات الجوال بلا خادم ولا حساب. غير متتبَّع في git.
+// التشغيل:  python3 -m http.server 8899  ثم  /preview-dashboard.html
+// المعاملات:  ?role=owner|staff   &theme=light|dark   &locked=1
+
+const P = new URLSearchParams(location.search);
+const ROLE = P.get('role') || 'owner';
+const LOCKED = P.get('locked') === '1';
+if (P.get('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+// وضع «التطبيق»: نفس ما يفعله src/core/native.js عند الإقلاع داخل قوقعة
+// Capacitor — يضيف الصنف الذي يفعّل native.css كاملاً. وenv(safe-area-*)
+// لا قيمة لها في متصفّح عادي، فنحقن قياسات آيفون حقيقية وإلا بدت المناطق
+// الآمنة صفراً وظهر التطبيق أنظف مما هو عليه على الجهاز.
+if (P.get('native') === '1') {
+  const plat = P.get('platform') || 'ios';
+  document.documentElement.classList.add('native', 'native-' + plat);
+  const safe = document.createElement('style');
+  safe.textContent = `html.native{
+    --safe-top:${plat === 'ios' ? '59px' : '24px'} !important;
+    --safe-bottom:${plat === 'ios' ? '34px' : '16px'} !important;
+  }`;
+  document.head.appendChild(safe);
+  // window.native موجودة في التطبيق الحقيقي — الكود المشترك يسأل عنها
+  window.native = {
+    isNative: true, platform: plat, isIOS: plat === 'ios', isAndroid: plat === 'android',
+    docPath: (p) => p, plugin: () => null, haptic() {}, openExternal() {},
+    ready: () => Promise.resolve(), hideSplash() {}, syncStatusBarToTheme() {}
+  };
+}
+
+function iso(h, m, dayOffset) {
+  const d = new Date();
+  d.setDate(d.getDate() + (dayOffset || 0));
+  d.setHours(h, m || 0, 0, 0);
+  return d.toISOString();
+}
+
+const FIELDS = [{ id: 'f1', name: 'الملعب الرئيسي' }, { id: 'f2', name: 'ملعب رقم ٢' }];
+
+function mk(id, h, dur, name, field, status, price, paid, dayOffset) {
+  return {
+    id, start_time: iso(h, 0, dayOffset), end_time: iso(h + dur, 0, dayOffset),
+    customers: { full_name: name }, fields: { name: field },
+    status, total_price: price, paid_amount: paid
+  };
+}
+
+const TODAY = [
+  mk('b1', 8,  1, 'عبدالله الشمري',   'الملعب الرئيسي', 'completed', 200, 200),
+  mk('b2', 10, 1, 'فريق الصقور',      'ملعب رقم ٢',     'confirmed', 250, 250),
+  mk('b3', 12, 2, 'محمد العتيبي',     'الملعب الرئيسي', 'confirmed', 400, 0),
+  mk('b4', 16, 1, 'خالد بن سعد',      'ملعب رقم ٢',     'pending',   250, 0),
+  mk('b5', 18, 1, 'نادي الشباب الحي', 'الملعب الرئيسي', 'confirmed', 300, 150),
+  mk('b6', 20, 1, 'سلطان الدوسري',    'ملعب رقم ٢',     'cancelled', 250, 0),
+  mk('b7', 21, 1, 'ماجد الحربي',      'الملعب الرئيسي', 'confirmed', 300, 300)
+];
+
+const TOMORROW = [
+  mk('t1', 9,  1, 'يوسف القحطاني', 'الملعب الرئيسي', 'confirmed', 250, 0, 1),
+  mk('t2', 11, 1, 'فهد المطيري',    'ملعب رقم ٢',     'pending',   250, 0, 1),
+  mk('t3', 17, 1, 'تركي العنزي',    'الملعب الرئيسي', 'confirmed', 300, 0, 1),
+  mk('t4', 19, 1, 'فريق النسور',    'ملعب رقم ٢',     'confirmed', 300, 0, 1),
+  mk('t5', 21, 1, 'بندر الزهراني',  'الملعب الرئيسي', 'confirmed', 300, 0, 1),
+  mk('t6', 22, 1, 'راكان السبيعي',  'ملعب رقم ٢',     'confirmed', 300, 0, 1)
+];
+
+const PENDING = [
+  mk('p1', 16, 1, 'خالد بن سعد',   'ملعب رقم ٢',     'pending', 250, 0),
+  mk('p2', 11, 1, 'فهد المطيري',    'ملعب رقم ٢',     'pending', 250, 0, 1),
+  mk('p3', 14, 1, 'أحمد الغامدي',   'الملعب الرئيسي', 'pending', 300, 0, 2),
+  mk('p4', 15, 1, 'زياد الرشيد',    'الملعب الرئيسي', 'pending', 300, 0, 3),
+  mk('p5', 18, 1, 'وليد الخالدي',   'ملعب رقم ٢',     'pending', 250, 0, 3)
+];
+
+window.api = {
+  async getDashboardStats() {
+    return { today_revenue: 1700, today_paid: 900, today_bookings: TODAY.length };
+  },
+  async listBookings({ from, to }) {
+    const f = new Date(from).getTime(), t = new Date(to).getTime();
+    if (t - f > 3 * 864e5) {
+      const out = [];
+      [3, 5, 2, 6, 4, 7, 5, 3, 6, 8, 4, 5, 7, 7].forEach((n, i) => {
+        for (let k = 0; k < n; k++) out.push(mk(`s${i}-${k}`, 10 + k, 1, 'x', 'y', 'confirmed', 250, 0, -13 + i));
+      });
+      return out;
+    }
+    return TODAY.concat(TOMORROW).filter((b) => {
+      const s = new Date(b.start_time).getTime();
+      return s >= f && s <= t;
+    });
+  },
+  async listPendingBookings() { return PENDING; },
+  async listFields() { return FIELDS; },
+  async getAvailableSlots(fieldId) {
+    const slots = [];
+    for (let i = 0; i < 14; i++) slots.push({ is_booked: fieldId === 'f1' ? i < 5 : i < 3 });
+    return slots;
+  }
+};
+
+// ── أقلّ ما تحتاجه القوقعة الحقيقية ─────────────────────────────
+const STATUS = LOCKED
+  ? { phase: 'grace_active', is_active: false, days_until_expiry: 0, days_remaining: 2 }
+  : { phase: 'active', is_active: true, days_until_expiry: 40, days_remaining: 43 };
+
+window.auth = {
+  async requireAuth() { return CTX; },
+  async requireActiveTenant() { return CTX; },
+  async loadSubscriptionStatus() { return STATUS; },
+  async checkIsSuperAdmin() { return ROLE === 'owner'; },
+  signOut() { alert('تسجيل الخروج (معاينة)'); }
+};
+
+const CTX = {
+  profile: { id: 'u1', full_name: 'محمد المطر', role: ROLE },
+  tenant:  { id: 't1', name: 'ملاعب مَرمى' },
+  status:  STATUS
+};
+
+// ── ما تحتاجه الصفحات المدمجة (ملاعبي / الولاء) ───────────────
+Object.assign(window.api, {
+  async listFieldImages() { return []; },
+  async listWorkingPeriods() {
+    return [
+      { id: 'w1', field_id: 'f1', day_of_week: 0, open_time: '16:00', close_time: '23:00', slot_duration_minutes: 60, hourly_price: 250 },
+      { id: 'w2', field_id: 'f1', day_of_week: 2, open_time: '16:00', close_time: '23:00', slot_duration_minutes: 60, hourly_price: 250 },
+      { id: 'w3', field_id: 'f2', day_of_week: 0, open_time: '18:00', close_time: '23:00', slot_duration_minutes: 90, hourly_price: 300 }
+    ];
+  },
+  async setDayPeriods() { return true; },
+  async createField() { return { id: 'new' }; },
+  async updateField() { return true; },
+  async deleteField() { return true; },
+  async reorderFields() { return true; },
+  async addFieldImage() { return {}; },
+  async removeFieldImage() { return true; },
+  async reorderFieldImages() { return true; }
+});
+
+window.loyaltyApi = {
+  async getProgram() {
+    return {
+      enabled: true, stamps_required: 10, reward_kind: 'free_booking',
+      reward_value: null, reward_cap: null, expiry_days: 180,
+      card_template: 'classic', card_color: '#0F3D2E', card_logo_url: null
+    };
+  },
+  async saveProgram() { return true; },
+  async listCards() {
+    return [
+      { id: 'c1', serial: 'MRM12345', stamps: 7, customers: { full_name: 'عبدالله الشمري', phone: '0555000111' } },
+      { id: 'c2', serial: 'MRM67890', stamps: 3, customers: { full_name: 'فهد المطيري',   phone: '0555000222' } }
+    ];
+  },
+  async cardDetail() { return { rewards: [] }; },
+  async enroll() { return {}; },
+  async adjust() { return true; },
+  async redeemReward() { return true; },
+  async releaseReward() { return true; },
+  async uploadLoyaltyAsset() { return ''; }
+};
+
+window.store = {
+  async get(cell) { return cell === 'fields:all' ? FIELDS.map((f) => ({ ...f, is_active: true })) : FIELDS; },
+  invalidate() {}
+};
+window.bookingModal = { open() {} };
+window.realtime = null;
+window.push = { isSupported: () => false };
+window.pwa = { isStandalone: () => false, isInstallable: () => false, needsManualInstall: () => false };
+window.commandPalette = { open() { alert('لوحة الأوامر (معاينة)'); } };
+window.themeToggle = {
+  render(slot) {
+    slot.innerHTML = '<button type="button" class="header-icon-btn" id="pv-theme"><i data-lucide="moon"></i></button>';
+    slot.querySelector('#pv-theme').addEventListener('click', () => {
+      const el = document.documentElement;
+      el.setAttribute('data-theme', el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  }
+};
+window.notificationBell = { mount() {}, bindPendingBadges() {} };
+</script>
+
+<script>
+[
+  '/src/shared/components/layout.js',
+  '/src/features/bookings/components/block-slot-modal.js',
+  '/src/features/dashboard/pages/home.js',
+  '/src/features/fields/pages/list.js',
+  '/src/features/schedule/pages/editor.js',
+  '/src/features/loyalty/pages/program.js',
+  '/src/features/loyalty/pages/cards.js'
+].forEach(__pv);
+</script>
+<script>
+// موجّه مصغّر: يقرأ المسار ويركّب صفحته. الخادم يعيد كتابة مسارات التطبيق
+// إلى هذا الملف (كما يفعل vite في التطوير)، فالتبويبات تعمل بالنقر فعلاً.
+const ROUTES = {
+  '/dashboard':     { page: 'dashboard',      key: 'dashboard', title: 'لوحة التحكم' },
+  '/fields':        { page: 'fields',         key: 'fields',    title: 'ملاعبي' },
+  '/schedule':      { page: 'schedule',       key: 'fields',    title: 'ملاعبي' },
+  '/loyalty':       { page: 'loyalty',        key: 'loyalty',   title: 'برنامج الولاء' },
+  '/loyalty/cards': { page: 'loyalty-cards',  key: 'loyalty',   title: 'برنامج الولاء' }
+};
+
+(async function () {
+  await window.layout.mountShell();
+
+  const path = location.pathname === '/preview-dashboard.html' ? '/dashboard' : location.pathname;
+  const route = ROUTES[path] || ROUTES['/dashboard'];
+
+  window.layout.setActive(route.key, route.title);
+
+  const mod = window.pages[route.page];
+  if (mod) {
+    await mod.mount(document.getElementById('page-content'), CTX);
+  } else {
+    document.getElementById('page-content').innerHTML =
+      `<div class="card"><div class="empty-state"><p>لا معاينة لهذا المسار بعد: <code>${path}</code></p></div></div>`;
+  }
+
+  window.utils.renderIcons(document.body);
+  setTimeout(() => {
+    window.utils.renderIcons(document.body);
+    document.body.dataset.ready = '1';
+  }, 400);
+})();
+</script>
+</body>
+</html>

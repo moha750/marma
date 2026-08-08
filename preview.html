@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مختبر مَرمى — الموقع · الجوال · التطبيق</title>
+<style>
+  /* المختبر نفسه محايد عمداً: لا يستورد أنماط مَرمى كي لا يلوّن حكمك عليها */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #1a1c19;
+    color: #e8e8e3;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 16px;
+    background: #24261f;
+    border-bottom: 1px solid #383a32;
+  }
+
+  .grp { display: flex; align-items: center; gap: 6px; }
+  .grp > label { font-size: 11px; color: #8f9186; margin-inline-end: 2px; }
+
+  .seg { display: flex; background: #14160f; border-radius: 7px; padding: 3px; gap: 2px; }
+  .seg button {
+    border: 0; background: transparent; color: #a9aba0;
+    font: inherit; font-size: 12px; padding: 6px 11px;
+    border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .seg button:hover { color: #fff; }
+  .seg button[aria-pressed="true"] { background: #0F9D58; color: #fff; }
+
+  select {
+    background: #14160f; color: #e8e8e3; border: 1px solid #383a32;
+    border-radius: 6px; padding: 6px 9px; font: inherit; font-size: 12px;
+  }
+
+  .stage {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 26px 16px 24px;
+    overflow-x: auto;
+  }
+
+  .pane { flex: 0 0 auto; }
+
+  .pane h2 {
+    margin: 0 0 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a9aba0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pane h2 .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .pane h2 small { color: #6d6f66; font-weight: 400; }
+
+  /* إطار الجهاز — حواف داكنة تفصل الصفحة عن خلفية المختبر */
+  .device {
+    background: #000;
+    border-radius: 34px;
+    padding: 8px;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.5);
+  }
+  .device--desk { border-radius: 8px; padding: 6px; }
+
+  iframe {
+    display: block;
+    border: 0;
+    background: #fff;
+    border-radius: 27px;
+  }
+  .device--desk iframe { border-radius: 3px; }
+
+  .hint {
+    padding: 0 16px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #6d6f66;
+    line-height: 1.7;
+  }
+  .hint code { color: #74E7A8; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="grp">
+    <label>السياق</label>
+    <div class="seg" id="ctx">
+      <button data-ctx="compare" aria-pressed="true">جوال: ويب │ تطبيق</button>
+      <button data-ctx="mobile">الجوال فقط</button>
+      <button data-ctx="native">التطبيق فقط</button>
+      <button data-ctx="desktop">سطح المكتب</button>
+      <button data-ctx="all">الثلاثة</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <label>الصفحة</label>
+    <select id="page">
+      <optgroup label="الشريط السفلي">
+        <option value="/dashboard">لوحة التحكم</option>
+        <option value="/customers">العملاء</option>
+        <option value="/bookings">الحجوزات — قائمة</option>
+        <option value="/calendar">الحجوزات — تقويم</option>
+        <option value="/loyalty/scan">مسح البطاقة</option>
+      </optgroup>
+      <optgroup label="ورقة المزيد">
+        <option value="/fields">ملاعبي — الأرضيات</option>
+        <option value="/schedule">ملاعبي — الفترات والأسعار</option>
+        <option value="/offers">العروض</option>
+        <option value="/loyalty">الولاء — البرنامج</option>
+        <option value="/loyalty/cards">الولاء — البطاقات</option>
+        <option value="/reports">التقارير</option>
+        <option value="/visits">الزيارات</option>
+        <option value="/staff">الموظفون</option>
+        <option value="/account">حسابي</option>
+        <option value="/subscription">الاشتراك</option>
+        <option value="/settings">إعدادات الملعب</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="grp">
+    <label>السِمة</label>
+    <div class="seg" id="theme">
+      <button data-theme="light" aria-pressed="true">فاتح</button>
+      <button data-theme="dark">داكن</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <label>الدور</label>
+    <div class="seg" id="role">
+      <button data-role="owner" aria-pressed="true">مالك</button>
+      <button data-role="staff">موظف</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <label>المنصّة</label>
+    <div class="seg" id="platform">
+      <button data-platform="ios" aria-pressed="true">iPhone</button>
+      <button data-platform="android">Android</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="seg"><button id="reload">⟳ تحديث</button></div>
+  </div>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="hint">
+  الجوال والتطبيق <b>نفس التخطيط</b> — الفارق الوحيد صنف <code>html.native</code>
+  (مناطق آمنة · لا تحديد نصّ · لا ارتداد مطاطي · الشريط يختفي مع لوحة المفاتيح).<br>
+  فرقٌ تراه بينهما = سطرٌ في <code>styles/components/native.css</code>. فرقٌ لا تراه = الملف المشترك.
+</div>
+
+<script>
+const state = {
+  ctx: 'compare',
+  page: '/dashboard',
+  theme: 'light',
+  role: 'owner',
+  platform: 'ios'
+};
+
+// كل لوح: عنوانه، عرضه، ارتفاعه، وهل يُقلع بوضع التطبيق
+const PANES = {
+  web:     { title: 'الموقع على الجوال', note: '390×844', w: 390,  h: 844, native: false, color: '#2E70C7' },
+  native:  { title: 'التطبيق',           note: '390×844 + مناطق آمنة', w: 390,  h: 844, native: true,  color: '#0F9D58' },
+  desktop: { title: 'الموقع — سطح المكتب', note: '1280×860', w: 1280, h: 860, native: false, color: '#8A8B84' }
+};
+
+const LAYOUTS = {
+  compare: ['web', 'native'],
+  mobile:  ['web'],
+  native:  ['native'],
+  desktop: ['desktop'],
+  all:     ['web', 'native', 'desktop']
+};
+
+function frameUrl(pane) {
+  // نفس المسارات على الخادمين: vite (بيانات حقيقية بعد تسجيل الدخول) وخادم
+  // المعاينة (بيانات وهمية). المعاملات يتجاهلها التطبيق الحقيقي بلا ضرر.
+  const q = new URLSearchParams({ role: state.role, theme: state.theme });
+  if (pane.native) { q.set('native', '1'); q.set('platform', state.platform); }
+  return `${state.page}?${q}`;
+}
+
+// وضع «التطبيق» على البيانات الحقيقية: التطبيق الحقيقي لا يقرأ ?native=1،
+// فنحقن ما يحقنه src/core/native.js عند الإقلاع داخل القوقعة. الحقن ممكن
+// لأن الإطار من نفس الأصل — ولهذا يجب فتح المختبر من خادم التطبيق نفسه.
+function applyContext(frame, pane) {
+  let doc;
+  try { doc = frame.contentDocument; } catch (_) { return; }
+  if (!doc || !doc.documentElement) return;
+
+  doc.documentElement.setAttribute('data-theme', state.theme);
+
+  if (!pane.native) return;
+  const plat = state.platform;
+  doc.documentElement.classList.add('native', 'native-' + plat);
+  if (!doc.getElementById('lab-safe-areas')) {
+    const s = doc.createElement('style');
+    s.id = 'lab-safe-areas';
+    // env(safe-area-*) تساوي صفراً في متصفّح سطح المكتب — بلا هذه القيم
+    // يظهر التطبيق أنظف مما هو على الجهاز فعلاً
+    s.textContent = `html.native{
+      --safe-top:${plat === 'ios' ? '59px' : '24px'} !important;
+      --safe-bottom:${plat === 'ios' ? '34px' : '16px'} !important;
+    }`;
+    doc.head.appendChild(s);
+  }
+}
+
+// سطح المكتب ١٢٨٠px لا يتّسع بجانب لوحين آخرين — نصغّره بصرياً بلا تغيير
+// الـ viewport، فتبقى نقاط التوقّف تُقاس على ١٢٨٠ الحقيقية.
+function scaleFor(key) {
+  if (key !== 'desktop') return 1;
+  return state.ctx === 'all' ? 0.42 : Math.min(1, (window.innerWidth - 80) / 1280);
+}
+
+// ارتفاع الجهاز يُقصّ ليتّسع في النافذة: بلا هذا يمتدّ الهاتف ٨٤٤px تحت حافة
+// الشاشة، فيختفي منتصفه — والتمرير بالفأرة يقع داخل الإطار لا على المختبر،
+// فيبدو أن الصفحة «لا تتمرّر». التمرير الآن يقع حيث يجب: داخل التطبيق.
+function fitHeight(nominal) {
+  // المحجوز: حشوة المسرح (26+24) + عنوان اللوح (~21) + حواف الإطار (16)
+  const avail = window.innerHeight - document.querySelector('.bar').offsetHeight - 92;
+  return Math.max(420, Math.min(nominal, avail));
+}
+
+function render() {
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  LAYOUTS[state.ctx].forEach((key) => {
+    const p = PANES[key];
+    const scale = scaleFor(key);
+    const h = fitHeight(p.h);
+    const pane = document.createElement('div');
+    pane.className = 'pane';
+    pane.innerHTML = `
+      <h2><span class="dot" style="background:${p.color}"></span>${p.title}
+        <small>${p.w}×${h}${h < p.h ? ' (مقصوص ليتّسع)' : ''}${p.native ? ' + مناطق آمنة' : ''}</small></h2>
+      <div class="device ${key === 'desktop' ? 'device--desk' : ''}"
+           style="transform:scale(${scale});transform-origin:top ${document.dir === 'rtl' ? 'right' : 'left'}">
+        <iframe src="${frameUrl(p)}" width="${p.w}" height="${h}" title="${p.title}"></iframe>
+      </div>
+    `;
+    if (scale !== 1) {
+      pane.style.height = (h * scale + 40) + 'px';
+      pane.style.width = (p.w * scale + 16) + 'px';
+    }
+    stage.appendChild(pane);
+
+    // الحقن عند كل تحميل — النقر داخل الإطار يُبحر لصفحة جديدة تفقد الصنف
+    const frame = pane.querySelector('iframe');
+    frame.addEventListener('load', () => applyContext(frame, p));
+  });
+}
+
+function wireSeg(id, key) {
+  document.getElementById(id).addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-' + key + ']');
+    if (!btn) return;
+    state[key] = btn.dataset[key];
+    [...e.currentTarget.querySelectorAll('button')].forEach((b) =>
+      b.setAttribute('aria-pressed', String(b === btn)));
+    render();
+  });
+}
+
+wireSeg('ctx', 'ctx');
+wireSeg('theme', 'theme');
+wireSeg('role', 'role');
+wireSeg('platform', 'platform');
+
+document.getElementById('page').addEventListener('change', (e) => {
+  state.page = e.target.value;
+  render();
+});
+
+document.getElementById('reload').addEventListener('click', render);
+
+// إعادة الرسم عند تغيير حجم النافذة — ارتفاع الجهاز مشتقّ منها
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 150);
+});
+
+// وضعان: خادم المعاينة (بيانات وهمية، الدور مفتاح) وvite (بيانات حقيقية،
+// الدور يأتي من صفّ profiles ولا يقلبه مفتاح — فتعطيله أصدق من إيهام بأنه يعمل).
+const MOCK = location.port === '8899';
+if (!MOCK) {
+  const roleGrp = document.getElementById('role').closest('.grp');
+  roleGrp.style.opacity = '0.4';
+  roleGrp.title = 'الدور يأتي من حسابك — سجّل بحساب موظف لاختبار واجهته';
+  [...roleGrp.querySelectorAll('button')].forEach((b) => { b.disabled = true; b.style.cursor = 'not-allowed'; });
+  document.querySelector('.hint').insertAdjacentHTML('afterbegin',
+    '<div style="color:#74E7A8;margin-bottom:8px">' +
+    'بيانات حقيقية. <b>سجّل الدخول مرّة واحدة داخل أي إطار</b> — الجلسة مشتركة بين الألواح كلها.</div>');
+} else {
+  document.querySelector('.hint').insertAdjacentHTML('afterbegin',
+    '<div style="color:#E8A04B;margin-bottom:8px">' +
+    'بيانات وهمية. للاختبار بحسابك الحقيقي: <code>npm run dev</code> ثم ' +
+    '<code>/preview.html</code> من منفذ vite.</div>');
+}
+
+render();
+</script>
+</body>
+</html>
