@@ -126,6 +126,53 @@
   color: var(--text-secondary);
   box-shadow: none;
 }
+/* ─── مُنتقي معامل (اختيار واحد من عدّة) ───────────────────────
+   يختلف عن شريط التبويب عمداً: ذاك ينقلك بين صفحات، وهذا يبدّل ما تعرضه
+   الصفحة الحالية. حين تجاورا بنفس الشكل (شريطان مقسّمان فوق بعضهما) صار
+   على المستخدم أن يجرّب ليعرف أيّهما يفعل ماذا.
+     التبويب  : مسار رماديّ غائر + المحدّد بطاقة بيضاء مرفوعة
+     المنتقي  : تسمية + رقائق محدّدة الحواف + المحدّد بصبغة خضراء */
+
+.picker-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.picker-rail-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  margin-inline-end: var(--space-1);
+}
+
+.picker-rail-off {
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+}
+
+.picker-rail .chip.is-active .picker-rail-off { color: inherit; opacity: 0.75; }
+
+@media (max-width: 767px) {
+  .picker-rail .chip { height: 40px; }
+  .picker-rail-label { width: 100%; }   /* التسمية سطراً وحدها فلا تُضيّق الرقائق */
+}
+
+/* شريط تبويب الصفحة — رقائق ملاحة لا فلاتر، فتحتاج مقاس لمس حقيقي.
+   الرقاقة العادية ٣٠px داخل seg: كافية للفأرة، دون حدّ أبل (٤٤) وقوقل (٤٨). */
+.page-tabs .chip {
+  min-height: 36px;
+  text-decoration: none;
+}
+
+@media (max-width: 767px) {
+  .page-tabs .chip {
+    min-height: 44px;
+  }
+}
+
 .chip-rail--seg .chip:hover {
   background: transparent;
   border-color: transparent;

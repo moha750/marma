@@ -17,15 +17,23 @@
 
 window.appRoutes = [
   { name: 'dashboard',        path: '/dashboard',        title: 'لوحة التحكم' },
-  { name: 'calendar',         path: '/calendar',         title: 'التقويم' },
+  // «الحجوزات» وجهةٌ واحدة بعرضين — والمساران باقيان كما هما:
+  // /bookings مكتوب في تريجرات SQL وحمولات الدفع (انظر الملاحظة أدناه).
   { name: 'bookings',         path: '/bookings',         title: 'الحجوزات' },
+  { name: 'calendar',         path: '/calendar',         title: 'الحجوزات', activeNav: 'bookings' },
   { name: 'customers',        path: '/customers',        title: 'العملاء' },
   { name: 'customer-details', path: '/customers/:id',    title: 'تفاصيل العميل',     activeNav: 'customers' },
-  { name: 'fields',           path: '/fields',           title: 'الأرضيات',          ownerOnly: true },
-  { name: 'schedule',         path: '/schedule',         title: 'أيام وفترات العمل', ownerOnly: true },
+  // «ملاعبي» وجهةٌ واحدة بتبويبين — المسارات باقية كما هي عمداً: عمود
+  // notifications.link يُكتب من تريجرات SQL، وحمولة الدفع من دوال الحافة،
+  // وكلاهما يحمل مسارات مخزّنة في صفوفٍ وأجهزةٍ لا تُرحَّل.
+  { name: 'fields',           path: '/fields',           title: 'ملاعبي',            ownerOnly: true },
+  { name: 'schedule',         path: '/schedule',         title: 'ملاعبي',            ownerOnly: true, activeNav: 'fields' },
   { name: 'offers',           path: '/offers',           title: 'العروض',            ownerOnly: true },
   { name: 'loyalty',          path: '/loyalty',          title: 'برنامج الولاء',     ownerOnly: true },
-  { name: 'loyalty-cards',    path: '/loyalty/cards',    title: 'بطاقات الولاء',     ownerOnly: true, activeNav: 'loyalty' },
+  { name: 'loyalty-cards',    path: '/loyalty/cards',    title: 'برنامج الولاء',     ownerOnly: true, activeNav: 'loyalty' },
+  // تبويبٌ ثالث داخل وجهة الولاء، فيرث ownerOnly منها. والموظف يوافق من
+  // الماسح — هو سطحه عند الكاونتر، والعميل أمامه.
+  { name: 'loyalty-stamps',   path: '/loyalty/stamps',   title: 'برنامج الولاء',     ownerOnly: true, activeNav: 'loyalty' },
   // الماسح متاح للموظفين عمداً — هم من يصرفون المكافآت عند الكاونتر
   { name: 'loyalty-scan',     path: '/loyalty/scan',     title: 'مسح البطاقة',       activeNav: 'loyalty-scan' },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },

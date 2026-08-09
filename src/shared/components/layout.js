@@ -10,16 +10,42 @@
 //   NAV_ITEMS: مصفوفة عناصر التنقل
 
 window.layout = (function () {
+  // ─── تبويبات الوجهات المدمجة ─────────────────────────────
+  // مصدر الحقيقة الوحيد: تقرؤها الصفحات (شريط التبويب) ولوحة الأوامر (بحث).
+  // بلا هذا الربط تختفي الوجهات المدموجة من البحث لأنها لم تعد في NAV_ITEMS.
+
+  // «قائمة» أولاً وهي الافتراضي: تجيب «ماذا أفعل الآن؟».
+  // و«تقويم» عدسة تجيب «كيف يبدو الأسبوع؟».
+  const BOOKING_TABS = [
+    { label: 'قائمة', path: '/bookings' },
+    { label: 'تقويم', path: '/calendar' }
+  ];
+
+  const PITCH_TABS = [
+    { label: 'الأرضيات',         path: '/fields' },
+    { label: 'الفترات والأسعار', path: '/schedule' }
+  ];
+
+  const LOYALTY_TABS = [
+    { label: 'البرنامج', path: '/loyalty' },
+    { label: 'البطاقات', path: '/loyalty/cards' },
+    { label: 'الأختام المعلّقة', path: '/loyalty/stamps' }
+  ];
+
   // التنقل مع التجميع — يُستخدمها sidebar و command-palette
   const NAV_ITEMS = [
     { key: 'dashboard',    group: 'تشغيلي', label: 'لوحة التحكم',          icon: 'layout-dashboard', path: '/dashboard' },
-    { key: 'calendar',     group: 'تشغيلي', label: 'التقويم',              icon: 'calendar-days',    path: '/calendar' },
-    { key: 'bookings',     group: 'تشغيلي', label: 'الحجوزات',             icon: 'clipboard-list',   path: '/bookings' },
+    // «الحجوزات» هي المكان، و«التقويم» عرضٌ لها لا وجهة مستقلّة: نفس البيانات
+    // ونفس مودال التعديل ونفس زرّ «حجز جديد». وحجب موعد — الفعل الوحيد الذي
+    // كان يملكه التقويم — انتقل إلى مكوّن مشترك تستدعيه القائمة كذلك.
+    { key: 'bookings',     group: 'تشغيلي', label: 'الحجوزات',             icon: 'clipboard-list',   path: '/bookings',     tabs: BOOKING_TABS },
     { key: 'customers',    group: 'تشغيلي', label: 'العملاء',              icon: 'users',            path: '/customers' },
-    { key: 'fields',       group: 'إدارة',  label: 'الأرضيات',             icon: 'goal',             path: '/fields',       ownerOnly: true },
-    { key: 'schedule',     group: 'إدارة',  label: 'أيام وفترات العمل',    icon: 'clock',            path: '/schedule',     ownerOnly: true },
+    // «ملاعبي» يضمّ الأرضيات وفتراتها وأسعارها. كانا تبويبين، والفصل كان
+    // مصطنعاً: جدول العمل مفتاحه field_id، وصفحته تفتح بسؤال «أي ملعب؟»،
+    // ونموذج تعديل الأرضية كان يحيل صراحةً إلى «صفحة أخرى» لضبط السعر.
+    { key: 'fields',       group: 'إدارة',  label: 'ملاعبي',               icon: 'goal',             path: '/fields',       ownerOnly: true, tabs: PITCH_TABS },
     { key: 'offers',       group: 'إدارة',  label: 'العروض',               icon: 'badge-percent',    path: '/offers',       ownerOnly: true },
-    { key: 'loyalty',      group: 'إدارة',  label: 'برنامج الولاء',        icon: 'credit-card',      path: '/loyalty',      ownerOnly: true },
+    { key: 'loyalty',      group: 'إدارة',  label: 'برنامج الولاء',        icon: 'credit-card',      path: '/loyalty',      ownerOnly: true, tabs: LOYALTY_TABS },
     { key: 'loyalty-scan', group: 'تشغيلي', label: 'مسح البطاقة',          icon: 'scan-line',        path: '/loyalty/scan' },
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
     { key: 'visits',       group: 'إدارة',  label: 'الزيارات',             icon: 'eye',              path: '/visits',       ownerOnly: true },
@@ -29,16 +55,27 @@ window.layout = (function () {
     { key: 'settings',     group: 'حساب',   label: 'إعدادات الملعب',       icon: 'settings',         path: '/settings' }
   ];
 
-  // عناصر الـ bottom-nav للجوال
+  // عناصر الـ bottom-nav للجوال — أربع وجهات + «المزيد» يفتح ورقة سفلية.
+  //
+  // «المزيد» يُلغي الهامبرغر على الجوال: نفس الوجهات، لكن من جهة الإبهام بدل
+  // أعلى اليسار — أبعد نقطة في الشاشة عن إبهام اليد الممسكة. وبدونه كانت ١١ من
+  // ١٥ وجهةً لا تُبلغ إلا من هناك.
+  // «الحجوزات» في المنتصف — أكثر ما يُفتح، وأقرب موضع للإبهام.
   const BOTTOM_NAV = [
-    { key: 'dashboard', label: 'لوحة',     icon: 'layout-dashboard', path: '/dashboard' },
-    { key: 'calendar',  label: 'التقويم',  icon: 'calendar-days',    path: '/calendar' },
-    { key: 'bookings',  label: 'الحجوزات', icon: 'clipboard-list',   path: '/bookings' },
-    { key: 'customers', label: 'العملاء',  icon: 'users',            path: '/customers' }
+    { key: 'dashboard',    label: 'الرئيسية', icon: 'layout-dashboard', path: '/dashboard' },
+    { key: 'customers',    label: 'العملاء',  icon: 'users',            path: '/customers' },
+    { key: 'bookings',     label: 'الحجوزات', icon: 'clipboard-list',   path: '/bookings' },
+    { key: 'loyalty-scan', label: 'مسح',      icon: 'scan-line',        path: '/loyalty/scan' },
+    { key: 'more',         label: 'المزيد',   icon: 'ellipsis',         sheet: true }
   ];
+
+  // مفاتيح الشريط السفلي — لاستبعادها من ورقة «المزيد» فلا تتكرّر الوجهة مرّتين
+  const BOTTOM_KEYS = new Set(BOTTOM_NAV.map((it) => it.key));
+
 
   let spaCtx = null;
   let currentRouteKey = null; // آخر مسار نشط — لإعادة رسم بانر الاشتراك لحظيًّا
+  let isSuperAdminCached = false; // تقرؤه ورقة «المزيد» — الفحص شبكيّ ولا يُعاد
 
   // ─── بانر الاشتراك ───────────────────────────────────────
 
@@ -93,17 +130,23 @@ window.layout = (function () {
 
   // ─── بناء التنقل المُجمَّع ───────────────────────────────
 
+  // يجمع العناصر تحت عناوينها بترتيب أول ظهور — لا بالتجاور.
+  //
+  // التجاور كان يكرّر العنوان: `loyalty-scan` (تشغيلي) واقعٌ بين عناصر «إدارة»
+  // في NAV_ITEMS، فيُغلق قسم «إدارة» ويُفتح ثانيةً بعده. يظهر الأثر في الشريط
+  // الجانبي وفي ورقة «المزيد» معاً.
+  function groupNavItems(items) {
+    const byLabel = new Map();
+    items.forEach((it) => {
+      if (!byLabel.has(it.group)) byLabel.set(it.group, { label: it.group, items: [] });
+      byLabel.get(it.group).items.push(it);
+    });
+    return [...byLabel.values()];
+  }
+
   function buildNavHtml(profile, isLocked) {
     const visible = NAV_ITEMS.filter((it) => !it.ownerOnly || profile.role === 'owner');
-    const groups = [];
-    let lastGroup = null;
-    visible.forEach((it) => {
-      if (it.group !== lastGroup) {
-        groups.push({ label: it.group, items: [] });
-        lastGroup = it.group;
-      }
-      groups[groups.length - 1].items.push(it);
-    });
+    const groups = groupNavItems(visible);
     return groups.map((g) => `
       <div class="nav-group">
         ${g.label ? `<div class="nav-group-label">${window.utils.escapeHtml(g.label)}</div>` : ''}
@@ -140,7 +183,16 @@ window.layout = (function () {
       <nav class="bottom-nav" id="bottom-nav" aria-label="التنقل السفلي">
         <div class="bottom-nav-list">
           ${BOTTOM_NAV.map((it) => {
-            // كل عناصر الـ bottom-nav تشغيلية، فجميعها تُقفل عند انتهاء الاشتراك.
+            // «المزيد» زرٌّ لا وجهة، ولا يُقفل أبداً: عند انتهاء الاشتراك تصير
+            // الورقة الطريقَ الوحيد إلى /subscription على الجوال (لا شريط جانبي).
+            if (it.sheet) {
+              return `
+            <button type="button" data-bottom-key="${it.key}" id="more-sheet-btn" aria-haspopup="dialog" aria-expanded="false">
+              <span class="nav-icon"><i data-lucide="${it.icon}"></i></span>
+              <span>${window.utils.escapeHtml(it.label)}</span>
+            </button>`;
+            }
+            // بقية العناصر تشغيلية، فجميعها تُقفل عند انتهاء الاشتراك.
             // المقفول بلا href ⇒ غير قابل للنقر ولا التنقّل.
             const hrefAttr = isLocked ? '' : ` href="${window.utils.path(it.path)}"`;
             const cls  = isLocked ? ' class="nav-link--locked"' : '';
@@ -155,6 +207,137 @@ window.layout = (function () {
         </div>
       </nav>
     `;
+  }
+
+  // ─── ورقة «المزيد» ───────────────────────────────────────
+  //
+  // ما لا يسعه الشريط السفلي. تُبنى من NAV_ITEMS نفسها لا من قائمة موازية —
+  // فأي وجهة جديدة تظهر هنا تلقائياً بلا خطوة ثانية تُنسى.
+  // والعرض ورقة سفلية بلا سطر CSS جديد: drawer.css يحوّل الدرج إلى ورقة
+  // منزلقة من الأسفل تحت ٦٤٠px أصلاً.
+
+  function moreSheetItems(profile) {
+    return NAV_ITEMS.filter((it) => !BOTTOM_KEYS.has(it.key) && (!it.ownerOnly || profile.role === 'owner'));
+  }
+
+  // دعوة التثبيت كانت في تذييل الشريط الجانبي وحده — والهامبرغر مخفيّ على
+  // الجوال. بلا نقلها هنا يفقد الويب على الجوال طريقه الوحيد لتثبيت الـ PWA.
+  // (داخل التطبيق المثبَّت لا تظهر أصلاً: native.css يُخفي #install-cta،
+  //  و isStandalone تُرجع true.)
+  function canOfferInstall() {
+    if (!window.pwa) return false;
+    try {
+      if (window.pwa.isStandalone()) return false;
+      return !!(window.pwa.isInstallable() ||
+        (window.pwa.needsManualInstall && window.pwa.needsManualInstall()));
+    } catch (_) { return false; }
+  }
+
+  function buildMoreSheetHtml(profile, isLocked) {
+    const groups = groupNavItems(moreSheetItems(profile));
+    return `
+      <nav class="more-sheet-nav" aria-label="وجهات إضافية">
+        ${groups.map((g) => `
+          <div class="nav-group">
+            ${g.label ? `<div class="nav-group-label">${window.utils.escapeHtml(g.label)}</div>` : ''}
+            ${g.items.map((item) => {
+              const locked = isLocked && item.key !== 'subscription';
+              const unlock = isLocked && item.key === 'subscription';
+              const hrefAttr = locked ? '' : ` href="${window.utils.path(item.path)}"`;
+              const cls = locked ? ' class="nav-link--locked"' : (unlock ? ' class="nav-link--unlock"' : '');
+              const lockAttr = locked ? ' aria-disabled="true" tabindex="-1"' : '';
+              const lockIcon = locked ? `<span class="nav-lock"><i data-lucide="lock"></i></span>` : '';
+              return `
+              <a${hrefAttr} data-nav-key="${item.key}"${cls}${lockAttr}>
+                <span class="nav-icon"><i data-lucide="${item.icon}"></i></span>
+                <span class="nav-label">${window.utils.escapeHtml(item.label)}</span>
+                <span class="nav-notif-badge" data-notif-link="${item.path}" hidden></span>
+                ${lockIcon}
+              </a>`;
+            }).join('')}
+          </div>
+        `).join('')}
+
+        <div class="nav-group more-sheet-footer">
+          ${canOfferInstall() ? `
+            <button type="button" class="more-sheet-install" id="more-sheet-install">
+              <span class="nav-icon"><i data-lucide="download"></i></span>
+              <span class="nav-label">${window.native && window.native.isIOS ? 'ثبّت على iPhone' : 'ثبّت التطبيق'}</span>
+            </button>
+          ` : ''}
+          ${isSuperAdminCached ? `
+            <a href="${window.utils.path('/admin/overview')}" data-nav-key="admin">
+              <span class="nav-icon"><i data-lucide="shield"></i></span>
+              <span class="nav-label">لوحة المشرف</span>
+            </a>
+          ` : ''}
+          <button type="button" class="more-sheet-signout" id="more-sheet-signout">
+            <span class="nav-icon"><i data-lucide="log-out"></i></span>
+            <span class="nav-label">تسجيل الخروج</span>
+          </button>
+        </div>
+      </nav>
+    `;
+  }
+
+  let moreSheetCtrl = null;
+
+  function openMoreSheet() {
+    if (moreSheetCtrl) return;
+    const profile = spaCtx ? spaCtx.profile : { role: 'staff' };
+    const isLocked = !!(spaCtx && spaCtx.status && spaCtx.status.is_active === false);
+    const btn = document.getElementById('more-sheet-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+
+    if (window.native) window.native.haptic('LIGHT');
+
+    moreSheetCtrl = window.drawer.open({
+      title: 'المزيد',
+      // هويّة المستخدم كانت في تذييل الشريط الجانبي — تبقى ظاهرة على الجوال
+      subtitle: `${profile.full_name || ''} · ${profile.role === 'owner' ? 'مالك' : 'موظف'}`,
+      size: 'sm',
+      body: buildMoreSheetHtml(profile, isLocked),
+      onClose: () => {
+        moreSheetCtrl = null;
+        const b = document.getElementById('more-sheet-btn');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // الرابط يغلق الورقة بنفسه: الراوتر يعترض النقر ويبدّل الصفحة تحتها،
+    // فبلا إغلاق تبقى الورقة فوق الصفحة الجديدة.
+    moreSheetCtrl.body.querySelectorAll('a[href]').forEach((a) => {
+      a.addEventListener('click', () => {
+        if (window.native) window.native.haptic('LIGHT');
+        if (moreSheetCtrl) moreSheetCtrl.close();
+      });
+    });
+
+    // تسجيل الخروج كان في قائمة الشريط الجانبي، والهامبرغر مخفيّ على الجوال —
+    // فبلا نقله هنا يصير الخروج متعذّراً على الجوال أصلاً.
+    const signout = moreSheetCtrl.body.querySelector('#more-sheet-signout');
+    if (signout) signout.addEventListener('click', () => window.auth.signOut());
+
+    // التثبيت: iOS بلا beforeinstallprompt ⇒ نافذة تعليمات يدوية، وغيره prompt برمجي
+    const install = moreSheetCtrl.body.querySelector('#more-sheet-install');
+    if (install) install.addEventListener('click', async () => {
+      if (window.pwa.needsManualInstall && window.pwa.needsManualInstall()) {
+        if (moreSheetCtrl) moreSheetCtrl.close();
+        showIOSInstallHelp();
+        return;
+      }
+      install.disabled = true;
+      try {
+        const res = await window.pwa.promptInstall();
+        if (res && res.outcome === 'accepted' && moreSheetCtrl) moreSheetCtrl.close();
+      } finally {
+        install.disabled = false;
+      }
+    });
+
+    // أبرِز الوجهة الحالية داخل الورقة
+    const activeLink = moreSheetCtrl.body.querySelector(`a[data-nav-key="${currentRouteKey}"]`);
+    if (activeLink) activeLink.classList.add('active');
   }
 
   // ─── شاشة الإيقاف الإداري (مستقلّة، بلا لوحة) ─────────────
@@ -209,6 +392,7 @@ window.layout = (function () {
 
     const { profile, tenant } = ctx;
     const isSuperAdmin = await window.auth.checkIsSuperAdmin();
+    isSuperAdminCached = isSuperAdmin;
     spaCtx = ctx;
 
     // اشتراك منتهٍ ⇒ نقفل التبويبات بصرياً (الراوتر يبقى خط الدفاع للروابط المباشرة)
@@ -355,6 +539,10 @@ window.layout = (function () {
       if (window.commandPalette) window.commandPalette.open();
     });
 
+    // ورقة «المزيد» في الشريط السفلي
+    const moreBtn = document.getElementById('more-sheet-btn');
+    if (moreBtn) moreBtn.addEventListener('click', openMoreSheet);
+
     // Sidebar toggle (الجوال)
     document.getElementById('menu-toggle').addEventListener('click', () => {
       document.getElementById('sidebar').classList.add('open');
@@ -491,6 +679,11 @@ window.layout = (function () {
       a.classList.toggle('active', a.dataset.bottomKey === routeKey);
     });
 
+    // وجهة داخل الورقة ⇒ يُبرَز «المزيد»، وإلا بقي المستخدم في صفحةٍ لا يشير
+    // إليها أي عنصر في الشريط فيقرأها كخروجٍ من التطبيق.
+    const moreBtn = document.querySelector('.bottom-nav button[data-bottom-key="more"]');
+    if (moreBtn) moreBtn.classList.toggle('active', !!routeKey && !BOTTOM_KEYS.has(routeKey));
+
     // breadcrumb — يُعاد بناؤه دائماً لأن setBreadcrumbs() قد يكون مسح الـ id
     const wrap = document.getElementById('breadcrumb');
     if (wrap) {
@@ -513,6 +706,10 @@ window.layout = (function () {
     const ov = document.getElementById('sidebar-overlay');
     if (sb) sb.classList.remove('open');
     if (ov) { ov.classList.remove('open'); ov.style.display = 'none'; }
+
+    // وأغلق ورقة «المزيد» — الملاحة قد تأتي من رابطٍ عميق أو زرّ رجوع لا من
+    // نقرةٍ داخل الورقة، فتبقى معلّقة فوق الصفحة الجديدة
+    if (moreSheetCtrl) moreSheetCtrl.close();
   }
 
   // breadcrumb متعدّد العناصر (للصفحات العميقة كتفاصيل العميل)
@@ -533,6 +730,28 @@ window.layout = (function () {
   }
 
   function getContext() { return spaCtx; }
+
+  // ─── شريط تبويب الصفحة ───────────────────────────────────
+  //
+  // وجهةٌ واحدة في القائمة، وداخلها مساراتها. يستبدل الروابط المتبادلة التي
+  // كانت تتقاذف المستخدم بين صفحتين شقيقتين بلا أن تُظهر له أنهما شيء واحد.
+  //
+  //   window.layout.pageTabs([{ label: 'الأرضيات', path: '/fields' }, …], '/fields')
+  //
+  // مبنيّ على chip-rail--seg القائم — لا نمط جديد عدا مقاس اللمس.
+  function pageTabs(tabs, activePath) {
+    if (!Array.isArray(tabs) || tabs.length < 2) return '';
+    return `
+      <div class="chip-rail chip-rail--seg page-tabs mb-md" role="tablist">
+        ${tabs.map((t) => {
+          const active = t.path === activePath;
+          return `<a class="chip${active ? ' is-active' : ''}" role="tab"
+                     aria-selected="${active ? 'true' : 'false'}"
+                     href="${window.utils.path(t.path)}">${window.utils.escapeHtml(t.label)}</a>`;
+        }).join('')}
+      </div>
+    `;
+  }
 
   // ─── Modal تعليمات تثبيت iOS ─────────────────────────────
   // iOS Safari لا يطلق beforeinstallprompt، فالتثبيت يدوي عبر Share menu.
@@ -586,5 +805,8 @@ window.layout = (function () {
     window.utils.renderIcons(root);
   }
 
-  return { mountShell, setActive, setBreadcrumbs, getContext, NAV_ITEMS };
+  return {
+    mountShell, setActive, setBreadcrumbs, getContext,
+    pageTabs, PITCH_TABS, LOYALTY_TABS, BOOKING_TABS, NAV_ITEMS
+  };
 })();

@@ -7,14 +7,15 @@
         <div class="page-subtitle">جميع الحجوزات مع فلاتر متقدّمة</div>
       </div>
       <div class="actions">
-        <a href="${window.utils.path('/calendar')}" class="btn btn--secondary">
-          <i data-lucide="calendar"></i> عرض التقويم
-        </a>
+        <button class="btn btn--secondary" id="block-slot-btn">
+          <i data-lucide="lock"></i> حجب موعد
+        </button>
         <button class="btn btn--primary" id="add-booking-btn">
           <i data-lucide="plus"></i> حجز جديد
         </button>
       </div>
     </div>
+    ${window.layout.pageTabs(window.layout.BOOKING_TABS, '/bookings')}
 
     <div class="filters-bar">
       <div class="form-group">
@@ -40,6 +41,7 @@
           <option value="completed">مكتمل</option>
           <option value="cancelled">ملغي</option>
           <option value="no_show">لم يحضر</option>
+          <option value="blocked">محجوب</option>
         </select>
       </div>
       <button class="btn btn--ghost" id="reset-filters-btn" title="إعادة تعيين">
@@ -65,6 +67,8 @@
         : '<span class="chip-status chip-status--cancelled">حجز ملغي</span>';
     }
     if (status === 'no_show') return '<span class="chip-status chip-status--noshow">لم يحضر</span>';
+    // موعد محجوب — إشغال بلا عميل (صيانة/لعب خاص)، والسبب في notes
+    if (status === 'blocked') return '<span class="chip-status chip-status--muted">موعد محجوب</span>';
     return `<span class="chip-status chip-status--muted">${window.utils.escapeHtml(status)}</span>`;
   }
 
@@ -236,11 +240,13 @@
       const urlStatus = window.utils.getQueryParam('status');
       if (urlStatus) filterStatus.value = urlStatus;
 
-      // املأ قائمة الأرضيات
+      // املأ قائمة الأرضيات — وتخدم «حجب موعد» كذلك
       let fieldsMap = {};
+      let allFields = [];
       try {
         const fields = window.store ? await window.store.get('fields:all') : await window.api.listFields(true);
         if (!alive) return;
+        allFields = fields;
         fields.forEach((f) => {
           fieldsMap[f.id] = f.name;
           const opt = document.createElement('option');
@@ -293,6 +299,9 @@
         if (filterField.value) filters.fieldId = filterField.value;
         // مؤكد/مكتمل/لم يحضر حالات مشتقّة تُحسب في الواجهة — لا تُمرَّر لقاعدة البيانات
         if (wantStatus === 'pending' || wantStatus === 'cancelled') filters.status = wantStatus;
+        // المحجوب صفّ إشغال بلا عميل، تستبعده الاستعلامات افتراضاً — فيُطلب صراحةً.
+        // كان يُرى في عرض «قائمة» داخل التقويم وحده، وقد أُلغي ذلك العرض.
+        if (wantStatus === 'blocked') { filters.status = 'blocked'; filters.includeBlocks = true; }
 
         const hasFilters = Object.keys(filters).length > 0 || !!wantStatus;
         buildChipRail({ from: filters.from, to: filters.to, fieldId: filters.fieldId, status: wantStatus });
@@ -345,7 +354,10 @@
             return;
           }
 
-          const active = bookings.filter((b) => b.status !== 'cancelled');
+          // المحجوب ليس حجزاً: بلا عميل وبلا سعر. عدُّه يضخّم «عدد الحجوزات»
+          // ويُدخل صفراً في متوسّطات الإيراد — فيُستبعد من المؤشرات لا من الجدول.
+          const countable = bookings.filter((b) => b.status !== 'blocked');
+          const active = countable.filter((b) => b.status !== 'cancelled');
           const totals = active.reduce((acc, b) => {
             // الغائب: قيمته المتحققة هي المحصَّل منه فقط (العربون) — سعره الكامل لن يأتي
             acc.revenue += b.no_show_at ? Number(b.paid_amount || 0) : Number(b.total_price || 0);
@@ -361,7 +373,9 @@
                   <span class="stat-label">عدد الحجوزات</span>
                 </div>
                 <div class="stat-value">${active.length}</div>
-                <div class="stat-sub">${bookings.length} إجمالاً (شامل الملغية)</div>
+                <div class="stat-sub">${countable.length} إجمالاً (شامل الملغية)${
+                  bookings.length > countable.length
+                    ? ` · ${bookings.length - countable.length} محجوب` : ''}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-card-head">
@@ -415,7 +429,11 @@
                                 : '')
                         }</td>
                         <td data-label="الأرضية">${window.utils.escapeHtml(b.fields ? b.fields.name : '—')}</td>
-                        <td data-label="العميل">${window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')}</td>
+                        <td data-label="العميل">${
+                          b.status === 'blocked'
+                            ? `<span class="text-tertiary">${window.utils.escapeHtml(b.notes || 'محجوب')}</span>`
+                            : window.utils.escapeHtml(b.customers ? b.customers.full_name : '—')
+                        }</td>
                         <td data-label="الجوال" class="tabular-nums">${b.customers && b.customers.phone ? window.utils.escapeHtml(b.customers.phone) : '—'}</td>
                         <td data-label="المدة" class="tabular-nums">${window.utils.formatDuration(hours)}</td>
                         <td data-label="السعر" class="tabular-nums">${window.utils.formatPrice(b.total_price)}</td>
@@ -648,6 +666,12 @@
       filterEls.forEach((el) => el.addEventListener('change', refresh));
       resetBtn.addEventListener('click', resetFilters);
       addBtn.addEventListener('click', () => window.bookingModal.open({ onSaved: refresh }));
+
+      // حجب موعد — كان في التقويم وحده، وهو فعلٌ على البيانات لا على العرض
+      const blockBtn = container.querySelector('#block-slot-btn');
+      if (blockBtn) blockBtn.addEventListener('click', () => {
+        window.blockSlotModal.open({ fields: allFields, onBlocked: refresh });
+      });
 
       cleanup.push(() => {
         alive = false;

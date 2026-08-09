@@ -138,6 +138,83 @@
   .bp-manage-banner-btn { width: 100%; justify-content: center; }
 }
 
+/* ── شريط بطاقة الولاء (شاشة «بطاقتي وحجوزاتي») ──────────────────────────
+   ليس بطاقةَ المحفظة — تلك تعيش في /card كاملةً بزرَّي المحفظتين. هذا شريطٌ
+   يجيب «هل لي بطاقة وأين وصلت؟» ويفتح البابَ إليها. ألوانه من هوية البطاقة
+   نفسها (‎--wc-*) فيتعرّف عليها العميل قبل أن يقرأ سطراً. */
+.bp-loyalty {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--wc-bg);
+  color: var(--wc-fg);
+}
+.bp-loyalty-head { display: flex; align-items: center; gap: var(--space-3); }
+.bp-loyalty-logo {
+  inline-size: 40px; block-size: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.bp-loyalty-title { flex: 1; min-width: 0; }
+.bp-loyalty-title strong { display: block; font-size: var(--text-md); }
+.bp-loyalty-title span {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--wc-label);
+  margin-top: 2px;
+}
+.bp-loyalty-count { font-size: var(--text-lg); font-weight: var(--weight-bold); flex-shrink: 0; }
+
+/* الشريط يقرأ التقدّم قبل الأرقام — والعرض بـ inline-size ليتبع اتجاه الصفحة */
+.bp-loyalty-bar {
+  block-size: 6px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .22);
+  margin: var(--space-3) 0 var(--space-2);
+  overflow: hidden;
+}
+.bp-loyalty-bar span { display: block; block-size: 100%; background: var(--wc-fg); }
+
+.bp-loyalty-left,
+.bp-loyalty-ready { margin: 0; font-size: var(--text-sm); color: var(--wc-label); }
+.bp-loyalty-ready {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--wc-fg);
+  font-weight: var(--weight-semibold);
+}
+.bp-loyalty-ready svg.lucide { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* الزرّ يستعير لوني البطاقة مقلوبين لا لون العلامة: الشريط يلبس هوية البرنامج
+   (وهي أيٌّ من اثني عشر لوناً)، وزرٌّ أخضر ثابت فوق بطاقةٍ بنفسجية لونان
+   يتخاصمان. القلب يضمن التباين نفسه الذي ضمنه المولّد للبطاقة أصلاً. */
+.bp-loyalty-btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--space-4);
+  background: var(--wc-fg);
+  color: var(--wc-bg);
+  border-color: transparent;
+}
+.bp-loyalty-btn:hover { background: var(--wc-fg); opacity: .92; }
+
+/* حالة «لا بطاقة بعد» ليست بطاقة — فلا تلبس ألوانها */
+.bp-loyalty--empty {
+  background: var(--c-surface);
+  color: var(--c-mute);
+  border: 1px solid var(--c-border);
+}
+.bp-loyalty--empty p {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+/* الإصدار فعلٌ لا اقتراح: البطاقة لا توجد حتى يضغط، فالزرّ أوّل ما تقع
+   عليه العين بعد السطر — لا ملحقٌ في زاوية. */
+.bp-loyalty-issue { width: 100%; justify-content: center; margin-top: var(--space-3); }
+.bp-loyalty--empty svg.lucide { width: 18px; height: 18px; flex-shrink: 0; }
+
 .bp-hero-tag {
   display: inline-flex;
   align-items: center;

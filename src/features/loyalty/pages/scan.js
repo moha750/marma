@@ -14,6 +14,9 @@
   const page = {
     async mount(container, ctx) {
       ctx = ctx || (window.layout && window.layout.getContext()) || {};
+      // الماسح متاح للموظف عمداً، و/loyalty/cards للمالك وحده — فرابط
+      // «التفاصيل» كان يقذف الموظف إلى لوحة التحكم بلا تفسير.
+      const isOwner = !!(ctx.profile && ctx.profile.role === 'owner');
       let alive = true;
       let stream = null, rafId = null, detector = null, busy = false;
       let current = null;             // آخر بطاقة مقروءة
@@ -29,7 +32,7 @@
         </div>
 
         <div class="scan-grid">
-          <div class="card scan-cam-card">
+          <div class="card"><div class="card-body">
             <div class="scan-viewport" id="viewport">
               <video id="cam" playsinline muted></video>
               <div class="scan-frame" aria-hidden="true"></div>
@@ -43,9 +46,9 @@
                 <i data-lucide="camera"></i> تشغيل الكاميرا
               </button>
             </div>
-          </div>
+          </div></div>
 
-          <div class="card">
+          <div class="card"><div class="card-body">
             <div class="form-group mb-0">
               <label class="form-label" for="manual">إدخال يدوي</label>
               <div class="scan-manual">
@@ -55,7 +58,7 @@
               </div>
               <div class="form-help">الرمز مطبوع على ظهر بطاقة العميل وأسفل رمز QR.</div>
             </div>
-          </div>
+          </div></div>
         </div>
 
         <div id="scan-result"></div>
@@ -171,6 +174,13 @@
         try {
           const d = await window.loyaltyApi.scanLookup(payload);
           if (!alive) return;
+          // الطلبات المعلّقة لهذه البطاقة: المسح هو اللحظة التي يقف فيها
+          // العميل أمامك، فهي أولى لحظةٍ بحسم ختمه. وفشلُها لا يُفشل المسح.
+          try {
+            const all = await window.loyaltyApi.pendingStamps();
+            d.pending = (all || []).filter((r) => r.card_id === (d.card && d.card.id));
+          } catch (_) { d.pending = []; }
+          if (!alive) return;
           current = d;
           renderCard(d);
         } catch (err) {
@@ -190,7 +200,7 @@
         const rewards = (d.rewards || []).filter((r) => r.status === 'available');
 
         result.innerHTML = `
-          <div class="card scan-card">
+          <div class="card"><div class="card-body">
             <div class="scan-card-head">
               <div>
                 <div class="scan-name">${esc(cu.full_name)}</div>
@@ -201,6 +211,25 @@
                 <div class="scan-balance-cap">ختماً</div>
               </div>
             </div>
+
+            ${(d.pending || []).length ? `
+              <div class="scan-pending">
+                <div class="scan-pending-head">
+                  <i data-lucide="stamp"></i>
+                  <span>${AR((d.pending || []).length)} ختم بانتظار قرارك</span>
+                </div>
+                ${d.pending.map((p) => `
+                  <div class="scan-pending-row" data-prow="${esc(p.id)}">
+                    <div>
+                      <div class="scan-pending-field">${esc(p.field_name || '')}</div>
+                      <div class="scan-pending-date">${esc(window.utils.formatDate(new Date(p.booking_start)))}</div>
+                    </div>
+                    <div class="scan-pending-actions">
+                      <button class="btn btn--primary btn--sm" data-stamp-ok="${esc(p.id)}">وافق</button>
+                      <button class="btn btn--danger-quiet btn--sm" data-stamp-no="${esc(p.id)}">ارفض</button>
+                    </div>
+                  </div>`).join('')}
+              </div>` : ''}
 
             ${rewards.length ? `
               <div class="scan-rewards">
@@ -219,17 +248,42 @@
 
             <div class="scan-foot">
               <span>رمز البطاقة <b dir="ltr">${esc((c.serial || '').substring(0, 8))}</b></span>
+              ${isOwner ? `
               <a class="btn btn--ghost btn--sm" href="${window.utils.path('/loyalty/cards')}">
                 <i data-lucide="external-link"></i> التفاصيل
-              </a>
+              </a>` : ''}
             </div>
-          </div>`;
+          </div></div>`;
         window.utils.renderIcons(result);
 
+        result.querySelectorAll('[data-stamp-ok], [data-stamp-no]').forEach((b) =>
+          b.addEventListener('click', () => decideStamp(b, d)));
         result.querySelectorAll('[data-redeem]').forEach((b) =>
           b.addEventListener('click', () => doRedeem(b.dataset.redeem, d)));
         result.querySelectorAll('[data-apply]').forEach((b) =>
           b.addEventListener('click', () => openApply(b.dataset.apply, d)));
+      }
+
+      // ─── قرار الختم ──────────────────────────────────────
+
+      // بعد القرار نُعيد المسح لا نُعدّل الصفّ محلياً: الموافقة قد تبلغ العتبة
+      // فتُصدر مكافأة — والشاشة يجب أن تُظهرها فوراً وإلا صرف الموظف بطاقةً
+      // يظنّها بلا مكافأة.
+      async function decideStamp(btn, d) {
+        const approve = btn.hasAttribute('data-stamp-ok');
+        const id = btn.getAttribute(approve ? 'data-stamp-ok' : 'data-stamp-no');
+        const row = btn.closest('.scan-pending-row');
+        row.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        try {
+          await window.loyaltyApi.decideStamp(id, approve);
+          if (!alive) return;
+          window.utils.toast(approve ? 'مُنح الختم' : 'رُفض الطلب', approve ? 'success' : 'info');
+          await lookup((d.card && d.card.serial) || '');
+        } catch (err) {
+          if (!alive) return;
+          window.utils.toast(window.utils.formatError(err), 'error');
+          row.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+        }
       }
 
       // ─── الصرف ───────────────────────────────────────────

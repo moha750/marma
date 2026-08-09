@@ -29,6 +29,20 @@
     { key: 'stamps',  name: 'عدّاد الأختام', desc: 'دوائر بعدد الأختام تمتلئ مع كل حجز', icon: 'circle-check-big' }
   ];
 
+  // «المعاينة» تبويبٌ على الجوال فقط. صارت لوحةً لها مبدّلاها وظهرُ بطاقتها،
+  // وما له أدواتُ تحكّمٍ خاصّة به لم يعد هامشاً على النموذج بل وجهةً قائمة —
+  // ووجهةٌ فوق وجهةٍ في عمودٍ واحد تخسران معاً. والتبويب يجعل مسافة «عدّلتُ
+  // ← أتحقّق» نقرةً ثابتة مهما طال النموذج، بدل تمريرةٍ تطول معه.
+  // والتسميات تقصر هناك ليتّسع الشريط لثلاثتها بلا تمرير أفقي.
+  const PANE_TABS = [
+    { key: 'program',  label: 'القواعد والمكافأة', short: 'القواعد' },
+    { key: 'identity', label: 'هوية البطاقة',      short: 'الهوية' },
+    { key: 'preview',  label: 'المعاينة',          short: 'المعاينة', narrowOnly: true }
+  ];
+
+  // يطابق نقطة انكسار .loy-grid في loyalty.css — يتغيّران معاً.
+  const NARROW = '(max-width: 60rem)';
+
   const REWARD_KINDS = [
     { key: 'free_booking',     label: 'حجز مجاني' },
     { key: 'percent_discount', label: 'خصم بنسبة' },
@@ -70,12 +84,17 @@
 
   const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
 
-  function rewardPreviewLabel(kind, value, custom) {
+  // مرآة loyalty_reward_label في قاعدة البيانات (20260730222010_loyalty_hardening.sql).
+  // البطاقة تحمل التسمية التي يولّدها الخادم، فأي اختلاف هنا = معاينة تكذب.
+  // وأرقامها غربية لأن to_char(...,'FM999') يخرجها غربية — لا AR() هنا أبداً.
+  function serverRewardLabel(kind, value, custom) {
+    const c = String(custom == null ? '' : custom).trim();
+    if (c) return c;
     const v = value === '' || value == null ? null : Number(value);
-    if (kind === 'free_item') return (custom || '').trim() || 'مكافأة عينية';
-    if (kind === 'free_booking') return v == null ? 'حجز مجاني' : `حجز مجاني ${AR(v)} دقيقة`;
-    if (kind === 'percent_discount') return `خصم ${AR(v == null ? 0 : v)}٪`;
-    if (kind === 'amount_discount') return `خصم ${AR(v == null ? 0 : v)} ريال`;
+    if (kind === 'free_booking') return v == null ? 'حجز مجاني' : `حجز مجاني ${v} دقيقة`;
+    // FM999 / FM999999.99 يقصّان الأصفار اللاحقة — وهو ما يفعله String على العدد
+    if (kind === 'percent_discount') return v == null ? 'مكافأة' : `خصم ${v}٪`;
+    if (kind === 'amount_discount') return v == null ? 'مكافأة' : `خصم ${v} ريال`;
     return 'مكافأة';
   }
 
@@ -86,20 +105,51 @@
       let state = null;          // { enabled, allowed_cards, program, stats }
       let form = null;           // نسخة العمل من البرنامج
       let activeTab = 'program';
+      // المحفظتان ترسمان البرنامج نفسه بحقول مختلفة، فالمعاينة الواحدة تكذب على
+      // إحداهما حتماً — لذا مبدّلان: أيّ محفظة، وأيّ حالة من حالتَي البطاقة.
+      let previewWallet = 'apple';      // apple | google
+      let previewState = 'collecting';  // collecting | ready
+      const narrowMq = window.matchMedia(NARROW);
       page._cleanup = [() => { alive = false; }];
+
+      // عبور نقطة الانكسار ينقل المعاينة بين تبويبٍ وعمودٍ جانبي — أعد الرسم
+      // وإلا بقيت في مكانٍ لا وجود له في التخطيط الجديد.
+      const onBreakpoint = () => { if (alive && form) render(); };
+      narrowMq.addEventListener('change', onBreakpoint);
+      page._cleanup.push(() => narrowMq.removeEventListener('change', onBreakpoint));
 
       container.innerHTML = `
         <div class="page-header">
           <div>
             <h2>برنامج الولاء</h2>
-            <div class="page-subtitle">بطاقة أختام لعملائك — تُمنح تلقائياً على كل حجز مكتمل ومُسدَّد</div>
+            <div class="page-subtitle">بطاقة أختام لعملائك — يُصدرها العميل بنفسه، ولا يُمنح ختمٌ إلا بموافقتك</div>
           </div>
           <div class="actions" id="loy-actions"></div>
         </div>
+        ${window.layout.pageTabs(window.layout.LOYALTY_TABS, '/loyalty')}
         <div id="loy-body"><div class="loader-center"><div class="loader loader--lg"></div></div></div>
       `;
       const body = container.querySelector('#loy-body');
       const actions = container.querySelector('#loy-actions');
+
+      // المبدّلان صارا يسكنان لوحاً يُعاد رسمه (تبويب المعاينة على الجوال)، فالربط
+      // بالتفويض على الحاوية الثابتة لا على أزرارٍ تُستبدل. ولا يعيدان رسم
+      // الصفحة: النموذج لم يتغيّر، البطاقة وحدها.
+      body.addEventListener('click', (e) => {
+        const w = e.target.closest('[data-wallet]');
+        if (w) {
+          previewWallet = w.dataset.wallet;
+          syncSeg('data-wallet', previewWallet);
+          renderPreview();
+          return;
+        }
+        const s = e.target.closest('[data-pstate]');
+        if (s) {
+          previewState = s.dataset.pstate;
+          syncSeg('data-pstate', previewState);
+          renderPreview();
+        }
+      });
 
       // ─── التحميل ─────────────────────────────────────────
 
@@ -121,7 +171,6 @@
             reward_excludes_offers: true,
             reward_terms: '',
             min_booking_amount: 0,
-            auto_enroll: true,
             redeem_pin_enabled: true,
             template: 'classic',
             brand_bg: PALETTE[0].hex,
@@ -153,30 +202,30 @@
 
       function render() {
         if (!state.enabled) return renderUpsell();
-        // صفحة البطاقات لا يصلها الشريط الجانبي (عنصر واحد للولاء)، فمدخلها من هنا
+        // مدخل البطاقات صار تبويباً أعلى الصفحة — لا زرّاً في شريط الأفعال
         actions.innerHTML = `
-          <a class="btn btn--ghost" href="${window.utils.path('/loyalty/cards')}">
-            <i data-lucide="credit-card"></i> البطاقات
-          </a>
           <button class="btn btn--primary" id="loy-save"><i data-lucide="save"></i> حفظ</button>`;
         window.utils.renderIcons(actions);
         actions.querySelector('#loy-save').addEventListener('click', save);
+
+        const narrow = narrowMq.matches;
+        // العودة إلى سطح المكتب تعيد المعاينة إلى عمودها — فلا تبويب لها هناك
+        if (!narrow && activeTab === 'preview') activeTab = 'identity';
+        const tabs = PANE_TABS.filter((t) => narrow || !t.narrowOnly);
 
         body.innerHTML = `
           ${renderStats()}
           <div class="loy-grid">
             <div class="loy-main">
               <div class="loy-tabs" role="tablist">
-                <button class="loy-tab${activeTab === 'program' ? ' is-active' : ''}" data-tab="program">القواعد والمكافأة</button>
-                <button class="loy-tab${activeTab === 'identity' ? ' is-active' : ''}" data-tab="identity">هوية البطاقة</button>
+                ${tabs.map((t) => `
+                  <button class="loy-tab${activeTab === t.key ? ' is-active' : ''}" role="tab"
+                    aria-selected="${activeTab === t.key ? 'true' : 'false'}"
+                    data-tab="${t.key}">${narrow ? t.short : t.label}</button>`).join('')}
               </div>
               <div id="loy-pane"></div>
             </div>
-            <aside class="loy-side">
-              <div class="loy-preview-head">معاينة حيّة</div>
-              <div id="loy-preview"></div>
-              <p class="loy-preview-note">هكذا تظهر البطاقة في Apple Wallet و Google Wallet. الأرقام هنا للتوضيح فقط.</p>
-            </aside>
+            ${narrow ? '' : `<aside class="loy-side">${previewPanelHtml()}</aside>`}
           </div>
         `;
         body.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
@@ -186,6 +235,41 @@
         renderPane();
         renderPreview();
         window.utils.renderIcons(body);
+      }
+
+      // لوحة المعاينة كاملة. تسكن العمود الجانبي على سطح المكتب وتبويبَها على
+      // الجوال — نصٌّ واحد للاثنين فلا تفترق النسختان بتعديلٍ يُنسى في إحداهما.
+      function previewPanelHtml() {
+        return `
+          <!-- التحذير من الأرقام الوهمية في العنوان لا في الشرح: العنوان يُقرأ
+               دائماً والشرح قد يُتجاوز. -->
+          <div class="loy-preview-head">معاينة حيّة — أرقامها للتوضيح فقط</div>
+          <!-- مبدّلان لا واحد: المحفظتان ترسمان البرنامج نفسه بحقول مختلفة
+               (جوجل تدمج المكافأة والباقي في سطر، ولا تستقبل شريط الأختام)،
+               والبطاقة تُبدّل حقولها عند بلوغ العتبة. معاينةٌ واحدة ثابتة
+               كانت تكذب على إحدى المحفظتين وعلى إحدى الحالتين حتماً. -->
+          <div class="loy-seg" role="tablist" aria-label="المحفظة">
+            <button class="loy-seg-btn${previewWallet === 'apple' ? ' is-active' : ''}" role="tab"
+              aria-selected="${previewWallet === 'apple'}" data-wallet="apple">Apple Wallet</button>
+            <button class="loy-seg-btn${previewWallet === 'google' ? ' is-active' : ''}" role="tab"
+              aria-selected="${previewWallet === 'google'}" data-wallet="google">Google Wallet</button>
+          </div>
+          <div class="loy-seg loy-seg--quiet" role="tablist" aria-label="حالة البطاقة">
+            <button class="loy-seg-btn${previewState === 'collecting' ? ' is-active' : ''}" role="tab"
+              aria-selected="${previewState === 'collecting'}" data-pstate="collecting">يجمع الأختام</button>
+            <button class="loy-seg-btn${previewState === 'ready' ? ' is-active' : ''}" role="tab"
+              aria-selected="${previewState === 'ready'}" data-pstate="ready">مكافأة جاهزة</button>
+          </div>
+          <div id="loy-preview"></div>
+          <p class="loy-preview-note">حقول هذه المعاينة هي حقول البطاقة نفسها كما يبنيها الخادم.</p>`;
+      }
+
+      function syncSeg(attr, value) {
+        body.querySelectorAll(`[${attr}]`).forEach((b) => {
+          const on = b.getAttribute(attr) === value;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-selected', String(on));
+        });
       }
 
       function renderUpsell() {
@@ -227,15 +311,34 @@
 
       function renderPane() {
         const pane = body.querySelector('#loy-pane');
-        pane.innerHTML = activeTab === 'program' ? programPaneHtml() : identityPaneHtml();
+
+        // تبويب المعاينة (الجوال): اللوح نفسه يحتضن #loy-preview — فتبقى
+        // renderPreview() جهةً واحدة تكتب البطاقة أينما حلّت.
+        if (activeTab === 'preview') {
+          pane.innerHTML = previewPanelHtml();
+          window.utils.renderIcons(pane);
+          renderPreview();
+          return;
+        }
+
+        // استثناء «الهوية» على الجوال: تحريره بصريٌّ محض — قالبٌ ولونٌ وشعار،
+        // واختيارها بلا رؤية النتيجة رميٌ في الظلام. فالبطاقة وحدها فوق أدواته:
+        // بلا مبدّلات ولا ظهر بطاقة، فتلك للتبويب المخصّص لها.
+        // و«القواعد» لا تحتاجها: أرقامٌ وقواعد لا يظهر منها على البطاقة إلا سطر.
+        const mini = narrowMq.matches && activeTab === 'identity'
+          ? '<div class="loy-preview-mini" id="loy-preview-mini"></div>'
+          : '';
+
+        pane.innerHTML = mini + (activeTab === 'program' ? programPaneHtml() : identityPaneHtml());
         window.utils.renderIcons(pane);
         if (activeTab === 'program') bindProgramPane(pane); else bindIdentityPane(pane);
+        renderMiniCard();
       }
 
       function programPaneHtml() {
         const k = form.reward_kind;
         return `
-          <div class="card">
+          <div class="card"><div class="card-body loy-pane-body">
             <div class="loy-switch-row">
               <label class="sch-switch">
                 <input type="checkbox" id="f-active" ${form.is_active ? 'checked' : ''}>
@@ -243,7 +346,7 @@
               </label>
               <div>
                 <div class="fw-semibold">${form.is_active ? 'البرنامج مفعّل' : 'البرنامج متوقّف'}</div>
-                <div class="text-tertiary text-sm">عند الإيقاف لا تُمنح أختام جديدة، والبطاقات الصادرة تبقى في جيوب عملائك.</div>
+                <div class="text-tertiary text-sm">عند الإيقاف لا تُصدَر بطاقات ولا تُرفع طلبات ختم، والبطاقات الصادرة تبقى في جيوب عملائك.</div>
               </div>
             </div>
 
@@ -256,7 +359,7 @@
               <div class="form-group">
                 <label class="form-label" for="f-threshold">كم ختماً للمكافأة؟ <span class="required">*</span></label>
                 <input class="form-control" id="f-threshold" type="number" min="2" max="50" step="1" value="${form.reward_threshold}">
-                <div class="form-help">بين ٢ و ٥٠ — كل حجز مكتمل ومُسدَّد يمنح ختماً واحداً.</div>
+                <div class="form-help">بين ٢ و ٥٠ — كل حجز مكتمل ومُسدَّد يرفع طلب ختمٍ لموافقتك.</div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-kind">ما المكافأة؟ <span class="required">*</span></label>
@@ -277,15 +380,13 @@
               <div class="form-group">
                 <label class="form-label" for="f-min">أقل مبلغ حجز يمنح ختماً</label>
                 <input class="form-control" id="f-min" type="number" min="0" step="1" value="${Number(form.min_booking_amount || 0)}">
-                <div class="form-help">صفر = كل حجز مُسدَّد يمنح ختماً.</div>
+                <div class="form-help">صفر = كل حجز مُسدَّد يرفع طلب ختم.</div>
               </div>
             </div>
 
             <div class="loy-checks">
               <label class="check"><input type="checkbox" id="f-excl" ${form.reward_excludes_offers ? 'checked' : ''}>
                 <span>لا تُجمع المكافأة مع عرض سعري على نفس الفترة</span></label>
-              <label class="check"><input type="checkbox" id="f-auto" ${form.auto_enroll ? 'checked' : ''}>
-                <span>انضمام تلقائي — تُصدَر البطاقة مع أول حجز مكتمل</span></label>
               <label class="check"><input type="checkbox" id="f-pin" ${form.redeem_pin_enabled ? 'checked' : ''}>
                 <span>طلب رمز الاستبدال من العميل عند الصرف</span></label>
             </div>
@@ -295,7 +396,7 @@
               <textarea class="form-control" id="f-terms" rows="3" maxlength="500"
                 placeholder="تظهر في ظهر البطاقة — مثال: المكافأة لا تُستبدل نقداً، وتُصرف بحضور صاحب البطاقة.">${window.utils.escapeHtml(form.reward_terms || '')}</textarea>
             </div>
-          </div>`;
+          </div></div>`;
       }
 
       function rewardValueHtml() {
@@ -358,7 +459,6 @@
         on('#f-valid', 'input', (e) => { form.reward_valid_days = e.target.value; });
         on('#f-min', 'input', (e) => { form.min_booking_amount = Number(e.target.value || 0); });
         on('#f-excl', 'change', (e) => { form.reward_excludes_offers = e.target.checked; });
-        on('#f-auto', 'change', (e) => { form.auto_enroll = e.target.checked; });
         on('#f-pin', 'change', (e) => { form.redeem_pin_enabled = e.target.checked; });
         on('#f-terms', 'input', (e) => { form.reward_terms = e.target.value; });
       }
@@ -369,7 +469,7 @@
         const fg = fgFor(form.brand_bg);
         const ratio = contrast(form.brand_bg, fg);
         return `
-          <div class="card">
+          <div class="card"><div class="card-body loy-pane-body">
             <div class="form-label">القالب</div>
             <div class="loy-templates">
               ${TEMPLATES.map((t) => `
@@ -423,7 +523,7 @@
                 </div>
                 <div class="form-help">صورة عريضة لملعبك — تُقصّ إلى ١٠٣٢×٣٣٦ تلقائياً.</div>
               </div>` : ''}
-          </div>`;
+          </div></div>`;
       }
 
       function bindIdentityPane(pane) {
@@ -474,56 +574,173 @@
 
       // ─── المعاينة الحيّة ─────────────────────────────────
 
-      function renderPreview() {
-        const el = body.querySelector('#loy-preview');
-        if (!el) return;
-        const bg = form.brand_bg;
-        const fg = fgFor(bg);
-        const label = labelFor(bg, fg);
-        const thr = Math.max(2, Math.min(50, Number(form.reward_threshold) || 10));
-        const filled = Math.min(thr, Math.max(1, Math.round(thr * 0.7)));
-        const org = (ctx.tenant && ctx.tenant.name) || 'ملعبك';
-        const reward = rewardPreviewLabel(form.reward_kind, form.reward_value, form.reward_label);
+      // القيم المشتركة بين المحفظتين. الرصيد يقلّد المحرّك: عند بلوغ العتبة
+      // تُصدَر قسيمة ويُخصَم مقدارها (loyalty_engine.sql) — فحالة «جاهزة» رصيدها ٠.
+      const DEMO_MEMBER = 'محمد العلي';
+      const DEMO_CODE = 'K7M2QP';
+      const DEMO_SERIAL = '7F3A2B1C';
+      const DEMO_PIN = '4821';
 
+      function previewModel() {
+        const thr = Math.max(2, Math.min(50, Number(form.reward_threshold) || 10));
+        const ready = previewState === 'ready';
+        const label = serverRewardLabel(form.reward_kind, form.reward_value, form.reward_label);
+        return {
+          bg: form.brand_bg,
+          fg: fgFor(form.brand_bg),
+          labelColor: labelFor(form.brand_bg, fgFor(form.brand_bg)),
+          org: (ctx.tenant && ctx.tenant.name) || 'ملعبك',
+          threshold: thr,
+          balance: ready ? 0 : Math.min(thr, Math.max(1, Math.round(thr * 0.7))),
+          reward: ready ? { code: DEMO_CODE, label } : null,
+          rewardLabel: label
+        };
+      }
+
+      const esc = (s) => window.utils.escapeHtml(String(s == null ? '' : s));
+
+      // ── Apple Wallet ──────────────────────────────────────
+      // مرآة buildPassBundle في supabase/functions/wallet-apple/index.ts
+      //
+      // الوجه وظهرُه دالّتان لا واحدة: تبويب «الهوية» على الجوال يعرض الوجه
+      // وحده — هناك يُختار اللون والقالب والشعار، ولا شأن لصفوف الظهر بذلك.
+      function appleCardHtml(m) {
+        // شريط الأختام: آبل تحدّه بـ ٢٠ نقطة مهما بلغت العتبة (strip.png)
         let strip = '';
-        if (form.template === 'photo') {
-          strip = form.hero_url
-            ? `<div class="wcard-strip" style="background-image:url('${window.utils.escapeHtml(form.hero_url)}')"></div>`
-            : '<div class="wcard-strip wcard-strip--empty">ارفع صورة ملعبك</div>';
-        } else if (form.template === 'stamps') {
-          const dots = Array.from({ length: thr }, (_, i) =>
-            `<span class="wcard-dot${i < filled ? ' is-filled' : ''}"></span>`).join('');
-          strip = `<div class="wcard-strip wcard-strip--stamps">${dots}</div>`;
+        if (form.template === 'stamps') {
+          const total = Math.min(m.threshold, 20);
+          const filled = Math.min(m.balance, m.threshold);
+          strip = `<div class="wcard-strip wcard-strip--stamps">${
+            Array.from({ length: total }, (_, i) =>
+              `<span class="wcard-dot${i < filled ? ' is-filled' : ''}"></span>`).join('')}</div>`;
+        } else if (form.template === 'photo' && form.hero_url) {
+          // آبل لا تضع شريطاً إن غابت الصورة — لا بديل ولا نصّ حثّ
+          strip = `<div class="wcard-strip" style="background-image:url('${esc(form.hero_url)}')"></div>`;
         }
 
-        el.innerHTML = `
-          <div class="wcard" style="--wc-bg:${bg};--wc-fg:${fg};--wc-label:${label}">
+        return `
+          <div class="wcard" style="--wc-bg:${m.bg};--wc-fg:${m.fg};--wc-label:${m.labelColor}">
             <div class="wcard-top">
-              <div class="wcard-logo">${form.logo_url
-                ? `<img src="${window.utils.escapeHtml(form.logo_url)}" alt="">`
-                : `<span>${window.utils.escapeHtml(org.trim().charAt(0) || 'م')}</span>`}</div>
-              <div class="wcard-org">
-                <div class="wcard-org-name">${window.utils.escapeHtml(org)}</div>
-                <div class="wcard-org-by">بواسطة مَرمى</div>
-              </div>
-              <div class="wcard-balance">
+              <div class="wcard-logo-rect">${form.logo_url
+                ? `<img src="${esc(form.logo_url)}" alt="">`
+                : ''}</div>
+              <div class="wcard-logotext">${esc(m.org)}</div>
+              <div class="wcard-header">
                 <div class="wcard-mini-label">الأختام</div>
-                <div class="wcard-mini-value">${AR(filled)} / ${AR(thr)}</div>
+                <!-- dir=ltr: «7 / 10» بمسافاتٍ حول الشرطة يقلبها ثنائي الاتجاه
+                     إلى «10 / 7» داخل فقرة عربية. البطاقة تحمل النصّ كما يكتبه
+                     الخادم، فالمعاينة تعرضه كما هو لا كما يقلبه المتصفّح. -->
+                <div class="wcard-mini-value"><bdi dir="ltr">${m.balance} / ${m.threshold}</bdi></div>
               </div>
             </div>
             ${strip}
             <div class="wcard-primary">
-              <div class="wcard-mini-label">المكافأة</div>
-              <div class="wcard-primary-value">${window.utils.escapeHtml(reward)}</div>
+              <div class="wcard-mini-label">${m.reward ? 'مكافأة جاهزة' : 'المكافأة'}</div>
+              <div class="wcard-primary-value">${esc(m.reward ? m.reward.label : m.rewardLabel)}</div>
             </div>
             <div class="wcard-row">
-              <div><div class="wcard-mini-label">العضو</div><div class="wcard-mini-value">محمد العلي</div></div>
-              <div><div class="wcard-mini-label">الباقي</div><div class="wcard-mini-value">${AR(Math.max(0, thr - filled))} حجوزات</div></div>
+              <div><div class="wcard-mini-label">العضو</div>
+                   <div class="wcard-mini-value">${DEMO_MEMBER}</div></div>
+              <div>${m.reward
+                ? `<div class="wcard-mini-label">رمز المكافأة</div>
+                   <div class="wcard-mini-value" dir="ltr">${m.reward.code}</div>`
+                : `<div class="wcard-mini-label">الباقي</div>
+                   <div class="wcard-mini-value">${Math.max(0, m.threshold - m.balance)} حجوزات</div>`}</div>
             </div>
-            <div class="wcard-qr"><i data-lucide="qr-code"></i></div>
-          </div>
+            <div class="wcard-qr"><i data-lucide="qr-code"></i><span dir="ltr">${DEMO_SERIAL}</span></div>
+          </div>`;
+      }
+
+      function appleBackHtml() {
+        const back = [];
+        if (form.redeem_pin_enabled) back.push(['رمز الاستبدال', DEMO_PIN]);
+        back.push(['احجز الآن', `${location.origin}/book?t=…`]);
+        if (String(form.reward_terms || '').trim()) back.push(['شروط البرنامج', form.reward_terms]);
+        back.push(['إلغاء الاشتراك', `${location.origin}/card?c=…#out`]);
+        return backHtml('ظهر البطاقة', back);
+      }
+
+      // ── Google Wallet ─────────────────────────────────────
+      // مرآة classPayload/objectPayload في _shared/google-wallet.ts.
+      // فروقها عن آبل مقصودة لأنها في المولّد نفسه: اسم المُصدِر يظهر، والمكافأة
+      // والباقي سطرٌ واحد، ولا شريط أختام — جوجل لا تستقبل strip.png أصلاً.
+      function googleCardHtml(m) {
+        // سلسلة البديل كما في classPayload: شعار البرنامج ← شعار الملعب ← شعار مَرمى
+        const logo = form.logo_url || (ctx.tenant && ctx.tenant.logo_url) || '/assets/wallet/marma-logo.png';
+
+        return `
+          <div class="wcard wcard--google" style="--wc-bg:${m.bg};--wc-fg:${m.fg};--wc-label:${m.labelColor}">
+            <div class="wcard-top">
+              <div class="wcard-logo"><img src="${esc(logo)}" alt=""></div>
+              <div class="wcard-org">
+                <div class="wcard-org-name">${esc(m.org)} — بواسطة مَرمى</div>
+                <div class="wcard-org-by">${esc(form.name || 'بطاقة الولاء')}</div>
+              </div>
+            </div>
+            <div class="wcard-primary">
+              <div class="wcard-mini-label">الأختام</div>
+              <div class="wcard-primary-value"><bdi dir="ltr">${m.balance} / ${m.threshold}</bdi></div>
+            </div>
+            ${m.reward ? `
+              <div class="wcard-row">
+                <div><div class="wcard-mini-label">مكافأة جاهزة</div>
+                     <div class="wcard-mini-value" dir="ltr">${m.reward.code}</div></div>
+              </div>` : ''}
+            ${form.hero_url
+              ? `<div class="wcard-strip" style="background-image:url('${esc(form.hero_url)}')"></div>`
+              : ''}
+            <div class="wcard-qr"><i data-lucide="qr-code"></i><span dir="ltr">${DEMO_SERIAL}</span></div>
+          </div>`;
+      }
+
+      function googleBackHtml(m) {
+        const remaining = Math.max(0, m.threshold - m.balance);
+        const body2 = m.reward
+          ? `${m.reward.label} — رمز ${m.reward.code}`
+          : `${m.rewardLabel} — باقي ${remaining} حجوزات`;
+
+        const mods = [[m.reward ? 'مكافأة جاهزة' : 'المكافأة', body2]];
+        if (form.redeem_pin_enabled) mods.push(['رمز الاستبدال', DEMO_PIN]);
+        if (String(form.reward_terms || '').trim()) mods.push(['شروط البرنامج', form.reward_terms]);
+        mods.push(['احجز الآن', `${location.origin}/book?t=…`]);
+        mods.push(['إلغاء الاشتراك', `${location.origin}/card?c=…#out`]);
+        return backHtml('تفاصيل البطاقة', mods);
+      }
+
+      function backHtml(title, rows) {
+        return `
+          <div class="wcard-back">
+            <div class="wcard-back-head">${title}</div>
+            ${rows.map(([k, v]) => `
+              <div class="wcard-back-row">
+                <div class="wcard-back-label">${esc(k)}</div>
+                <div class="wcard-back-value">${esc(v)}</div>
+              </div>`).join('')}
+          </div>`;
+      }
+
+      // المعاينة الكاملة: وجه البطاقة وظهرها. تسكن العمود الجانبي على سطح
+      // المكتب وتبويب «المعاينة» على الجوال — والحاوية واحدة في الحالتين.
+      function renderPreview() {
+        const el = body.querySelector('#loy-preview');
+        if (!el) return;
+        const m = previewModel();
+        const google = previewWallet === 'google';
+        el.innerHTML = `
+          ${google ? googleCardHtml(m) : appleCardHtml(m)}
+          ${google ? googleBackHtml(m) : appleBackHtml()}
           ${!form.is_active ? '<div class="loy-preview-off"><i data-lucide="pause"></i> البرنامج متوقّف — لن تُمنح أختام جديدة</div>' : ''}
         `;
+        window.utils.renderIcons(el);
+      }
+
+      // وجه البطاقة وحده فوق أدوات «الهوية» على الجوال — ما يراه من يختار
+      // لوناً وقالباً وشعاراً. لا ظهر ولا مبدّلات: تلك في تبويب المعاينة.
+      function renderMiniCard() {
+        const el = body.querySelector('#loy-preview-mini');
+        if (!el) return;
+        const m = previewModel();
+        el.innerHTML = previewWallet === 'google' ? googleCardHtml(m) : appleCardHtml(m);
         window.utils.renderIcons(el);
       }
 
@@ -562,7 +779,6 @@
             reward_excludes_offers: !!form.reward_excludes_offers,
             reward_terms: String(form.reward_terms || '').trim() || null,
             min_booking_amount: Number(form.min_booking_amount || 0),
-            auto_enroll: !!form.auto_enroll,
             redeem_pin_enabled: !!form.redeem_pin_enabled,
             template: form.template,
             brand_bg: form.brand_bg,

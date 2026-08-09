@@ -68,26 +68,8 @@
   margin-bottom: var(--space-6);
 }
 
-/* bento يبقى شبكة صريحة (تخطيط مقصود) */
-.stats-grid--bento {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-}
-
-@media (max-width: 960px) {
-  .stats-grid--bento {
-    grid-template-columns: 1fr 1fr;
-  }
-  /* في وضع العمودين: الكرت اليتيم (الأخير بترتيب فردي) يمتدّ على العرض الكامل */
-  .stats-grid--bento > :last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-}
 @media (max-width: 640px) {
-  .stats-grid,
-  .stats-grid--bento {
-    grid-template-columns: 1fr;
-  }
+  .stats-grid { flex-direction: column; }
 }
 
 /* ─── بطاقة إحصائيّة ─── */
@@ -223,10 +205,10 @@
 }
 .stat-card--warning .stat-label,
 .stat-card--warning .stat-sub {
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 .stat-card--warning .stat-value {
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 
 /* ─── شريط أعمار المدفوعات (Aging) — في تفاصيل العميل ─── */
@@ -263,6 +245,158 @@
 .aging-seg--fresh  { background: var(--info-tint);    color: var(--info); }
 .aging-seg--warn   { background: var(--warning-tint); color: var(--warning); }
 .aging-seg--danger { background: var(--danger-tint);  color: var(--danger); }
+
+/* ═══ لوحة التحكم ═══════════════════════════════════════════════════
+   الأصل كان تخطيط سطح مكتب يُقرأ بإبهام: ٢٤٩٤px على شاشة ٨٤٤px، ومؤشّر
+   واحد ظاهر في أوّل شاشة. ما يلي يضغط الرأس والمؤشرات وشريط المعلّق. */
+
+/* ترويسة اللوحة — بلا عنوانٍ مكرّر، فالتاريخ وحده يحمل السطر */
+.dash-header {
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.dash-date {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+
+/* ─── شريط الطلبات المعلّقة — صفٌّ واحد قابل للنقر ─── */
+
+.pending-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--warning-tint);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  text-decoration: none;
+  color: var(--warning-ink);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.pending-bar:active {
+  background: color-mix(in srgb, var(--warning-tint) 84%, var(--warning));
+}
+
+.pending-bar-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.pending-bar-text strong { font-weight: var(--weight-bold); }
+
+/* «كل التواريخ» — يفصل عدّاد الشريط عن «معلّق ٣» في بطاقة اليوم */
+.pending-bar-scope {
+  display: block;
+  font-size: var(--text-2xs);
+  opacity: 0.75;
+}
+
+.pending-bar-go {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+
+/* ─── شريط المؤشرات ─── */
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;                       /* الفواصل خطوط لا فجوات — كتلة واحدة */
+  background: var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.kpi-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  min-width: 0;
+}
+
+.kpi-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-value {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* الوحدة (٪ · ر.س) لا تزاحم الرقم */
+.kpi-unit {
+  font-size: 0.55em;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin-inline-start: 1px;
+}
+
+.kpi-sub {
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+  line-height: var(--leading-snug);
+}
+
+/* المبلغ غير المحصَّل — الرقم الذي يستدعي فعلاً، فلا يُكتب بلون الهامش */
+.kpi-flag {
+  color: var(--warning-ink);
+  font-weight: var(--weight-semibold);
+}
+
+.kpi-cell .stat-bar { margin-top: var(--space-2); }
+
+.kpi-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--text-3xs);
+  color: var(--text-secondary);
+}
+.kpi-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.kpi-legend .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* على الشاشات الضيّقة جدّاً ينزل المزيج تحت الرقمين بدل أن يُقصّ */
+@media (max-width: 380px) {
+  .kpi-value { font-size: var(--text-lg); }
+  .kpi-cell  { padding: var(--space-3) var(--space-2); }
+}
 
 /* ─── قائمة inline داخل stat-card (للحجوزات المعلَّقة في dashboard) ─── */
 

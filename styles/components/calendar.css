@@ -175,25 +175,6 @@
   border-width: 5px;
 }
 
-/* ── عرض القائمة (listWeek) ── */
-.fc-theme-standard .fc-list { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
-.fc .fc-list-day-cushion {
-  background: var(--surface-2);
-  color: var(--text-primary);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
-}
-.fc .fc-list-event { cursor: pointer; }
-.fc .fc-list-event:hover td { background: var(--surface-2); }
-.fc .fc-list-event-time { color: var(--text-secondary); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium); }
-.fc .fc-list-event-title { color: var(--text-primary); font-weight: var(--weight-medium); }
-.fc .fc-list-event-graphic .fc-list-event-dot { border-width: 5px; border-radius: var(--radius-full); border-color: var(--ev-accent, var(--accent-500)); }
-/* ملغي في القائمة: عنوان أحمر مشطوب + وقت مشطوب */
-.fc-list-event.status-cancelled .fc-list-event-title { color: var(--danger); text-decoration: line-through; }
-.fc-list-event.status-cancelled .fc-list-event-time { text-decoration: line-through; }
-.fc .fc-list-table td { border-color: var(--border-subtle); padding: var(--space-3); }
-.fc .fc-list-empty { background: var(--surface-1); color: var(--text-tertiary); font-size: var(--text-sm); }
-
 /* ── روابط "المزيد" + الـ popover ── */
 .fc .fc-more-link { font-size: var(--text-xs); color: var(--accent-700); font-weight: var(--weight-semibold); }
 [data-theme="dark"] .fc .fc-more-link { color: var(--accent-500); }

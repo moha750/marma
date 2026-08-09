@@ -1,13 +1,23 @@
 // أدوات مساعدة عامة
 
 // تنسيق التاريخ والوقت بالعربي (صيغة 12 ساعة دائماً)
+// نظام أرقام واحد في كل الواجهة: لاتيني.
+//
+// كان المال والرسوم البيانية تفرض latn والتواريخ لا، فتخرج سلاسل مخلوطة داخل
+// النصّ الواحد: «٨ أغسطس ٢٠٢٦ - 11:05 ص» — لأن toTime12 يبني وقته من قوالب JS
+// (لاتينية دائماً) بينما ar-EG الافتراضية هندية. والاختيار لاتيني لا هندي لأن
+// الأرقام تُصفّ في جداول (tabular-nums) وتُجاور مبالغ وأرقام جوّال.
+const NUM = { numberingSystem: 'latn' };
+
 const dateFormatter = new Intl.DateTimeFormat('ar-EG', {
+  ...NUM,
   year: 'numeric',
   month: 'long',
   day: 'numeric'
 });
 
 const dateShortFormatter = new Intl.DateTimeFormat('ar-EG', {
+  ...NUM,
   year: 'numeric',
   month: 'short',
   day: 'numeric'

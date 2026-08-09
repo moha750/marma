@@ -62,6 +62,25 @@ window.loyaltyApi = (function () {
     return data;
   }
 
+  // ─── الأختام المعلّقة ────────────────────────────────────
+  // اكتمال الحجز يرفع طلباً، ولا يمسّ الرصيد حتى يُحسم من هنا.
+
+  async function pendingStamps(limit) {
+    const { data, error } = await sb().rpc('loyalty_pending_stamps_list', {
+      p_limit: limit || 100
+    });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function decideStamp(id, approve) {
+    const { data, error } = await sb().rpc('loyalty_decide_stamp', {
+      p_id: id, p_approve: !!approve
+    });
+    if (error) throw error;
+    return data;
+  }
+
   // ─── القسائم ─────────────────────────────────────────────
 
   // يقبل حمولة QR كاملة (MRM1:serial:sig) أو الرقم التسلسلي أو بادئته
@@ -128,6 +147,7 @@ window.loyaltyApi = (function () {
   return {
     getProgram, saveProgram,
     listCards, cardDetail, enroll, adjust,
+    pendingStamps, decideStamp,
     scanLookup, applyReward, redeemReward, releaseReward,
     uploadLoyaltyAsset: uploadAsset
   };

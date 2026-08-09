@@ -34,18 +34,15 @@
 .loy-stat-value { font-size: var(--text-xl); font-weight: 600; line-height: 1.2; }
 .loy-stat-label { font-size: var(--text-xs); color: var(--text-tertiary); }
 
-/* ── التخطيط: نموذج + معاينة لاصقة ───────────────────────── */
+/* ── التخطيط: نموذج + معاينة ──────────────────────────────
+   المعاينة لا تلاحق التمرير: تبقى في موضعها من الصفحة وتنزلق مع كل شيء.
+   كانت لاصقة فتنزل على المحتوى وتحجب الخيارات تحتها. */
 .loy-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
   gap: var(--space-4);
   align-items: start;
 }
-@media (max-width: 60rem) {
-  .loy-grid { grid-template-columns: minmax(0, 1fr); }
-  .loy-side { order: -1; }   /* المعاينة أولاً على الجوال */
-}
-.loy-side { position: sticky; inset-block-start: var(--space-4); }
 .loy-preview-head {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
@@ -68,13 +65,41 @@
 }
 .loy-preview-off i { inline-size: 1rem; block-size: 1rem; }
 
+/* ── الجوال: عمودٌ واحد، والمعاينة في تبويبها ──────────────
+   لا .loy-side هنا — program.js لا يرسمها دون هذه النقطة أصلاً.
+   (بعد القواعد الأساسية عمداً: نقطة الانكسار لا تتغلّب على ترتيب الملف
+   عند تساوي الأولوية — وضعُها قبلها يجعلها بلا أثر.) */
+@media (max-width: 60rem) {
+  .loy-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+
+  /* سطرا نصٍّ يكفيان الإحصاءة، دون أن تفرض الأيقونة ارتفاعاً أكبر منهما */
+  .loy-stat { padding: var(--space-3); gap: var(--space-2); }
+  .loy-stat-icon { inline-size: 2rem; block-size: 2rem; }
+  .loy-stat-icon i { inline-size: 1rem; block-size: 1rem; }
+}
+
+/* البطاقة المرافقة فوق أدوات «الهوية» على الجوال. رفيقةٌ لا بطلة: تضيق
+   إيقاعاتها ويضمر رمزها — وهو أيقونةٌ نائبة لا رمزاً يُمسح — لتبقى الأدوات
+   التي تصفها في الشاشة نفسها. أما بطاقة تبويب المعاينة فبحجمها كاملاً. */
+.loy-preview-mini { margin-block-end: var(--space-4); }
+.loy-preview-mini .wcard { --wc-pad: var(--space-3); }
+.loy-preview-mini .wcard-primary { margin-block-start: var(--space-3); }
+.loy-preview-mini .wcard-row { margin-block-start: var(--space-2); }
+.loy-preview-mini .wcard-qr { margin-block-start: var(--space-3); padding: var(--space-1); }
+.loy-preview-mini .wcard-qr i { inline-size: 1.75rem; block-size: 1.75rem; }
+
 /* ── التبويبات ───────────────────────────────────────────── */
+/* شريطٌ لا يلتف: تبويبٌ ينزل سطراً ثانياً يبدو تبويباً معطّلاً — والتمرير
+   الأفقي شبكة أمان لو كبّر المستخدم الخطّ أو ضاقت الشاشة. */
 .loy-tabs {
   display: flex;
   gap: var(--space-1);
   margin-block-end: var(--space-3);
   border-block-end: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.loy-tabs::-webkit-scrollbar { display: none; }
 .loy-tab {
   appearance: none;
   background: none;
@@ -86,6 +111,8 @@
   color: var(--text-secondary);
   cursor: pointer;
   margin-block-end: -1px;
+  flex: none;
+  white-space: nowrap;
 }
 .loy-tab:hover { color: var(--text-primary); }
 .loy-tab.is-active { color: var(--accent-600); border-block-end-color: var(--accent-500); font-weight: 600; }
@@ -99,7 +126,11 @@
   margin-block-end: var(--space-4);
   border-block-end: 1px solid var(--border-subtle);
 }
-.loy-checks { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+/* الحشوة تملك المسافة السفلية — فلا يضيف آخر حقلٍ هامشه فوقها. */
+.loy-pane-body > :last-child { margin-block-end: 0; }
+
+/* الفاصل العلوي يأتي من .form-row فوقه — فلا هامش هنا وإلا تجمّع الاثنان. */
+.loy-checks { display: grid; gap: var(--space-2); margin-block: 0 var(--space-4); }
 .loy-checks .check { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); cursor: pointer; }
 
 /* ── القوالب ─────────────────────────────────────────────── */
@@ -173,11 +204,14 @@
 .loy-asset-empty--wide { inline-size: 12rem; block-size: 3.9rem; }
 
 /* ── بطاقة المحفظة (المعاينة) ────────────────────────────── */
+/* --wc-pad: الحشوة مسمّاة لأن الشريط ينزف إلى الحافّتين بهامشٍ سالب يساويها
+   — لو ضاقت إحداهما دون الأخرى انكسر النزيف. */
 .wcard {
+  --wc-pad: var(--space-4);
   background: var(--wc-bg);
   color: var(--wc-fg);
   border-radius: 1rem;
-  padding: var(--space-4);
+  padding: var(--wc-pad);
   box-shadow: 0 8px 24px rgb(0 0 0 / .18);
   position: relative;
   overflow: hidden;
@@ -199,7 +233,22 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wcard-org-by { font-size: var(--text-3xs); color: var(--wc-label); }
-.wcard-balance { text-align: end; flex: none; }
+.wcard-header { text-align: end; flex: none; }
+
+/* شعار آبل مستطيل لا دائري: logo.png تُرسم بنسبة ١٦٠×٥٠ إلى يسار logoText.
+   وحين لا يرفع المالك شعاراً يولّد المولّد مستطيلاً بلون العلامة — أي فراغاً
+   على البطاقة، لا حرفاً أوّلَ. المعاينة تُظهر الفراغ نفسه عمداً. */
+.wcard-logo-rect {
+  inline-size: 4.6rem; block-size: 1.44rem;   /* ١٦٠×٥٠ */
+  flex: none; overflow: hidden;
+  border-radius: 2px;
+}
+.wcard-logo-rect img { inline-size: 100%; block-size: 100%; object-fit: contain; object-position: right; }
+.wcard-logotext {
+  flex: 1; min-inline-size: 0;
+  font-weight: 600; font-size: var(--text-sm);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .wcard-mini-label {
   font-size: var(--text-3xs);
   color: var(--wc-label);
@@ -209,7 +258,7 @@
 
 .wcard-strip {
   block-size: 4.5rem;
-  margin: var(--space-3) calc(var(--space-4) * -1) 0;
+  margin: var(--space-3) calc(var(--wc-pad) * -1) 0;
   background-size: cover;
   background-position: center;
 }
@@ -246,6 +295,100 @@
   padding: var(--space-2);
 }
 .wcard-qr i { inline-size: 3rem; block-size: 3rem; }
+/* altText تحت الرمز — تظهر على البطاقتين الحقيقيتين */
+.wcard-qr span {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xs);
+  letter-spacing: .08em;
+  margin-block-start: 2px;
+}
+
+/* ظهر البطاقة: آبل تعرض backFields قائمةَ تسمية/قيمة، وجوجل تعرض
+   textModulesData و linksModuleData بالشكل نفسه — فقائمة واحدة تكفيهما. */
+.wcard-back {
+  margin-block-start: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.wcard-back-head {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  font-size: var(--text-3xs);
+  color: var(--text-tertiary);
+}
+.wcard-back-row {
+  padding: var(--space-2) var(--space-3);
+  border-block-start: 1px solid var(--border-subtle);
+}
+.wcard-back-label { font-size: var(--text-3xs); color: var(--text-tertiary); }
+.wcard-back-value {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+/* ── مبدّلا المعاينة ─────────────────────────────────────── */
+.loy-seg {
+  display: flex;
+  gap: var(--space-1);
+  margin-block-end: var(--space-2);
+  padding: 3px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+.loy-seg-btn {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-2);
+  border-radius: calc(var(--radius-md) - 3px);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.loy-seg-btn.is-active {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}
+.loy-seg--quiet .loy-seg-btn { font-size: var(--text-3xs); }
+
+/* ── الأختام المعلّقة ─────────────────────────────────────
+   صفٌّ واحد لكل طلب: مَن، وأيّ حجز، وأين رصيده الآن — ثم قرار. الرصيد ظاهرٌ
+   عمداً: الموافقة على ختمٍ يبلغ العتبة تُصدر مكافأة، والمالك يستحقّ أن يعرف
+   أنه يوقّع على مكافأة لا على ختم. */
+.stamp-reqs { display: grid; gap: var(--space-2); }
+.stamp-req {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+.stamp-req-main { flex: 1; min-inline-size: 12rem; }
+.stamp-req-name { font-weight: 600; }
+.stamp-req-meta {
+  display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3);
+  margin-block-start: .15rem;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.stamp-req-meta span { display: inline-flex; align-items: center; gap: .25rem; }
+.stamp-req-meta i { inline-size: .85rem; block-size: .85rem; }
+.stamp-req-count { text-align: center; flex: none; font-variant-numeric: tabular-nums; }
+.stamp-req-count bdi { font-size: var(--text-lg); font-weight: 600; }
+.stamp-req-count small { display: block; font-size: var(--text-3xs); color: var(--text-tertiary); }
+.stamp-req-actions { display: flex; gap: var(--space-2); flex: none; }
+
+@media (max-width: 40rem) {
+  .stamp-req-actions { inline-size: 100%; }
+  .stamp-req-actions .btn { flex: 1; justify-content: center; }
+}
 
 /* ── صفحة البطاقات ───────────────────────────────────────── */
 .loy-toolbar { padding: var(--space-3); margin-block-end: var(--space-3); }
@@ -370,7 +513,7 @@
 }
 @media (max-width: 52rem) { .scan-grid { grid-template-columns: minmax(0, 1fr); } }
 
-.scan-cam-card { padding: var(--space-3); }
+/* حشوة بطاقات هذه الصفحة من .card-body كبقيّة اللوحة — لا قيمة خاصّة بها. */
 .scan-viewport {
   position: relative;
   aspect-ratio: 4 / 3;
@@ -405,7 +548,6 @@
 .scan-manual { display: flex; gap: var(--space-2); }
 .scan-manual .form-control { flex: 1; min-inline-size: 0; }
 
-.scan-card { padding: var(--space-4); }
 .scan-card-head {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding-block-end: var(--space-3);
@@ -416,6 +558,30 @@
 .scan-balance { text-align: center; flex: none; }
 .scan-balance-value { font-size: var(--text-2xl); font-weight: 600; line-height: 1; color: var(--accent-600); }
 .scan-balance-cap { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+/* الأختام المعلّقة داخل الماسح — تعلو المكافآت لأنها الأسبق زمناً: الختم
+   يُحسم أولاً، وقد يُصدر هو نفسه المكافأة التي تُصرف بعده في النقرة التالية. */
+.scan-pending {
+  display: grid; gap: var(--space-2);
+  margin-block: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--warning);
+  border-radius: var(--radius-md);
+}
+.scan-pending-head {
+  display: flex; align-items: center; gap: var(--space-2);
+  color: var(--warning);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.scan-pending-head i { inline-size: 1rem; block-size: 1rem; }
+.scan-pending-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); flex-wrap: wrap;
+}
+.scan-pending-field { font-size: var(--text-sm); font-weight: 600; }
+.scan-pending-date { font-size: var(--text-xs); color: var(--text-tertiary); }
+.scan-pending-actions { display: flex; gap: var(--space-2); flex: none; }
 
 .scan-rewards { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
 .scan-reward {

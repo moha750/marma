@@ -33,16 +33,14 @@
       container.innerHTML = `
         <div class="page-header">
           <div>
-            <h2>بطاقات الولاء</h2>
+            <h2>برنامج الولاء</h2>
             <div class="page-subtitle">كل عميل انضم للبرنامج، ورصيده وقسائمه</div>
           </div>
           <div class="actions">
-            <a class="btn btn--ghost" href="${window.utils.path('/loyalty')}">
-              <i data-lucide="settings-2"></i> إعدادات البرنامج
-            </a>
             <button class="btn btn--primary" id="add-card"><i data-lucide="user-plus"></i> إصدار بطاقة</button>
           </div>
         </div>
+        ${window.layout.pageTabs(window.layout.LOYALTY_TABS, '/loyalty/cards')}
         <div class="card loy-toolbar">
           <div class="form-group mb-0">
             <input class="form-control" id="card-search" placeholder="ابحث باسم العميل أو جوّاله أو رمز البطاقة">

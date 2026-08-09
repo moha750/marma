@@ -5,11 +5,12 @@
   const TEMPLATE = `
     <div class="page-header">
       <div>
-        <h2>أيام وفترات العمل</h2>
+        <h2>ملاعبي</h2>
         <div class="page-subtitle">حدّد أوقات كل أرضية ومدة الموعد وسعره</div>
       </div>
       <div class="actions" id="sch-actions"></div>
     </div>
+    ${window.layout.pageTabs(window.layout.PITCH_TABS, '/schedule')}
     <div id="schedule-container">
       <div class="loader-center"><div class="loader loader--lg"></div></div>
     </div>
@@ -201,12 +202,19 @@
 
       function render() {
         root.innerHTML = `
-          <div class="chip-rail chip-rail--seg mb-md" id="sch-fields">
+          <!-- مُنتقي الأرضية: تسمية + رقائق محدّدة، لا شريطاً مقسّماً.
+               الشريط المقسّم صار أعلى الصفحة للتنقّل بين تبويبَي «ملاعبي»،
+               فوجود شريطين متطابقي الشكل فوق بعضهما — أحدهما ينقلك والآخر
+               يختار — التباسٌ لا يحلّه إلا اختلاف الشكل. -->
+          <div class="picker-rail mb-md" id="sch-fields" role="group" aria-label="اختر الأرضية">
+            <span class="picker-rail-label">الأرضية</span>
             ${fields.map((f) => `
-              <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}" data-field-id="${f.id}">
-                <i data-lucide="goal" style="width:12px;height:12px"></i>
+              <button class="chip ${f.id === selectedFieldId ? 'is-active' : ''}"
+                      data-field-id="${f.id}"
+                      aria-pressed="${f.id === selectedFieldId ? 'true' : 'false'}">
+                <i data-lucide="goal"></i>
                 <span>${esc(f.name)}</span>
-                ${!f.is_active ? '<span class="text-tertiary text-xs">معطّلة</span>' : ''}
+                ${!f.is_active ? '<span class="picker-rail-off">معطّلة</span>' : ''}
               </button>`).join('')}
           </div>
           <div class="sch-summary" id="sch-summary"></div>
