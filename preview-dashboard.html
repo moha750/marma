@@ -193,6 +193,20 @@ window.loyaltyApi = {
     ];
   },
   async cardDetail() { return { rewards: [] }; },
+  async pendingStamps() {
+    const now = Date.now();
+    return [
+      { id: 'p1', card_id: 'c1', serial: 'MRM12345', customer_name: 'عبدالله الشمري',
+        customer_phone: '0555000111', delta: 1, balance: 9, threshold: 10,
+        booking_id: 'b1', booking_start: new Date(now - 864e5).toISOString(),
+        field_name: 'الملعب الرئيسي', created_at: new Date(now - 36e5).toISOString() },
+      { id: 'p2', card_id: 'c2', serial: 'MRM67890', customer_name: 'فهد المطيري',
+        customer_phone: '0555000222', delta: 1, balance: 3, threshold: 10,
+        booking_id: 'b2', booking_start: new Date(now - 2 * 864e5).toISOString(),
+        field_name: 'ملعب ٢', created_at: new Date(now - 72e5).toISOString() }
+    ];
+  },
+  async decideStamp() { return { ok: true }; },
   async enroll() { return {}; },
   async adjust() { return true; },
   async redeemReward() { return true; },
@@ -229,7 +243,8 @@ window.notificationBell = { mount() {}, bindPendingBadges() {} };
   '/src/features/fields/pages/list.js',
   '/src/features/schedule/pages/editor.js',
   '/src/features/loyalty/pages/program.js',
-  '/src/features/loyalty/pages/cards.js'
+  '/src/features/loyalty/pages/cards.js',
+  '/src/features/loyalty/pages/stamps.js'
 ].forEach(__pv);
 </script>
 <script>
@@ -240,7 +255,8 @@ const ROUTES = {
   '/fields':        { page: 'fields',         key: 'fields',    title: 'ملاعبي' },
   '/schedule':      { page: 'schedule',       key: 'fields',    title: 'ملاعبي' },
   '/loyalty':       { page: 'loyalty',        key: 'loyalty',   title: 'برنامج الولاء' },
-  '/loyalty/cards': { page: 'loyalty-cards',  key: 'loyalty',   title: 'برنامج الولاء' }
+  '/loyalty/cards': { page: 'loyalty-cards',  key: 'loyalty',   title: 'برنامج الولاء' },
+  '/loyalty/stamps':{ page: 'loyalty-stamps', key: 'loyalty',   title: 'الأختام المعلّقة' }
 };
 
 (async function () {

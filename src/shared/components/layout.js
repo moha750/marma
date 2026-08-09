@@ -28,7 +28,8 @@ window.layout = (function () {
 
   const LOYALTY_TABS = [
     { label: 'البرنامج', path: '/loyalty' },
-    { label: 'البطاقات', path: '/loyalty/cards' }
+    { label: 'البطاقات', path: '/loyalty/cards' },
+    { label: 'الأختام المعلّقة', path: '/loyalty/stamps' }
   ];
 
   // التنقل مع التجميع — يُستخدمها sidebar و command-palette

@@ -122,6 +122,7 @@
         </h2>
         <div class="bp-landing-fields" id="bp-landing-fields"></div>
       </section>
+      ${renderCardBanner()}
       ${renderManageBanner()}
       ${renderFooter()}
     `;
@@ -225,9 +226,31 @@
     `;
   }
 
+  // بابُ البطاقة مستقلٌّ عن بانر الحجوزات عمداً. ذاك يخفيه المالك ليمنع العميل
+  // من إلغاء حجوزاته — سلطةٌ على تقويمه؛ وهذا توزيعٌ مجاني يريده. غرضان
+  // متعاكسان لا يجوز أن يحكمهما مفتاح واحد. فشرطه واحد: أن يكون له برنامج.
+  function renderCardBanner() {
+    if (!state.tenantInfo.loyalty_active) return '';
+    return `
+      <section class="bp-manage-banner bp-card-banner">
+        <span class="bp-manage-banner-icon"><i data-lucide="wallet"></i></span>
+        <div class="bp-manage-banner-body">
+          <h3 class="bp-manage-banner-title">بطاقة الولاء</h3>
+          <p class="bp-manage-banner-text">أصدر بطاقتك برقم جوّالك وأضِفها لمحفظة جوالك — واجمع ختماً مع كل حجز.</p>
+        </div>
+        <button type="button" class="btn btn--primary bp-manage-banner-btn" id="bp-card-btn">
+          <i data-lucide="wallet"></i>
+          <span>بطاقتي</span>
+        </button>
+      </section>
+    `;
+  }
+
   function bindManageBtn() {
     const btn = document.getElementById('bp-manage-btn');
     if (btn) btn.addEventListener('click', () => renderManageEntryView());
+    const card = document.getElementById('bp-card-btn');
+    if (card) card.addEventListener('click', () => renderManageEntryView());
   }
 
   function mountTenantHero(host, { hasCover }) {
@@ -1139,7 +1162,7 @@
           totalPrice: data.total_price,
           fieldName: state.selectedField.name,
           start, end: new Date(data.end_time || state.selectedSlot.endIso),
-          customerName
+          customerName, customerPhone
         });
       } catch (err) {
         window.utils.toast(window.utils.formatError(err), 'error');
@@ -1153,7 +1176,7 @@
   // SUCCESS VIEW
   // ═══════════════════════════════════════════════════════════════
 
-  function renderSuccessView({ bookingId, totalPrice, fieldName, start, end, customerName }) {
+  function renderSuccessView({ bookingId, totalPrice, fieldName, start, end, customerName, customerPhone }) {
     const shortId = String(bookingId).slice(0, 8);
     const shareText = `حجزت في ${state.tenantInfo.name} - ${fieldName}\nالتاريخ: ${window.utils.formatDate(start)}\nالوقت: ${window.utils.formatTime(start)} → ${window.utils.formatTime(end)}`;
     const shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
@@ -1204,6 +1227,11 @@
         </div>
 
         <div class="bp-success-actions">
+          ${state.tenantInfo.loyalty_active ? `
+            <button type="button" class="btn btn--secondary" id="bp-card-success">
+              <i data-lucide="wallet"></i>
+              بطاقتي
+            </button>` : ''}
           <button type="button" class="btn btn--secondary" id="bp-ics-btn">
             <i data-lucide="calendar-plus"></i>
             أضف للتقويم
@@ -1220,6 +1248,11 @@
       </div>
     `;
     window.utils.renderIcons(root);
+
+    // البطاقة لا توجد بعد وقت الحجز — تُصدر بعد انتهائه وسداده. فالزرّ يفتح
+    // البابَ الدائم بالرقم الذي كتبه للتوّ، لا رابطَ بطاقةٍ لم تُخلق.
+    const cardBtn = document.getElementById('bp-card-success');
+    if (cardBtn) cardBtn.addEventListener('click', () => renderManageEntryView(customerPhone));
 
     document.getElementById('bp-copy-id').addEventListener('click', async () => {
       try {
@@ -1267,12 +1300,24 @@
   // MANAGE VIEWS
   // ═══════════════════════════════════════════════════════════════
 
-  function renderManageEntryView() {
+  // مفتاح المالك يحكم قسم الحجوزات نفسه لا بانره فقط. من أطفأه أراد منع
+  // العميل من إلغاء حجوزاته؛ ولو حكم البانرَ وحده لصار بابُ البطاقة طريقاً
+  // خلفياً إلى زرّ الإلغاء ذاته — إذ يُفضي الاثنان إلى الشاشة نفسها.
+  function bookingsAllowed() {
+    return state.tenantInfo.show_manage_banner !== false;
+  }
+
+  function renderManageEntryView(prefillPhone) {
+    // بابٌ واحد لشيئين: البطاقة دائمة والحجوزات عابرة — والاسم يذكر الدائم
+    // أولاً. ولولا ذلك لاختبأت البطاقة خلف بابٍ فارغٍ أغلبَ أيام السنة:
+    // list_customer_bookings لا تُرجع إلا الحجوزات القادمة.
+    const loyal = !!state.tenantInfo.loyalty_active;
+    const withBookings = bookingsAllowed();
     root.innerHTML = `
       <header class="bp-hero">
         <span class="bp-hero-tag">
           <span class="bp-hero-tag-dot"></span>
-          إدارة حجوزاتي
+          ${loyal && withBookings ? 'بطاقتي وحجوزاتي' : (loyal ? 'بطاقتي' : 'إدارة حجوزاتي')}
         </span>
         <h1 class="bp-hero-title">${window.utils.escapeHtml(state.tenantInfo.name)}</h1>
       </header>
@@ -1280,11 +1325,14 @@
       <section class="bp-manage-entry">
         <div class="bp-manage-entry-card">
           <h2>أدخل رقم جوالك</h2>
-          <p>سنعرض حجوزاتك القادمة في هذا الملعب.</p>
-          <input type="tel" class="form-control" id="bp-manage-phone" placeholder="05XXXXXXXX" dir="ltr" style="text-align:start" autocomplete="tel">
+          <p>${loyal && withBookings
+            ? 'نعرض لك بطاقة ولائك وحجوزاتك القادمة في هذا الملعب.'
+            : (loyal ? 'نعرض لك بطاقة ولائك في هذا الملعب.' : 'سنعرض حجوزاتك القادمة في هذا الملعب.')}</p>
+          <input type="tel" class="form-control" id="bp-manage-phone" placeholder="05XXXXXXXX" dir="ltr" style="text-align:start" autocomplete="tel"
+            value="${window.utils.escapeHtml(prefillPhone || '')}">
           <button type="button" class="btn btn--primary btn--lg" id="bp-manage-lookup">
             <i data-lucide="search"></i>
-            <span>عرض حجوزاتي</span>
+            <span>${loyal && withBookings ? 'عرض بطاقتي وحجوزاتي' : (loyal ? 'عرض بطاقتي' : 'عرض حجوزاتي')}</span>
           </button>
           <button type="button" class="btn btn--ghost" id="bp-manage-back">
             <i data-lucide="arrow-right"></i>
@@ -1312,11 +1360,21 @@
       lookupBtn.disabled = true;
       lookupBtn.dataset.loading = 'true';
       try {
-        const { data, error } = await window.sb.rpc('list_customer_bookings', {
-          p_tenant_id: tenantId, p_phone: phone
-        });
-        if (error) throw error;
-        renderManageListView(phone, data);
+        // البطاقة لا تُفشل الحجوزات: لو تعثّرت دالّتها (ملعبٌ لم تُطبَّق عليه
+        // المهاجرة بعد مثلاً) تُعرض القائمة كما كانت قبل هذه الميزة.
+        // Promise.resolve حول نداء البطاقة: sb.rpc() يُرجع PostgrestFilterBuilder
+        // — كائنٌ ثنائي القابلية (then) بلا catch، فاستدعاؤها عليه مباشرةً يسقط.
+        const [bookingsRes, cardRes] = await Promise.all([
+          bookingsAllowed()
+            ? window.sb.rpc('list_customer_bookings', { p_tenant_id: tenantId, p_phone: phone })
+            : Promise.resolve({ data: null }),
+          state.tenantInfo.loyalty_active
+            ? Promise.resolve(window.sb.rpc('loyalty_card_by_phone', { p_tenant_id: tenantId, p_phone: phone }))
+                .catch(() => ({ data: null }))
+            : Promise.resolve({ data: null })
+        ]);
+        if (bookingsRes.error) throw bookingsRes.error;
+        renderManageListView(phone, bookingsRes.data, cardRes && cardRes.data);
       } catch (err) {
         window.utils.toast(window.utils.formatError(err), 'error');
         lookupBtn.disabled = false;
@@ -1329,7 +1387,101 @@
     });
   }
 
-  function renderManageListView(phone, data) {
+  // شريط البطاقة: يجيب «هل لي بطاقة وأين وصلت؟» في لمحة، وبابه إلى ‎/card
+  // حيث يعيش الكرت كاملاً بزرَّي المحفظتين واكتشاف النظام — جهةٌ واحدة تملكه
+  // فلا تفترق نسختان. ولا يُطبع هنا رمز مكافأةٍ ولا رمز استبدال.
+  function renderLoyaltyStrip(card) {
+    if (!card || !card.serial) return '';
+    const p = card.program || {};
+    const esc = window.utils.escapeHtml;
+    const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+    const thr = Number(card.threshold) || 0;
+    const bal = Math.max(0, Number(card.balance) || 0);
+    const ready = Number(card.rewards_available) || 0;
+    const pct = thr > 0 ? Math.min(100, Math.round((bal / thr) * 100)) : 0;
+
+    return `
+      <section class="bp-loyalty" style="--wc-bg:${esc(p.brand_bg || '#0F3D2E')};--wc-fg:${esc(p.brand_fg || '#FFFFFF')};--wc-label:${esc(p.brand_label || '#FFFFFF')}">
+        <div class="bp-loyalty-head">
+          ${p.logo_url ? `<img class="bp-loyalty-logo" src="${esc(p.logo_url)}" alt="">` : ''}
+          <div class="bp-loyalty-title">
+            <strong>${esc(p.name || 'بطاقة الولاء')}</strong>
+            <span>${esc(p.reward || '')}</span>
+          </div>
+          <div class="bp-loyalty-count"><bdi dir="ltr">${AR(bal)} / ${AR(thr)}</bdi></div>
+        </div>
+        <div class="bp-loyalty-bar"><span style="inline-size:${pct}%"></span></div>
+        ${ready > 0
+          ? `<p class="bp-loyalty-ready"><i data-lucide="gift"></i> لديك ${AR(ready)} مكافأة جاهزة — اعرضها عند الكاونتر</p>`
+          : `<p class="bp-loyalty-left">باقٍ ${AR(Math.max(0, thr - bal))} حجوزات على مكافأتك</p>`}
+        <a class="btn btn--primary btn--lg bp-loyalty-btn" href="${esc(window.utils.path('/card'))}?c=${encodeURIComponent(card.serial)}">
+          <i data-lucide="wallet"></i>
+          <span>افتح بطاقتي وأضِفها للمحفظة</span>
+        </a>
+      </section>`;
+  }
+
+  // إصدار البطاقة بيد العميل. الخادم هو من يقرّر أيحتاج اسماً أم لا: من حجز
+  // عندنا من قبل يكفيه رقمه، ومن لم يحجز يُسجَّل عميلاً باسمه ثم تُصدَر بطاقته.
+  // فلا تسأل الواجهة عن اسمٍ قد لا يُحتاج، ولا تُخمّن من هو العميل.
+  async function selfIssue(phone, bookingsData, name) {
+    const btn = root.querySelector('[data-issue]');
+    if (btn) { btn.disabled = true; btn.dataset.loading = 'true'; }
+    try {
+      const { data, error } = await window.sb.rpc('loyalty_self_issue', {
+        p_tenant_id: tenantId, p_phone: phone, p_name: name || null
+      });
+      if (error) throw error;
+
+      if (data && data.need_name) {
+        const entered = await askCustomerName();
+        if (!entered) {
+          if (btn) { btn.disabled = false; delete btn.dataset.loading; }
+          return;
+        }
+        return selfIssue(phone, bookingsData, entered);
+      }
+
+      window.utils.toast('صدرت بطاقتك — أضِفها لمحفظتك', 'success');
+      renderManageListView(phone, bookingsData, data);
+    } catch (err) {
+      window.utils.toast(window.utils.formatError(err), 'error');
+      if (btn) { btn.disabled = false; delete btn.dataset.loading; }
+    }
+  }
+
+  function askCustomerName() {
+    return new Promise((resolve) => {
+      const ctrl = window.utils.openModal({
+        title: 'اسمك',
+        body: `
+          <p class="text-muted text-sm" style="margin-block-start:0">
+            أول مرة معنا — اكتب اسمك لتُصدَر بطاقتك باسمك.
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="bp-issue-name">الاسم <span class="required">*</span></label>
+            <input class="form-control" id="bp-issue-name" maxlength="60" autocomplete="name">
+          </div>`,
+        footer: `
+          <button type="button" class="btn btn--ghost" data-act="cancel">إلغاء</button>
+          <button type="button" class="btn btn--primary" data-act="ok">أصدر بطاقتي</button>`
+      });
+      const input = ctrl.modal.querySelector('#bp-issue-name');
+      const done = (v) => { ctrl.close(); resolve(v); };
+      ctrl.modal.querySelector('[data-act="cancel"]').addEventListener('click', () => done(null));
+      ctrl.modal.querySelector('[data-act="ok"]').addEventListener('click', () => {
+        const v = input.value.trim();
+        if (!v) { input.focus(); return; }
+        done(v);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); ctrl.modal.querySelector('[data-act="ok"]').click(); }
+      });
+      setTimeout(() => input.focus(), 50);
+    });
+  }
+
+  function renderManageListView(phone, data, card) {
     const bookings = (data && data.bookings) || [];
 
     const statusLabels = {
@@ -1378,20 +1530,39 @@
       <div class="bp-empty">
         <div class="bp-empty-icon"><i data-lucide="calendar-x"></i></div>
         <h3>لا توجد حجوزات قادمة</h3>
-        <p>لم نجد حجوزات لهذا الرقم في هذا الملعب.</p>
+        <p>${card ? 'احجز موعدك التالي وازدد ختماً على بطاقتك.' : 'لم نجد حجوزات لهذا الرقم في هذا الملعب.'}</p>
       </div>
     `;
+
+    // البطاقة أولاً: هي الدائمة، والقائمة تحتها قد تفرغ في أغلب الأيام —
+    // فراغُها بعد اليوم لا يترك الشاشة خاوية.
+    const stripHtml = renderLoyaltyStrip(card);
+
+    // لا بطاقة بعد: البطاقة لا تُصدَر إلا بيده — فالسطر دعوةٌ لا اعتذار.
+    // ولا يُطلب الاسم هنا: الخادم يطلبه إن لم يكن الرقم لعميلٍ مسجَّل.
+    const noCardHtml = (!stripHtml && state.tenantInfo.loyalty_active) ? `
+      <section class="bp-loyalty bp-loyalty--empty">
+        <p><i data-lucide="wallet"></i> لا بطاقة ولاء لهذا الرقم بعد.</p>
+        <button type="button" class="btn btn--primary bp-loyalty-issue" data-issue="${window.utils.escapeHtml(phone)}">
+          <i data-lucide="plus"></i>
+          <span>أصدر بطاقتي الآن</span>
+        </button>
+      </section>` : '';
 
     root.innerHTML = `
       <header class="bp-hero">
         <span class="bp-hero-tag">
           <span class="bp-hero-tag-dot"></span>
-          حجوزاتي · ${window.utils.escapeHtml(phone)}
+          ${state.tenantInfo.loyalty_active
+            ? (bookingsAllowed() ? 'بطاقتي وحجوزاتي' : 'بطاقتي')
+            : 'حجوزاتي'} · ${window.utils.escapeHtml(phone)}
         </span>
         <h1 class="bp-hero-title">${window.utils.escapeHtml((data && data.tenant_name) || state.tenantInfo.name)}</h1>
       </header>
 
-      ${listHtml}
+      ${stripHtml}
+      ${noCardHtml}
+      ${bookingsAllowed() ? listHtml : ''}
 
       <div style="text-align:center;margin-top:var(--space-5);display:flex;justify-content:center;gap:var(--space-2);flex-wrap:wrap">
         <button type="button" class="btn btn--ghost" id="bp-manage-other">
@@ -1406,6 +1577,9 @@
       ${renderFooter()}
     `;
     window.utils.renderIcons(root);
+
+    const issueBtn = root.querySelector('[data-issue]');
+    if (issueBtn) issueBtn.addEventListener('click', () => selfIssue(phone, data));
 
     document.getElementById('bp-manage-other').addEventListener('click', () => renderManageEntryView());
     document.getElementById('bp-manage-tobook').addEventListener('click', () => dispatchRoute());
@@ -1434,7 +1608,8 @@
             p_tenant_id: tenantId, p_phone: phone
           });
           if (refErr) throw refErr;
-          renderManageListView(phone, refreshed);
+          // مرّر البطاقة معها وإلا اختفت من الشاشة بعد أول إلغاء
+          renderManageListView(phone, refreshed, card);
         } catch (err) {
           const msg = err && err.message ? err.message : String(err);
           if (msg.includes('PHONE_MISMATCH')) {

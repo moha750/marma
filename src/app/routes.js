@@ -31,6 +31,9 @@ window.appRoutes = [
   { name: 'offers',           path: '/offers',           title: 'العروض',            ownerOnly: true },
   { name: 'loyalty',          path: '/loyalty',          title: 'برنامج الولاء',     ownerOnly: true },
   { name: 'loyalty-cards',    path: '/loyalty/cards',    title: 'برنامج الولاء',     ownerOnly: true, activeNav: 'loyalty' },
+  // تبويبٌ ثالث داخل وجهة الولاء، فيرث ownerOnly منها. والموظف يوافق من
+  // الماسح — هو سطحه عند الكاونتر، والعميل أمامه.
+  { name: 'loyalty-stamps',   path: '/loyalty/stamps',   title: 'برنامج الولاء',     ownerOnly: true, activeNav: 'loyalty' },
   // الماسح متاح للموظفين عمداً — هم من يصرفون المكافآت عند الكاونتر
   { name: 'loyalty-scan',     path: '/loyalty/scan',     title: 'مسح البطاقة',       activeNav: 'loyalty-scan' },
   { name: 'reports',          path: '/reports',          title: 'التقارير',          ownerOnly: true },
