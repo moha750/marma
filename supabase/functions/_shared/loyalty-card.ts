@@ -39,12 +39,31 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * الشكل الصارم قبل أي استعلام (§11.3): ٢٤ خانة سداسية عشرية ثم توقيع مطابق.
- * فحص الشكل أولاً يقطع الفحص العشوائي قبل أن يلمس أي طلبٍ قاعدةَ البيانات.
+ * بوّابة زرَّي المحفظة: تقبل الحمولة بصورتيها «serial» و «serial.sig».
+ *
+ * الشكل الصارم قبل أي استعلام (§11.3): ٢٤ خانة سداسية عشرية — فحص الشكل أولاً
+ * يقطع الفحص العشوائي قبل أن يلمس أي طلبٍ قاعدةَ البيانات.
+ *
+ * التوقيع لا يولده إلا الخادم (QR_SECRET)، ولا يظهر إلا داخل بطاقةٍ صادرة —
+ * في ظهر بطاقة آبل وفي الـ QR. أما الروابط التي تصل العميل فعلاً (مشاركة
+ * الواتساب من اللوحة، وبطاقته في موقع الحجز) فتحمل الرقم التسلسلي وحده،
+ * فكان اشتراط التوقيع يردّ كل ضغطةٍ على «إضافة إلى المحفظة» بـ 400.
+ *
+ * فنقبل الرقم وحده — وهو نفس ما تقبله loyalty_public_card وللسبب نفسه: ٢٤
+ * خانة سداسية عشرية = ٩٦ بت عشوائية، هي الحارس لا التوقيع. ونُبقي التحقّق
+ * صارماً متى حضر التوقيع، فالروابط المخبوزة في البطاقات القديمة تظلّ تُفحَص.
+ *
+ * يُعيد: ok للقبول، أو reason لسبب الردّ.
  */
-export async function verifyLinkSig(serial: string, sig: string): Promise<boolean> {
-  if (!/^[0-9a-f]{24}$/.test(serial)) return false;
-  return safeEqual(sig, await linkSig(serial));
+export async function acceptCardPayload(
+  serial: string,
+  sig: string,
+): Promise<{ ok: true } | { ok: false; reason: "bad" | "forbidden" }> {
+  if (!/^[0-9a-f]{24}$/.test(serial)) return { ok: false, reason: "bad" };
+  if (!sig) return { ok: true };
+  return safeEqual(sig, await linkSig(serial))
+    ? { ok: true }
+    : { ok: false, reason: "forbidden" };
 }
 
 /** يفصل «serial.sig» — الرابط الواحد يخدم الصفحة وزرَّي المحفظتين */

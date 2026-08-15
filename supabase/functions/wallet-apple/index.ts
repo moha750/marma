@@ -20,6 +20,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildPkpass, pngSolid, fetchPng, hexToRgb, rgbCss } from "../_shared/pkpass.ts";
 import {
+  acceptCardPayload,
   authToken,
   availableReward,
   type CardRow,
@@ -29,7 +30,6 @@ import {
   SITE,
   splitPayload,
   tenantLocations,
-  verifyLinkSig,
 } from "../_shared/loyalty-card.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -192,8 +192,12 @@ Deno.serve(async (req) => {
     // ── تنزيل البطاقة: /pkpass/<serial>.<sig> ──
     if (req.method === "GET" && parts[0] === "pkpass" && parts[1]) {
       const [serial, sig] = splitPayload(parts[1]);
-      if (!serial || !sig) return new Response("bad request", { status: 400 });
-      if (!await verifyLinkSig(serial, sig)) return new Response("forbidden", { status: 403 });
+      const gate = await acceptCardPayload(serial, sig);
+      if (!gate.ok) {
+        return gate.reason === "bad"
+          ? new Response("bad request", { status: 400 })
+          : new Response("forbidden", { status: 403 });
+      }
 
       const card = await loadCard(db, serial);
       if (!card) return new Response("not found", { status: 404 });

@@ -15,10 +15,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  acceptCardPayload,
   loadCard,
   SITE,
   splitPayload,
-  verifyLinkSig,
 } from "../_shared/loyalty-card.ts";
 import {
   googleWalletConfigured,
@@ -54,8 +54,12 @@ Deno.serve(async (req) => {
 
     const payload = parts[1];
     const [serial, sig] = splitPayload(payload);
-    if (!serial || !sig) return new Response("bad request", { status: 400 });
-    if (!await verifyLinkSig(serial, sig)) return new Response("forbidden", { status: 403 });
+    const gate = await acceptCardPayload(serial, sig);
+    if (!gate.ok) {
+      return gate.reason === "bad"
+        ? new Response("bad request", { status: 400 })
+        : new Response("forbidden", { status: 403 });
+    }
 
     if (!googleWalletConfigured()) {
       console.error("[wallet-google] GOOGLE_SA_JSON أو GOOGLE_ISSUER_ID غير مضبوط");
