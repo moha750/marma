@@ -11,14 +11,14 @@
   <meta property="og:locale" content="ar_AR">
   <meta property="og:url" content="https://marma.help/auth/signup.html">
   <meta property="og:title" content="سجّل ملعبك الآن — مَرمى">
-  <meta property="og:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية ٣ أيام. كل حجوزاتك .. في مَرمى واحد.">
+  <meta property="og:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية أسبوعًا كاملًا. كل حجوزاتك .. في مَرمى واحد.">
   <meta property="og:image" content="https://marma.help/assets/og/signup.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="سجّل ملعبك الآن مع تجربة مجانية ٣ أيام">
+  <meta property="og:image:alt" content="سجّل ملعبك الآن مع تجربة مجانية أسبوعًا كاملًا">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="سجّل ملعبك الآن — مَرمى">
-  <meta name="twitter:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية ٣ أيام. كل حجوزاتك .. في مَرمى واحد.">
+  <meta name="twitter:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية أسبوعًا كاملًا. كل حجوزاتك .. في مَرمى واحد.">
   <meta name="twitter:image" content="https://marma.help/assets/og/signup.png">
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
   <!-- حارس جولة أوّل الاستخدام — نسخة صفحة التسجيل. مضمَّن هنا كما في login.html
@@ -69,7 +69,7 @@
       <div class="logo">
         <img src="../assets/logo.svg" alt="مَرمى" class="auth-logo" width="64" height="64">
         <h1 id="page-title">إنشاء حساب جديد</h1>
-        <p class="subtitle" id="page-subtitle">سجل ملعبك الآن مع <span style="color:var(--color-success);font-weight:600;">3 أيام تجربة مجانية</span></p>
+        <p class="subtitle" id="page-subtitle">سجل ملعبك الآن مع <span style="color:var(--color-success);font-weight:600;">أسبوع تجربة مجانية</span></p>
       </div>
 
       <div id="invite-info" class="hidden" style="background:var(--color-info-light);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:0.9rem;"></div>
@@ -377,7 +377,7 @@
           });
           if (error) throw error;
 
-          const welcomeMsg = inviteCode ? 'تم إنشاء الحساب بنجاح' : 'مرحباً! لديك 3 أيام تجربة مجانية';
+          const welcomeMsg = inviteCode ? 'تم إنشاء الحساب بنجاح' : 'مرحباً! لديك أسبوع تجربة مجانية';
           if (data.session) {
             // تأكيد البريد غير مفعّل: دخول مباشر للوحة التحكم
             window.utils.toast(welcomeMsg, 'success');
