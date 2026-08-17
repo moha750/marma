@@ -23,13 +23,12 @@ import {
   authToken,
   availableReward,
   type CardRow,
+  checkPayload,
   linkSig,
   loadCard,
   safeEqual,
   SITE,
-  splitPayload,
   tenantLocations,
-  verifyLinkSig,
 } from "../_shared/loyalty-card.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -191,9 +190,11 @@ Deno.serve(async (req) => {
   try {
     // ── تنزيل البطاقة: /pkpass/<serial>.<sig> ──
     if (req.method === "GET" && parts[0] === "pkpass" && parts[1]) {
-      const [serial, sig] = splitPayload(parts[1]);
-      if (!serial || !sig) return new Response("bad request", { status: 400 });
-      if (!await verifyLinkSig(serial, sig)) return new Response("forbidden", { status: 403 });
+      const check = await checkPayload(parts[1]);
+      if (!check.ok) {
+        return new Response(check.status === 403 ? "forbidden" : "bad request", { status: check.status });
+      }
+      const serial = check.serial;
 
       const card = await loadCard(db, serial);
       if (!card) return new Response("not found", { status: 404 });

@@ -53,6 +53,29 @@ export function splitPayload(payload: string): [string, string] {
   return [serial ?? "", sig ?? ""];
 }
 
+export type PayloadCheck =
+  | { ok: true; serial: string }
+  | { ok: false; status: 400 | 403 };
+
+/**
+ * التوقيع اختياري عمداً.
+ *
+ * الرابط الذي يصل العميل في واتساب يحمل الرقم التسلسلي وحده (cards.js) — لا
+ * توقيع معه، لأن الواجهة لا تملك QR_SECRET ولا يجوز أن تملكه. والتوقيع يبقى
+ * مخبوزاً في webServiceURL داخل البطاقات الصادرة، فيصل في نداءات PassKit.
+ *
+ * ولا خسارة أمنية: الحارس الفعلي ٢٤ خانة سداسية عشرية = ٩٦ بت عشوائية، وهو
+ * نفسه ما تكتفي به loyalty_public_card التي تعرض بيانات البطاقة كاملة. فإن
+ * جاء توقيع تحقّقنا منه (فلا يمرّ رابط مزوَّر بتوقيع خاطئ)، وإن غاب اكتفينا
+ * بالشكل الصارم.
+ */
+export async function checkPayload(payload: string): Promise<PayloadCheck> {
+  const [serial, sig] = splitPayload(payload);
+  if (!/^[0-9a-f]{24}$/.test(serial)) return { ok: false, status: 400 };
+  if (sig && !await verifyLinkSig(serial, sig)) return { ok: false, status: 403 };
+  return { ok: true, serial };
+}
+
 // ─── قراءة البطاقة ───────────────────────────────────────────────────────
 
 export interface CardRow {

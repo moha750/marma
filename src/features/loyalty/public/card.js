@@ -122,7 +122,7 @@
       <i data-lucide="wallet"></i>
       <span><b>إضافة إلى Apple Wallet</b><small>تُحدَّث تلقائياً بعد كل حجز</small></span>
     </a>`;
-    const google = `<a class="lcard-wallet lcard-wallet--google" href="/api/wallet/google/${enc}">
+    const google = `<a class="lcard-wallet lcard-wallet--google" href="/api/wallet/google/save/${enc}">
       <i data-lucide="wallet-cards"></i>
       <span><b>إضافة إلى Google Wallet</b><small>تُحدَّث تلقائياً بعد كل حجز</small></span>
     </a>`;
