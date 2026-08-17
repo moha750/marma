@@ -46,3 +46,51 @@
 }
 
 .lead-venue-tag { margin-inline-start: var(--space-1); }
+
+/* ─── الخطّ الزمني ────────────────────────────────────────────────────────
+   أصنافٌ خاصّة لا إعارةَ من .timeline-row: ذاك صفُّ حجزٍ من سطرٍ واحد
+   (شبكة ٨٠px للوقت + nowrap + ellipsis)، وهذا كلامٌ يطول ويجب أن يلتفّ
+   كاملاً — فالملاحظة المقصوصة ملاحظةٌ ضائعة. */
+
+.lead-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.lead-event {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lead-event:first-child { padding-top: 0; }
+.lead-event:last-child  { border-bottom: 0; padding-bottom: 0; }
+
+.lead-event-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* الالتفاف على النصّ وحده لا على الحاوية: pre-wrap على حاوية flex كان
+   سيطبع مسافات القالب نفسها. */
+.lead-event-text,
+.lead-event-note {
+  white-space: pre-wrap;   /* أسطر الملاحظة كما كتبها صاحبها */
+  overflow-wrap: anywhere; /* رقمٌ أو رابطٌ طويل لا يمدّ الدرج */
+  min-width: 0;
+}
+
+.lead-event-note {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.lead-event-meta {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
