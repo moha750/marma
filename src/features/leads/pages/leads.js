@@ -345,21 +345,20 @@
           return;
         }
         timelineEl.innerHTML = `
-          <div class="timeline-list">
+          <div class="lead-timeline">
             ${notes.map((n) => {
               const isStatus = n.kind === 'status';
-              const to = isStatus && n.meta ? STATUS_MAP[n.meta.to] : null;
+              const from = isStatus && n.meta ? STATUS_MAP[n.meta.from] : null;
+              // يُبنى في سطرٍ واحد: الملاحظة تُعرض بـ pre-wrap، فأي مسافةٍ من
+              // تنسيق القالب كانت ستُطبع كما هي.
+              const head = isStatus
+                ? `${from ? statusBadge(n.meta.from) : ''}<span class="text-tertiary">←</span>${statusBadge(n.meta.to)}`
+                : `<span class="lead-event-text">${window.utils.escapeHtml(n.body || '')}</span>`;
               return `
-                <div class="timeline-row timeline-row--compact">
-                  <div class="timeline-main">
-                    <div class="timeline-customer">
-                      ${isStatus
-                        ? `صار: ${to ? statusBadge(n.meta.to) : ''}`
-                        : window.utils.escapeHtml(n.body || '')}
-                    </div>
-                    ${isStatus && n.body ? `<div class="text-secondary text-sm">${window.utils.escapeHtml(n.body)}</div>` : ''}
-                    <div class="timeline-field">${window.utils.escapeHtml(n.author_name || '—')} · ${window.utils.timeAgo(n.created_at)}</div>
-                  </div>
+                <div class="lead-event">
+                  <div class="lead-event-body">${head}</div>
+                  ${isStatus && n.body ? `<div class="lead-event-note">${window.utils.escapeHtml(n.body)}</div>` : ''}
+                  <div class="lead-event-meta">${window.utils.escapeHtml(n.author_name || '—')} · ${window.utils.timeAgo(n.created_at)}</div>
                 </div>`;
             }).join('')}
           </div>`;

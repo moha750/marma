@@ -49,7 +49,7 @@
 
 .status-badge--trial    { background: var(--info-tint);    color: var(--info); }
 .status-badge--active   { background: var(--success-tint); color: var(--accent-700); }
-.status-badge--grace    { background: var(--warning-tint); color: var(--warning); }
+.status-badge--warn     { background: var(--warning-tint); color: var(--warning); }
 .status-badge--expired  { background: var(--danger-tint);  color: var(--danger); }
 .status-badge--pending  { background: var(--warning-tint); color: var(--warning); }
 .status-badge--approved { background: var(--success-tint); color: var(--accent-700); }

@@ -140,8 +140,8 @@ window.api = {
 
 // ── أقلّ ما تحتاجه القوقعة الحقيقية ─────────────────────────────
 const STATUS = LOCKED
-  ? { phase: 'grace_active', is_active: false, days_until_expiry: 0, days_remaining: 2 }
-  : { phase: 'active', is_active: true, days_until_expiry: 40, days_remaining: 43 };
+  ? { phase: 'expired', is_active: false, days_until_expiry: 0 }
+  : { phase: 'active', is_active: true, days_until_expiry: 40 };
 
 window.auth = {
   async requireAuth() { return CTX; },

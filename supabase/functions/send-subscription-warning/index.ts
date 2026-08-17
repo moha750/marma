@@ -6,7 +6,8 @@
 //   tenant_id: uuid
 //   kind: 'trial_3d' | 'trial_1d' | 'trial_final'
 //       | 'sub_3d'   | 'sub_1d'   | 'sub_final'
-//       | 'grace_final'   (سماح يوم واحد → تذكير أخير فقط)
+//
+// كلّها قبل الانتهاء — لا فترة سماح بعده، فالقفل يقع لحظة الانتهاء.
 //
 // secrets المطلوبة:
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, INTERNAL_HOOK_SECRET
@@ -45,16 +46,11 @@ const MESSAGES: Record<string, MessageContent> = {
   },
   sub_1d: {
     title: "اشتراكك ينتهي خلال 24 ساعة ⏰",
-    body: "جدّد لتفادي دخول فترة السماح",
+    body: "جدّد اليوم لتفادي توقّف الحجوزات",
   },
   sub_final: {
     title: "اشتراكك ينتهي بعد ساعتين 🚨",
-    body: "جدّد الآن قبل دخول فترة السماح",
-  },
-  // فترة السماح (يوم واحد) — تذكير أخير فقط
-  grace_final: {
-    title: "الحساب يُقفل بعد ساعتين 🚨",
-    body: "جدّد الآن لاستعادة الوصول",
+    body: "جدّد الآن — يُقفَل الحساب لحظة الانتهاء",
   },
 };
 

@@ -16,7 +16,6 @@
     if (phase === 'trial') return extended ? 'تجربة ممدّدة' : 'تجربة مجانية';
     return ({
       active: 'اشتراك نشط',
-      grace_active: 'انتهى الاشتراك (فترة سماح)',
       expired: 'منتهي',
       suspended: 'موقوف من الإدارة',
       lifetime: 'وصول دائم',
@@ -112,19 +111,11 @@
         }
 
         const phase = status.phase;
-        // فترة السماح: العدّ حتى القفل الكامل (days_remaining)
-        if (phase && phase.startsWith('grace_')) {
-          const lock = daysLabel(Math.max(0, Number(status.days_remaining) || 0));
-          return banner('grace', 'triangle-alert', nativeApp
-            ? `أنت في فترة السماح — يُقفَل الحساب بعد ${lock}.`
-            : `أنت في فترة السماح — يرجى تجديد الاشتراك خلال ${lock}.`);
-        }
-
-        // نشِط/تجربة: المتبقّي حتى نهاية الاشتراك (days_until_expiry)، واللون حسب القرب
+        // نشِط/تجربة: المتبقّي حتى نهاية الاشتراك — وهي لحظة القفل، لا سماح بعدها.
         const toExpiry = Math.max(0, Number(status.days_until_expiry) || 0);
         const left = daysLabel(toExpiry);
-        const tone = toExpiry <= 3 ? 'danger' : (toExpiry <= 7 ? 'grace' : 'ok');
-        const icon = tone === 'danger' ? 'triangle-alert' : (tone === 'grace' ? 'hourglass' : 'calendar-check');
+        const tone = toExpiry <= 3 ? 'danger' : (toExpiry <= 7 ? 'warn' : 'ok');
+        const icon = tone === 'danger' ? 'triangle-alert' : (tone === 'warn' ? 'hourglass' : 'calendar-check');
 
         if (phase === 'trial') {
           const lead = status.trial_extended ? 'تجربتك الممدّدة نشطة' : 'تجربتك المجانية نشطة';
@@ -210,7 +201,7 @@
         const hasPending    = !!(status && status.pending_request_id);
         const phase         = status ? status.phase : 'none';
         // ضمن دورة مدفوعة نشطة (phase='active'): الحدّ الأدنى = المسموح — لا خفض لما دُفع له.
-        // بعد انتهاء الدورة (سماح/منتهٍ/تجربة): الحدّ = الاستخدام الفعلي — يمكن التجديد بأقلّ.
+        // خارجها (منتهٍ/تجربة): الحدّ = الاستخدام الفعلي — يمكن التجديد بأقلّ.
         const periodActive = phase === 'active';
         const minFields = periodActive ? Math.max(1, allowedFields, currentFields) : Math.max(1, currentFields);
         const minStaff  = periodActive ? Math.max(1, allowedStaff,  currentStaff)  : Math.max(1, currentStaff);

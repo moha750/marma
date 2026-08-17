@@ -9,6 +9,7 @@
     "build": "npm run vendor && node scripts/generate-config.js && vite build",
     "preview": "vite preview",
     "test": "node test/pricing.test.js",
+    "db": "sh scripts/db.sh",
     "build:native": "node scripts/build-native.mjs",
     "build:native:ios": "node scripts/build-native.mjs ios",
     "build:native:android": "node scripts/build-native.mjs android",

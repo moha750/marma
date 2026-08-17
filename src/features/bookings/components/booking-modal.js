@@ -58,7 +58,7 @@ window.bookingModal = (function () {
       booking.customer_input_name.trim() !== booking.customers.full_name.trim();
 
     const pendingBanner = isPending
-      ? `<div class="trial-banner trial-banner--grace" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
+      ? `<div class="trial-banner trial-banner--warn" style="margin-bottom:var(--space-4);border-radius:var(--radius-md)">
            <span class="trial-banner-icon"><i data-lucide="hourglass"></i></span>
            <span>هذا الحجز بانتظار موافقتك</span>
          </div>`

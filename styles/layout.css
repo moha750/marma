@@ -811,7 +811,7 @@
   background: var(--info-tint);
   color: var(--info);
 }
-.trial-banner--grace {
+.trial-banner--warn {
   background: var(--warning-tint);
   color: var(--warning);
 }
@@ -819,7 +819,7 @@
   background: var(--surface-2);
   color: var(--text-primary);
 }
-/* عتبات الاشتراك النشِط: مطمئن (أخضر) ← خطر (أحمر). --grace يغطّي التحذير (كهرماني). */
+/* عتبات الاشتراك النشِط: مطمئن (أخضر) ← خطر (أحمر). --warn يغطّي ما بينهما (كهرماني). */
 .trial-banner--ok {
   background: var(--success-tint);
   color: var(--success);

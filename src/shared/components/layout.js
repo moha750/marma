@@ -118,27 +118,22 @@ window.layout = (function () {
         </div>
       `;
     }
-    // days_until_expiry = أيام حتى نهاية التجربة/الاشتراك (بدون فترة سماح)
-    // days_remaining    = أيام حتى القفل الكامل (مع فترة السماح للاشتراك المدفوع)
+    // days_until_expiry = أيام حتى نهاية التجربة/الاشتراك، وهي نفسها لحظة القفل:
+    // لا فترة سماح بعدها.
     const daysToExpiry = Math.max(0, Number(status.days_until_expiry) || 0);
-    const daysToLock   = Math.max(0, Number(status.days_remaining) || 0);
     let kind = '', text = '';
     if (phase === 'trial') {
       kind = 'trial';
       text = `${status.trial_extended ? 'تجربة ممدّدة' : 'تجربة مجانية'} — متبقي ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
-    } else if (phase === 'grace_active') {
-      kind = 'grace';
-      text = `انتهى الاشتراك — فترة سماح ${daysToLock} ${pluralDays(daysToLock)}، يرجى التجديد`;
     } else if (phase === 'active' && daysToExpiry <= 7) {
       kind = 'soon';
       text = `الاشتراك ينتهي خلال ${daysToExpiry} ${pluralDays(daysToExpiry)}`;
     } else {
       return '';
     }
-    const iconName = kind === 'grace' ? 'triangle-alert' : 'info';
     return `
       <div class="trial-banner trial-banner--${kind}">
-        <span class="trial-banner-icon"><i data-lucide="${iconName}"></i></span>
+        <span class="trial-banner-icon"><i data-lucide="info"></i></span>
         <span>${window.utils.escapeHtml(text)}</span>
         <a class="trial-banner-cta" href="${window.utils.path('/subscription')}">تجديد الاشتراك</a>
       </div>

@@ -3,8 +3,6 @@
   // حالة المستأجر — نفس منطق صفحة الملاعب
   function statusOf(t) {
     if (!t.is_active) return 'expired';
-    if (t.subscription_ends_at && new Date(t.subscription_ends_at) < new Date()) return 'grace';
-    if (t.trial_ends_at && new Date(t.trial_ends_at) < new Date() && !t.subscription_ends_at) return 'grace';
     if (t.subscription_status === 'active') return 'active';
     return 'trial';
   }
@@ -27,7 +25,7 @@
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const in7 = new Date(now.getTime() + 7 * 86400000);
-    const counts = { active: 0, trial: 0, grace: 0, expired: 0 };
+    const counts = { active: 0, trial: 0, expired: 0 };
     let newThisMonth = 0, expiringSoon = 0;
 
     tenants.forEach((t) => {
@@ -40,7 +38,6 @@
     });
 
     const total = tenants.length;
-    const inactive = counts.grace + counts.expired;
     const pendingAmount = pending.reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
     return `
@@ -56,7 +53,7 @@
         ${card({ icon: 'hourglass', label: 'تجارب نشطة', value: counts.trial, sub: 'في فترة التجربة المجانية' })}
         ${card({ icon: 'credit-card', label: 'طلبات معلّقة', value: pending.length, sub: pending.length ? `${window.utils.formatCurrency(pendingAmount)} بانتظار المراجعة` : 'لا طلبات معلّقة', variant: pending.length ? 'warning' : '' })}
         ${card({ icon: 'triangle-alert', label: 'تنتهي خلال 7 أيام', value: expiringSoon, sub: 'اشتراكات قاربت الانتهاء', variant: expiringSoon ? 'warning' : '' })}
-        ${card({ icon: 'circle-slash', label: 'منتهية / سماح', value: inactive, sub: `${counts.grace} سماح · ${counts.expired} مغلق` })}
+        ${card({ icon: 'circle-slash', label: 'ملاعب مغلقة', value: counts.expired, sub: 'انتهى اشتراكها أو تجربتها' })}
         ${card({ icon: 'user-plus', label: 'جديدة هذا الشهر', value: newThisMonth, sub: 'ملاعب سُجّلت هذا الشهر' })}
       </div>
     `;

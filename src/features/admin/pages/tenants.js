@@ -3,9 +3,8 @@
   function statusInfo(t) {
     if (t.suspended) return { cls: 'expired', label: 'موقوف' };
     if (t.lifetime) return { cls: 'lifetime', label: 'دائم' };
+    // is_active يقفل لحظة الانتهاء — فلا حالة بين «مشترك» و«مغلق».
     if (!t.is_active) return { cls: 'expired', label: 'مغلق' };
-    if (t.subscription_ends_at && new Date(t.subscription_ends_at) < new Date()) return { cls: 'grace', label: 'سماح (انتهى الاشتراك)' };
-    if (t.trial_ends_at && new Date(t.trial_ends_at) < new Date() && !t.subscription_ends_at) return { cls: 'grace', label: 'سماح (انتهت التجربة)' };
     if (t.subscription_status === 'active') return { cls: 'active', label: 'مشترك' };
     return { cls: 'trial', label: 'تجربة' };
   }
@@ -14,7 +13,6 @@
     { key: '',        label: 'الكل' },
     { key: 'active',  label: 'مشترك' },
     { key: 'trial',   label: 'تجربة' },
-    { key: 'grace',   label: 'سماح' },
     { key: 'lifetime', label: 'دائم' },
     { key: 'expired', label: 'منتهٍ' }
   ];
