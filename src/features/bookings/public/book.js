@@ -109,6 +109,7 @@
 
     root.innerHTML = `
       <header class="bp-hero bp-hero--tenant" id="bp-hero"></header>
+      ${renderCardBanner()}
       ${hasAbout ? `
         <section class="bp-section">
           <h2 class="bp-section-title"><i data-lucide="info"></i><span>عن الملعب</span></h2>
@@ -122,7 +123,6 @@
         </h2>
         <div class="bp-landing-fields" id="bp-landing-fields"></div>
       </section>
-      ${renderCardBanner()}
       ${renderManageBanner()}
       ${renderFooter()}
     `;
@@ -229,6 +229,7 @@
   // بابُ البطاقة مستقلٌّ عن بانر الحجوزات عمداً. ذاك يخفيه المالك ليمنع العميل
   // من إلغاء حجوزاته — سلطةٌ على تقويمه؛ وهذا توزيعٌ مجاني يريده. غرضان
   // متعاكسان لا يجوز أن يحكمهما مفتاح واحد. فشرطه واحد: أن يكون له برنامج.
+  // وموضعه تحت اسم الملعب مباشرةً — عرضٌ يريده المالك أن يُرى، لا ذيلَ صفحة.
   function renderCardBanner() {
     if (!state.tenantInfo.loyalty_active) return '';
     return `
@@ -236,7 +237,7 @@
         <span class="bp-manage-banner-icon"><i data-lucide="wallet"></i></span>
         <div class="bp-manage-banner-body">
           <h3 class="bp-manage-banner-title">بطاقة الولاء</h3>
-          <p class="bp-manage-banner-text">أصدر بطاقتك برقم جوّالك وأضِفها لمحفظة جوالك — واجمع ختماً مع كل حجز.</p>
+          <p class="bp-manage-banner-text">كل حجز يقرّبك من مكافأتك — أصدر بطاقتك برقم جوّالك.</p>
         </div>
         <button type="button" class="btn btn--primary bp-manage-banner-btn" id="bp-card-btn">
           <i data-lucide="wallet"></i>

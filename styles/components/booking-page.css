@@ -96,6 +96,11 @@
   border-radius: var(--radius-lg);
 }
 
+/* حين يقع البانر تحت الهيرو مباشرةً (بطاقة الولاء في صفحة المالك) يجتمع
+   padding الهيرو (٢٤) مع margin البانر (٢٠) فيتضاعف الفراغ. فيُقلَّم إلى ١٦
+   ليبلغ المجموع ٤٠ — إيقاع الصفحة نفسه بين كل قسمين. */
+.bp-hero + .bp-manage-banner { margin-block-start: var(--space-4); }
+
 .bp-manage-banner-icon {
   flex-shrink: 0;
   display: inline-flex;
@@ -1784,6 +1789,10 @@
 .bp-hero-brand .bp-hero-title {
   margin-bottom: 0;
 }
+
+/* الهامش أسفله يفصله عمّا يليه داخل الهيرو. فإن كان آخرَ الهيرو (صفحة المالك:
+   شعار واسم فحسب) فهو فراغٌ ميت يتراكم على حشوة الهيرو ويكسر إيقاع الصفحة. */
+.bp-hero-brand:last-child { margin-bottom: 0; }
 
 .bp-hero-logo {
   width: 56px;
