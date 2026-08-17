@@ -26,6 +26,60 @@
   <meta name="twitter:description" content="ادخل إلى لوحة تحكّم مَرمى لإدارة حجوزات ملاعبك.">
   <meta name="twitter:image" content="https://marma.help/assets/og/home.png">
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <!-- حارس جولة أوّل الاستخدام — يجب أن يبقى هنا في الـ head ومضمَّناً.
+       السبب: جسم الصفحة أدناه يُرسم كاملاً قبل أوّل <script> في نهايته، وشاشة
+       الإقلاق في التطبيق الأصلي لا تنتظر شيئاً في صفحات المصادقة (native.js
+       يُخفيها عند DOMContentLoaded لغياب #app-root) — فأي طبقة تُحقن من JS كانت
+       ستقفز فوق نموذج دخول مرسوم. والقاعدة مكرّرة هنا لأن main.css يُحمَّل بـ35
+       @import متسلسلة فلا يصل قبل الرسم.
+       القرار كلّه متزامن: لا شبكة ولا انتظار. وtour.js يستهلك __TOUR_OK__. -->
+  <style>html.tour-pending .auth-page{visibility:hidden}</style>
+  <script>
+  (function(){
+    var d = document.documentElement;
+    try {
+      var nativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.__NATIVE__ === true;
+      // الجولة لمساحة الجوال والتطبيق فقط — سطح المكتب لا يُمَسّ.
+      if (!nativeApp && !matchMedia('(max-width: 767px)').matches) return;
+
+      // عودة OAuth تهبط على هذه الصفحة نفسها حاملةً ?code — ورجلٌ في منتصف
+      // تسجيل دخوله لا يُعرض عليه تعريف بالمنتج.
+      if (/[?&](code|error|error_description)=/.test(location.search)) return;
+
+      // جلسة قائمة؟ فحص متزامن لا ينتظر redirectIfAuthenticated (٢-٤ رحلات شبكة).
+      // نمسح بالنمط لأن config.js لم يُحمَّل بعد فلا سبيل لاشتقاق معرّف المشروع.
+      for (var i = 0; i < localStorage.length; i++) {
+        if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) return;
+      }
+
+      if (localStorage.getItem('marma:known-user')) return;   // صادَق هذا الجهاز يوماً
+      if (localStorage.getItem('marma:tour:v1')) return;       // أكملها أو تخطّاها
+      if (Date.now() < +(localStorage.getItem('marma:tour:snooze') || 0)) return;
+
+      // علم جلسة التبويب محصور بالتطبيق الأصلي عمداً: وُضع لحماية سلسلة الإقلاع
+      // الأصلية من التركيب المزدوج (index.html → boot.js → requireAuth →
+      // replace('/auth/login.html')، ومعها إعادة التحميل المشروطة marma:css-retry
+      // في app.html). أمّا على الوِب فلا سلسلة كهذه، وتركُه عاماً كان يكتم الجولة
+      // عند أي إعادة تحميل في نفس التبويب — وهو نقضٌ للقاعدة: «كل زيارة حتى أوّل
+      // مصادقة»، لا «مرّة واحدة لكل تبويب».
+      if (nativeApp && sessionStorage.getItem('marma:tour:session')) return;
+
+      // على الوِب وحده: من جاء من صفحة الهبوط قرأ الوعود للتوّ. وفي التطبيق لا
+      // صفحة هبوط في الحزمة أصلاً (قاعدة أبل 3.1.1) فالفحص يُتخطّى.
+      if (!nativeApp && document.referrer) {
+        var r = new URL(document.referrer);
+        if (r.host === location.host && /^\/(index\.html)?$/.test(r.pathname)) return;
+      }
+
+      window.__TOUR_OK__ = true;
+      d.classList.add('tour-pending');
+    } catch (_) {}
+    // شبكة أمان: لو تعثّر تحميل tour.js لبقيت صفحة الدخول مخفيّة إلى الأبد.
+    if (d.classList.contains('tour-pending')) {
+      setTimeout(function(){ d.classList.remove('tour-pending'); }, 2500);
+    }
+  })();
+  </script>
   <link rel="stylesheet" href="../styles/main.css">
 </head>
 <body>
@@ -70,6 +124,15 @@
       <div class="auth-footer">
         ليس لديك حساب؟ <a href="/auth/signup">أنشئ حساباً جديداً</a>
       </div>
+
+      <!-- المدخل اليدوي للجولة: العلم في الـ head يكتم الفتح التلقائي بعد أوّل
+           مصادقة، وهذا السطر يُبقيها في متناول من أرادها متى أراد — «تلقائياً
+           مرّة، ومتاحة دائماً». يظهر على مساحة الجوال والتطبيق فقط.
+           موضعه داخل .auth-card لا بعدها: .auth-page حاوية flex أفقية، فأي
+           شقيق للبطاقة يُصفّ بجانبها لا تحتها. -->
+      <p class="auth-tour-link">
+        <button type="button" id="tour-open-btn">ما هو مَرمى؟ · جولة سريعة</button>
+      </p>
     </div>
   </div>
 
@@ -82,9 +145,17 @@
   <script src="../src/core/utils.js"></script>
   <script src="../src/core/analytics.js"></script>
   <script src="../src/core/auth.js"></script>
+  <script src="../src/shared/components/tour-stages.js"></script>
+  <script src="../src/shared/components/tour.js"></script>
   <script>
     window.utils.renderIcons();
     window.utils.initPasswordToggles();
+
+    // الجولة: تُركَّب فوراً إن أذن الحارس في الـ head، ورابطها اليدوي يعمل دائماً.
+    // ترفع tour-pending في الحالتين — بما فيها حالة «لن تُعرض» — فلا تبقى صفحة
+    // الدخول مخفيّة.
+    window.tour.init();
+    document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
     // زر Google
     document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
     document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
@@ -107,6 +178,7 @@
       try {
         const { error } = await window.sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        window.auth.markKnownDevice();
         const dest = await window.auth.getPostLoginDestination();
         if (dest) {
           window.location.replace(dest);

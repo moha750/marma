@@ -2,7 +2,7 @@
 // أي تغيير في النموذج التجاري يبدأ من هنا.
 //
 // النموذج:
-//   - تجربة 3 أيام: مجاناً، 1 أرضية، 0 موظف
+//   - تجربة 7 أيام: مجاناً، 1 أرضية، 0 موظف
 //   - الباقة الأساسية: 200 ر.س/شهر تشمل 1 أرضية + 1 موظف
 //   - كل أرضية أو موظف إضافي: +50 ر.س/شهر
 
@@ -10,7 +10,7 @@ window.pricing = (function () {
   const BASE_PRICE = 200;            // الباقة الأساسية
   const UNIT_PRICE = 50;             // كل وحدة إضافية (أرضية أو موظف)
   const DURATION_DAYS = 30;          // مدة دورة الاشتراك
-  const TRIAL_DAYS = 3;
+  const TRIAL_DAYS = 7;              // يطابق create_owner_tenant في قاعدة البيانات
 
   const INCLUDED = { fields: 1, staff: 1 };
   const TRIAL    = { fields: 1, staff: 0 };

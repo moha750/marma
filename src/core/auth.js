@@ -18,6 +18,21 @@ window.auth = (function () {
     return (window.__BASE__ || '') + resolved;
   }
 
+  // يعلّم أن هذا الجهاز احتضن جلسةً مصادَقة يوماً ما. تقرؤه جولة أوّل الاستخدام
+  // (src/shared/components/tour.js) لتقرّر هل تُعرض تلقائياً.
+  //
+  // لماذا هذا المفتاح لا مفتاح «رأى الجولة»: العلم الثاني يسجّل حدثاً لا حالة،
+  // وموثوقيته معكوسة عن نيّته — ITP في سفاري يمسح التخزين بعد سبعة أيام بلا
+  // تفاعل، فيتبخّر عند العميل المحتمل الذي أردنا أن نعرض له مرّةً واحدة، ويصمد
+  // عند الموظّف اليومي وهو الوحيد الذي يزعجه التكرار. أمّا «صادَق هذا الجهاز»
+  // فيصمد حيث يجب: signOut أدناه لا يمسّ localStorage، فالموظّف الذي يخرج كل
+  // ليلة لا يرى الجولة ثانيةً أبداً، والمحتمَل الذي لم يدخل قطّ يراها كلّما عاد.
+  //
+  // لا يُحذف أبداً — لا عند الخروج ولا عند تبديل الحساب.
+  function markKnownDevice() {
+    try { localStorage.setItem('marma:known-user', '1'); } catch (_) {}
+  }
+
   // خطأ عابر (شبكة) لا يعني أن الجلسة باطلة — لا يجوز تسجيل الخروج عنده
   function isTransientError(err) {
     if (!err) return false;
@@ -47,6 +62,11 @@ window.auth = (function () {
     const { data: { session }, error } = await window.sb.auth.getSession();
     if (error) { console.error('فشل قراءة الجلسة:', error); return null; }
     if (!session) return null;
+    // أي جلسة صالحة تثبت أن هذا الجهاز صادَق يوماً — وهذا المصبّ يغطّي ما لا
+    // تغطّيه نداءات المصادقة التفاعلية: استعادة كلمة المرور (reset.html تبني
+    // جلسة بـ setSession ثم تُخرج)، والأجهزة المسجَّلة قبل إضافة العلم أصلاً
+    // (لولاه لرأى كل عميل قائم الجولة عند أوّل خروج له بعد التحديث).
+    markKnownDevice();
     const expMs = (session.expires_at || 0) * 1000;
     // حدّث لو انتهى أو يقارب (هامش 60 ثانية)
     if (expMs && expMs < Date.now() + 60000) {
@@ -299,6 +319,7 @@ window.auth = (function () {
           if (window.utils) window.utils.toast(window.utils.formatError(exErr), 'error');
           return;
         }
+        markKnownDevice();
         const dest = await getPostLoginDestination();
         window.location.replace(dest || withBase('/dashboard'));
       } finally {
@@ -340,6 +361,7 @@ window.auth = (function () {
       if (window.utils) window.utils.toast(window.utils.formatError(error), 'error');
       return false;
     }
+    markKnownDevice();
     return true;
   }
 
@@ -372,6 +394,7 @@ window.auth = (function () {
     signInWithGoogle,
     signInWithApple,
     handleOAuthCallback,
+    markKnownDevice,
     signOut
   };
 })();

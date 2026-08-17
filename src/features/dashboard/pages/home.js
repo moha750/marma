@@ -159,8 +159,8 @@
           <div class="dash-date">${todayLabel}</div>
         </div>
         <div class="actions">
-          <button class="btn btn--primary" id="quick-booking-btn">
-            <i data-lucide="plus"></i> حجز جديد
+          <button class="btn btn--primary" id="share-link-btn">
+            <i data-lucide="share-2"></i> <span>رابط الحجز</span>
           </button>
         </div>
       </div>
@@ -335,7 +335,8 @@
           <div class="card-header"><h3>جدول اليوم</h3></div>
           <div class="empty-state" style="padding:var(--space-6)">
             <div class="empty-icon"><i data-lucide="clock"></i></div>
-            <p>لا توجد حجوزات لليوم بعد. شارك رابط الحجز أو أنشئ حجزاً يدوياً.</p>
+            <p>لا توجد حجوزات لليوم بعد. شارك رابط الحجز من الأعلى،
+               أو أضِف حجزاً من <a href="${window.utils.path('/bookings')}">الحجوزات</a>.</p>
           </div>
         </div>
       `;
@@ -502,7 +503,7 @@
       const sparkArea    = container.querySelector('#sparkline-area');
       const timelineArea = container.querySelector('#timeline-area');
       const tomorrowArea = container.querySelector('#tomorrow-area');
-      const quickBtn     = container.querySelector('#quick-booking-btn');
+      const shareBtn     = container.querySelector('#share-link-btn');
 
       const cleanup = [];
       let alive = true;
@@ -679,9 +680,37 @@
         }
       }
 
-      const onQuickClick = () => window.bookingModal.open({ onSaved: refresh });
-      quickBtn.addEventListener('click', onQuickClick);
-      cleanup.push(() => quickBtn.removeEventListener('click', onQuickClick));
+      // ─── رابط الحجز العام ─────────────────────────────
+      //
+      // كان يستلزم: الإعدادات ← تمرير إلى «رابط الحجز العام» ← نسخ ← فتح
+      // واتساب ← لصق. وهو أكثر ما يُرسَل يومياً. صار فعلاً واحداً من الرئيسية،
+      // وعلى الجوال يفتح ورقة المشاركة الأصلية فيختفي النسخ واللصق أصلاً.
+      const tenant = ctx.tenant || (window.layout && window.layout.getContext() || {}).tenant;
+      const publicLink = tenant
+        ? `${window.location.origin}${window.utils.path('/book')}?t=${encodeURIComponent(tenant.id)}`
+        : null;
+      const venue = (tenant && tenant.name) || 'ملعبنا';
+      // بلا منشأة لا رابط — نخفي الزرّ بدل أن نعرض واحداً يفشل عند الضغط
+      if (!publicLink) shareBtn.hidden = true;
+
+      const onShare = async () => {
+        if (window.native) window.native.haptic('LIGHT');
+        shareBtn.disabled = true;
+        try {
+          const how = await window.utils.shareLink({
+            url: publicLink,
+            title: `احجز في ${venue}`,
+            text: `احجز موعدك في ${venue}:`
+          });
+          if (how === 'copied') window.utils.toast('تم نسخ رابط الحجز', 'success');
+        } catch (_) {
+          window.utils.toast('تعذّرت المشاركة — الرابط في صفحة إعدادات الملعب', 'error');
+        } finally {
+          shareBtn.disabled = false;
+        }
+      };
+      shareBtn.addEventListener('click', onShare);
+      cleanup.push(() => shareBtn.removeEventListener('click', onShare));
 
       if (window.realtime) {
         const debounced = window.utils.debounce(refresh, 400);

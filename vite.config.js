@@ -31,6 +31,7 @@ const APP_ROUTES = [
   'schedule',
   'offers',
   'loyalty',
+  'leads',
   'reports',
   'visits',
   'staff',

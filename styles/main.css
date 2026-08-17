@@ -35,10 +35,12 @@
 @import url('./components/public.css');
 @import url('./components/subscription.css');
 @import url('./components/loyalty.css');
+@import url('./components/leads.css');
 @import url('./components/public-shell.css'); /* أساس مشترك للوجه العام — قبل .lp و.bp */
 @import url('./components/landing.css');
 @import url('./components/booking-page.css');
 @import url('./components/legal.css');
+@import url('./components/tour.css');
 /* آخر ملف: أنماط التطبيق الأصلي محصورة كلها تحت html.native، ويجب أن تتغلّب
    على ما سبقها (حشوات المناطق الآمنة تعدّل ارتفاعات مُعرَّفة في layout.css). */
 @import url('./components/native.css');

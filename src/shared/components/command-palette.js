@@ -36,8 +36,10 @@ window.commandPalette = (function () {
     const role = ctx.profile && ctx.profile.role;
     const locked = subscriptionLocked();
     const out = [];
-    window.layout.NAV_ITEMS
-      .filter((it) => !it.ownerOnly || role === 'owner')
+    // نفس مرشّح الشريط الجانبي — فلا يقترح البحثُ وجهةً لا تظهر في القائمة.
+    (window.layout.navVisibleFor
+      ? window.layout.navVisibleFor(ctx.profile || { role })
+      : window.layout.NAV_ITEMS.filter((it) => !it.ownerOnly || role === 'owner'))
       .forEach((it) => {
         const itemLocked = locked && it.key !== 'subscription';
         out.push({

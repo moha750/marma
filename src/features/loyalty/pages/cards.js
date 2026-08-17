@@ -124,9 +124,9 @@
       // والصفحة تقبل الصورتين فيعمل الرابط كما هو.
       function shareCard(serial, name, phone) {
         const link = `${location.origin}/card?c=${encodeURIComponent(serial)}`;
-        const text = `مرحباً ${name} 👋\n`
-          + `بطاقة ولائك في ${(ctx.tenant && ctx.tenant.name) || 'ملعبنا'} جاهزة.\n`
-          + `أضِفها لمحفظة جوالك من هنا:\n${link}`;
+        const text = `مرحباً ${name} 👋\n\n`
+          + `بطاقة ولائك في ${(ctx.tenant && ctx.tenant.name) || 'ملعبنا'} جاهزة لكسب مكافآت من حجوزاتك🏟️🪪.\n\n`
+          + `أضِفها لمحفظة جوالك من هنا📱:\n${link}`;
         const digits = String(phone || '').replace(/\D/g, '').replace(/^0/, '966');
         window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
       }

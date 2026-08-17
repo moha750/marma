@@ -120,7 +120,7 @@ export function signupConfirmation({ fullName, code, verifyUrl }: SignupConfirma
     <div dir="ltr" style="margin:0 0 8px;padding:18px 20px;background:#E9F7EF;border:1px solid ${ACCENT};border-radius:10px;text-align:center;font-family:${FONT_STACK};font-size:34px;font-weight:700;letter-spacing:10px;color:${ACCENT_DARK};user-select:all;-webkit-user-select:all;-moz-user-select:all;cursor:pointer;">${escapeHtml(code)}</div>
     <p style="margin:0 0 16px;font-size:12px;color:${TEXT_SECONDARY};">اضغط على الرمز لتحديده كاملاً ثم انسخه. صالح لمدة ساعة — إن لم تطلبه فتجاهل الرسالة.</p>
     <div style="margin-top:8px;padding:16px;background:${SURFACE_BODY};border-radius:8px;border:1px solid ${BORDER_SUBTLE};">
-      <div style="font-weight:600;color:${TEXT_PRIMARY};margin-bottom:6px;">تجربة مجانية لمدة 3 أيام</div>
+      <div style="font-weight:600;color:${TEXT_PRIMARY};margin-bottom:6px;">تجربة مجانية لمدة أسبوع</div>
       <div style="font-size:13px;color:${TEXT_SECONDARY};">ستحصل على ملعب واحد لتجربة كامل ميزات النظام. بعد انتهاء التجربة يمكنك الاشتراك بـ 200 ريال شهرياً.</div>
     </div>
     <p style="margin:24px 0 0;font-size:13px;color:${TEXT_SECONDARY};">يمكنك أيضاً تفعيل حسابك مباشرةً عبر هذا الرابط:</p>
