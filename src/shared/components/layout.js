@@ -47,6 +47,9 @@ window.layout = (function () {
     { key: 'offers',       group: 'إدارة',  label: 'العروض',               icon: 'badge-percent',    path: '/offers',       ownerOnly: true },
     { key: 'loyalty',      group: 'إدارة',  label: 'برنامج الولاء',        icon: 'credit-card',      path: '/loyalty',      ownerOnly: true, tabs: LOYALTY_TABS },
     { key: 'loyalty-scan', group: 'تشغيلي', label: 'مسح البطاقة',          icon: 'scan-line',        path: '/loyalty/scan' },
+    // متابعة العملاء ليست ميزةً في الباقة بل دفتر المشرف يُشارَك مع مالكٍ
+    // بعينه. leadsOnly ⇒ لا تظهر إلا لمن مُنح، وإلا كان تبويباً يفتح على رفض.
+    { key: 'leads',        group: 'إدارة',  label: 'متابعة العملاء',       icon: 'user-search',      path: '/leads',        ownerOnly: true, leadsOnly: true },
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
     { key: 'visits',       group: 'إدارة',  label: 'الزيارات',             icon: 'eye',              path: '/visits',       ownerOnly: true },
     { key: 'staff',        group: 'إدارة',  label: 'الموظفون',             icon: 'user',             path: '/staff',        ownerOnly: true },
@@ -61,21 +64,45 @@ window.layout = (function () {
   // أعلى اليسار — أبعد نقطة في الشاشة عن إبهام اليد الممسكة. وبدونه كانت ١١ من
   // ١٥ وجهةً لا تُبلغ إلا من هناك.
   // «الحجوزات» في المنتصف — أكثر ما يُفتح، وأقرب موضع للإبهام.
+  //
+  // الخانة الثانية تتبع الدور: «ملاعبي» ownerOnly، ولو ظهرت للموظف لكانت
+  // تبويباً يقذفه إلى لوحة التحكم (router.js يحوّل مسارات المالك)، أي زرّاً
+  // يبدو معطّلاً بلا تفسير. فيأخذ الموظف «العملاء» مكانها — وهي أنفع له،
+  // إذ لا ملاعب في حسابه أصلاً. وكلا الدورين يخرج بخمس خانات والحجوزات وسطها.
   const BOTTOM_NAV = [
     { key: 'dashboard',    label: 'الرئيسية', icon: 'layout-dashboard', path: '/dashboard' },
-    { key: 'customers',    label: 'العملاء',  icon: 'users',            path: '/customers' },
+    { key: 'fields',       label: 'ملاعبي',   icon: 'goal',             path: '/fields',       ownerOnly: true },
+    { key: 'customers',    label: 'العملاء',  icon: 'users',            path: '/customers',    staffOnly: true },
     { key: 'bookings',     label: 'الحجوزات', icon: 'clipboard-list',   path: '/bookings' },
     { key: 'loyalty-scan', label: 'مسح',      icon: 'scan-line',        path: '/loyalty/scan' },
     { key: 'more',         label: 'المزيد',   icon: 'ellipsis',         sheet: true }
   ];
 
-  // مفاتيح الشريط السفلي — لاستبعادها من ورقة «المزيد» فلا تتكرّر الوجهة مرّتين
-  const BOTTOM_KEYS = new Set(BOTTOM_NAV.map((it) => it.key));
+  function bottomNavFor(role) {
+    const isOwner = role === 'owner';
+    return BOTTOM_NAV.filter((it) => (!it.ownerOnly || isOwner) && (!it.staffOnly || !isOwner));
+  }
+
+  // مفاتيح شريط هذا الدور — لاستبعادها من ورقة «المزيد» فلا تتكرّر الوجهة
+  // مرّتين. مشتقّة من الدور لا ثابتة: «العملاء» في شريط الموظف وفي ورقة
+  // المالك، ولو كانت المجموعة واحدة لاختفت عن المالك تماماً.
+  function bottomKeysFor(role) {
+    return new Set(bottomNavFor(role).map((it) => it.key));
+  }
 
 
   let spaCtx = null;
   let currentRouteKey = null; // آخر مسار نشط — لإعادة رسم بانر الاشتراك لحظيًّا
   let isSuperAdminCached = false; // تقرؤه ورقة «المزيد» — الفحص شبكيّ ولا يُعاد
+  let hasLeadsAccessCached = false; // مثله: هل شُورك معه دفتر متابعة العملاء؟
+
+  // مرشّح الظهور الواحد — يقرؤه الشريط الجانبي وورقة «المزيد» معاً، فلا تفترق
+  // القائمتان في وجهةٍ تظهر هنا وتغيب هناك.
+  function navVisibleFor(profile) {
+    return NAV_ITEMS.filter((it) =>
+      (!it.ownerOnly || profile.role === 'owner') &&
+      (!it.leadsOnly || hasLeadsAccessCached));
+  }
 
   // ─── بانر الاشتراك ───────────────────────────────────────
 
@@ -145,8 +172,7 @@ window.layout = (function () {
   }
 
   function buildNavHtml(profile, isLocked) {
-    const visible = NAV_ITEMS.filter((it) => !it.ownerOnly || profile.role === 'owner');
-    const groups = groupNavItems(visible);
+    const groups = groupNavItems(navVisibleFor(profile));
     return groups.map((g) => `
       <div class="nav-group">
         ${g.label ? `<div class="nav-group-label">${window.utils.escapeHtml(g.label)}</div>` : ''}
@@ -178,11 +204,11 @@ window.layout = (function () {
     `).join('');
   }
 
-  function buildBottomNavHtml(isLocked) {
+  function buildBottomNavHtml(isLocked, role) {
     return `
       <nav class="bottom-nav" id="bottom-nav" aria-label="التنقل السفلي">
         <div class="bottom-nav-list">
-          ${BOTTOM_NAV.map((it) => {
+          ${bottomNavFor(role).map((it) => {
             // «المزيد» زرٌّ لا وجهة، ولا يُقفل أبداً: عند انتهاء الاشتراك تصير
             // الورقة الطريقَ الوحيد إلى /subscription على الجوال (لا شريط جانبي).
             if (it.sheet) {
@@ -217,7 +243,8 @@ window.layout = (function () {
   // منزلقة من الأسفل تحت ٦٤٠px أصلاً.
 
   function moreSheetItems(profile) {
-    return NAV_ITEMS.filter((it) => !BOTTOM_KEYS.has(it.key) && (!it.ownerOnly || profile.role === 'owner'));
+    const inBar = bottomKeysFor(profile.role);
+    return navVisibleFor(profile).filter((it) => !inBar.has(it.key));
   }
 
   // دعوة التثبيت كانت في تذييل الشريط الجانبي وحده — والهامبرغر مخفيّ على
@@ -391,8 +418,16 @@ window.layout = (function () {
     }
 
     const { profile, tenant } = ctx;
-    const isSuperAdmin = await window.auth.checkIsSuperAdmin();
+    // الفحصان متوازيان: كلاهما جولةٌ واحدة للخادم، وتسلسلهما يؤخّر رسم القوقعة.
+    // وفحص المتابعة للمالك وحده — والمشرف يبلغ الدفتر من لوحته لا من هنا.
+    const [isSuperAdmin, hasLeadsAccess] = await Promise.all([
+      window.auth.checkIsSuperAdmin(),
+      (profile.role === 'owner' && window.leadsApi)
+        ? window.leadsApi.canAccess()
+        : Promise.resolve(false)
+    ]);
     isSuperAdminCached = isSuperAdmin;
+    hasLeadsAccessCached = hasLeadsAccess;
     spaCtx = ctx;
 
     // اشتراك منتهٍ ⇒ نقفل التبويبات بصرياً (الراوتر يبقى خط الدفاع للروابط المباشرة)
@@ -511,7 +546,7 @@ window.layout = (function () {
           <main class="page-content" id="page-content"></main>
         </div>
 
-        ${buildBottomNavHtml(isLocked)}
+        ${buildBottomNavHtml(isLocked, profile.role)}
       </div>
     `;
 
@@ -681,8 +716,13 @@ window.layout = (function () {
 
     // وجهة داخل الورقة ⇒ يُبرَز «المزيد»، وإلا بقي المستخدم في صفحةٍ لا يشير
     // إليها أي عنصر في الشريط فيقرأها كخروجٍ من التطبيق.
+    // نقرأ الشريط المركَّب فعلاً لا القائمة المصدر — فهو المفلتَر بالدور
     const moreBtn = document.querySelector('.bottom-nav button[data-bottom-key="more"]');
-    if (moreBtn) moreBtn.classList.toggle('active', !!routeKey && !BOTTOM_KEYS.has(routeKey));
+    if (moreBtn) {
+      const inBar = new Set([...document.querySelectorAll('.bottom-nav a[data-bottom-key]')]
+        .map((a) => a.dataset.bottomKey));
+      moreBtn.classList.toggle('active', !!routeKey && !inBar.has(routeKey));
+    }
 
     // breadcrumb — يُعاد بناؤه دائماً لأن setBreadcrumbs() قد يكون مسح الـ id
     const wrap = document.getElementById('breadcrumb');
@@ -807,6 +847,6 @@ window.layout = (function () {
 
   return {
     mountShell, setActive, setBreadcrumbs, getContext,
-    pageTabs, PITCH_TABS, LOYALTY_TABS, BOOKING_TABS, NAV_ITEMS
+    pageTabs, PITCH_TABS, LOYALTY_TABS, BOOKING_TABS, NAV_ITEMS, navVisibleFor
   };
 })();
