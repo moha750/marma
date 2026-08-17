@@ -1,22 +1,7 @@
 // إعدادات الملعب — صفحة (كانت Modal قبل الترحيل)
 (function () {
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  }
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); } catch (_) {}
-    ta.remove();
-  }
+  // النسخ صار في window.utils — تستدعيه لوحة التحكم كذلك، فلا نسختان تتباعدان
+  const copyToClipboard = (text) => window.utils.copyToClipboard(text);
 
   function buildPublicLink(tenantId) {
     return `${window.location.origin}${window.utils.path('/book')}?t=${encodeURIComponent(tenantId)}`;

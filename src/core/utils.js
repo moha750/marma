@@ -31,6 +31,19 @@ const currencyFormatter = new Intl.NumberFormat('ar-EG', {
 
 const relTimeFormatter = new Intl.RelativeTimeFormat('ar', { numeric: 'auto' });
 
+// نسخة احتياطية للحافظة حين لا تتوفّر Clipboard API
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (_) {}
+  ta.remove();
+}
+
 // تحويل ساعات/دقائق إلى نص 12 ساعة بالعربية: "4:00 م"
 function toTime12(h, m) {
   const period = h >= 12 ? 'م' : 'ص';
@@ -501,5 +514,49 @@ window.utils = {
     if (msg.includes('rate limit')) return 'محاولات كثيرة، يرجى الانتظار قليلاً';
 
     return msg;
+  },
+
+  // ── نسخ إلى الحافظة ──────────────────────────────────────
+  // execCommand بديلاً: Clipboard API يحتاج سياقاً آمناً (https أو
+  // localhost)، وWebView التطبيق ليس دائماً كذلك.
+  copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    }
+    fallbackCopy(text);
+    return Promise.resolve();
+  },
+
+  // ── مشاركة رابط ──────────────────────────────────────────
+  //
+  // على الجوال الفعل المقصود ليس «انسخ» بل «أرسله لعميل» — والنسخ خطوة
+  // وسيطة يتبعها فتح واتساب ولصق. فورقة المشاركة الأصلية تختصرهما.
+  // والترتيب: ملحق Capacitor (ورقة النظام داخل التطبيق) ← Web Share API
+  // (جوال المتصفّح) ← الحافظة (سطح المكتب، ولا ورقة مشاركة فيه أصلاً).
+  //
+  // يُرجع 'shared' أو 'copied' ليعرف المنادي أي رسالة يعرض.
+  async shareLink({ url, title = '', text = '' }) {
+    if (window.native && window.native.isNative) {
+      const Share = window.native.plugin('Share');
+      if (Share) {
+        try {
+          await Share.share({ title, text, url, dialogTitle: title });
+          return 'shared';
+        } catch (err) {
+          // إلغاء المستخدم للورقة ليس فشلاً — لا نُتبعه بنسخٍ لم يطلبه
+          if (err && /cancel/i.test(err.message || '')) return 'cancelled';
+        }
+      }
+    }
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return 'shared';
+      } catch (err) {
+        if (err && err.name === 'AbortError') return 'cancelled';
+      }
+    }
+    await this.copyToClipboard(url);
+    return 'copied';
   }
 };
