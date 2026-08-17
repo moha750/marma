@@ -21,6 +21,46 @@
   <meta name="twitter:description" content="ابدأ بإدارة حجوزات ملاعبك مع تجربة مجانية ٣ أيام. كل حجوزاتك .. في مَرمى واحد.">
   <meta name="twitter:image" content="https://marma.help/assets/og/signup.png">
   <script>(function(){try{var t=localStorage.getItem('marma:theme')||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(_){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <!-- حارس جولة أوّل الاستخدام — نسخة صفحة التسجيل. مضمَّن هنا كما في login.html
+       وكما يُضمَّن سكربت السمة أعلاه في صفحات المصادقة الأربع: الجسم يُرسم قبل
+       أوّل <script> في نهايته، فأي طبقة تُحقن من JS كانت ستقفز فوق نموذج مرسوم.
+       الفارق الوحيد عن login.html: بوّابة الدعوة أدناه. -->
+  <style>html.tour-pending .auth-page{visibility:hidden}</style>
+  <script>
+  (function(){
+    var d = document.documentElement;
+    try {
+      var nativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || window.__NATIVE__ === true;
+      if (!nativeApp && !matchMedia('(max-width: 767px)').matches) return;
+
+      // الموظّف المدعوّ ليس عميلاً محتمَلاً يوازن بين المنتجات — هو منضمّ إلى
+      // منشأة قائمة بقرار صاحبها. ستّ شرائح تبيع له ما اشتراه غيره اعتراضٌ لا فائدة فيه.
+      if (/[?&]invite=/.test(location.search)) return;
+
+      if (/[?&](code|error|error_description)=/.test(location.search)) return;
+
+      for (var i = 0; i < localStorage.length; i++) {
+        if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) return;
+      }
+
+      if (localStorage.getItem('marma:known-user')) return;
+      if (localStorage.getItem('marma:tour:v1')) return;
+      if (Date.now() < +(localStorage.getItem('marma:tour:snooze') || 0)) return;
+      if (nativeApp && sessionStorage.getItem('marma:tour:session')) return;
+
+      if (!nativeApp && document.referrer) {
+        var r = new URL(document.referrer);
+        if (r.host === location.host && /^\/(index\.html)?$/.test(r.pathname)) return;
+      }
+
+      window.__TOUR_OK__ = true;
+      d.classList.add('tour-pending');
+    } catch (_) {}
+    if (d.classList.contains('tour-pending')) {
+      setTimeout(function(){ d.classList.remove('tour-pending'); }, 2500);
+    }
+  })();
+  </script>
   <link rel="stylesheet" href="../styles/main.css">
 </head>
 <body>
@@ -108,6 +148,11 @@
       <div class="auth-footer" id="auth-footer">
         لديك حساب بالفعل؟ <a href="/auth/login">سجل دخولك</a>
       </div>
+
+      <!-- داخل .auth-card لا بعدها: .auth-page حاوية flex أفقية. -->
+      <p class="auth-tour-link">
+        <button type="button" id="tour-open-btn">ما هو مَرمى؟ · جولة سريعة</button>
+      </p>
     </div>
   </div>
 
@@ -123,9 +168,15 @@
   <!-- signup يحتاج staffApi.getInvitationByCode فقط -->
   <script src="../src/features/staff/api.js"></script>
   <script src="../src/core/api.js"></script>
+  <script src="../src/shared/components/tour-stages.js"></script>
+  <script src="../src/shared/components/tour.js"></script>
   <script>
     window.utils.renderIcons();
     window.utils.initPasswordToggles();
+
+    // الجولة: تُركَّب إن أذن الحارس في الـ head، وترفع tour-pending في كل الأحوال.
+    window.tour.init();
+    document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
     document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
     document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
     (async () => {
@@ -214,6 +265,9 @@
           const { error } = await window.sb.auth.verifyOtp({ email: pendingEmail, token, type: 'signup' });
           if (error) throw error;
           // نجح: الجلسة مفعّلة → للوحة التحكم (شاشة الإعداد تلتقطه للمالك الجديد)
+          // ويُعلَّم الجهاز: الموظّف المدعوّ يدخل من هنا لا من صفحة الدخول، فلولا
+          // هذا السطر لرأى الجولة عند أوّل خروج له.
+          window.auth.markKnownDevice();
           window.utils.toast('تم تفعيل حسابك 🎉', 'success');
           setTimeout(() => window.location.replace(window.utils.path('/dashboard')), 600);
         } catch (err) {

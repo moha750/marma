@@ -1,0 +1,1669 @@
+/* ===== جولة أوّل استخدام — ستّ شرائح فوق صفحة الدخول =====
+   تُعرض على مساحة الجوال (‎max-width: 767px) وداخل التطبيق الأصلي فقط.
+
+   كل قاعدة هنا محصورة تحت ‎.tour أو ‎html.tour-pending — لا شيء يتسرّب إلى صفحة
+   الدخول خلفها ولا إلى بقيّة التطبيق.
+
+   قانون الحركة (سببه في docs، وخلاصته هنا):
+   كل تغيير حالة يقع داخل ‎@keyframes لا بتبديل أصناف من JS — لأن ‎chip.css و
+   ‎card.css تضعان ‎transition على ‎background، فتبديلٌ بالـ JS كان سيُمَوِّه الارتداد
+   فيُقرأ «النظام يسحب ما فعله». والحركة داخل keyframes تتجاوز الـ transitions.
+   وكل حلقة تنتهي عند حالة «بَعد» لا عند حالة البداية، والقطع بين الدورتين
+   تتكفّل به ‎tour-cut على المسرح: عتمة خاطفة ثم ظهور — قطعٌ لا لفٌّ عكسي. */
+
+/* ===== حارس الوميض =====
+   نموذج الدخول مرسوم في السطور 32-74 من login.html وأول سكربت في السطر 76 —
+   أي أنه يُرسم قبل أن يعرف أحد أن هناك جولة. والحارس المتزامن في ‎<head> يضع
+   ‎html.tour-pending فيُخفيه، ثم ترفعه ‎tour.js بعد أن تُركّب الطبقة أو تقرّر ألّا
+   تُعرض. القاعدة نفسها مكرّرة مضمَّنةً في ‎<head> لأن ‎main.css يُحمَّل بـ35 @import
+   متسلسلة فلا يصل قبل الرسم. */
+html.tour-pending .auth-page { visibility: hidden; }
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-0);
+  padding-block-start: max(var(--space-3), var(--safe-top, 0px));
+  padding-block-end: max(var(--space-4), var(--safe-bottom, 0px));
+  padding-inline: var(--tour-pad);
+  overscroll-behavior: contain;
+
+  /* حشوة ضيّقة عمداً: المسرح يتحجّم بعرض الشاشة، فكل بكسل حشوة بكسلان من
+     الرسم. والسقف الرأسي تضبطه سلالم الارتفاع أدناه. */
+  --tour-pad: var(--space-3);
+  --tour-scale-max: 1;
+}
+
+/* ===== الترويسة: تخطّي ===== */
+.tour-head {
+  display: flex;
+  justify-content: flex-end;
+  min-block-size: 32px;
+}
+
+/* 44×44 حدٌّ أدنى لكل هدف لمس: الجولة لا تُعرض إلا على الجوال والتطبيق، فكل
+   زرّ فيها يُلمس بالإصبع لا بالمؤشّر (WCAG 2.5.5 · iOS HIG). */
+.tour-skip {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-inline-end: calc(var(--space-3) * -1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+}
+.tour-skip:hover { color: var(--text-secondary); }
+
+/* ===== المنصّة ===== */
+/* overflow-y هنا ليس ترفاً: المسرح والنصّ معاً يتجاوزان الشاشة حين يقصر
+   الارتفاع (نافذة متصفّح مصغّرة، أو جوال في الوضع الأفقي)، وبلا حصر كان النصّ
+   يزحف فوق زرّ «التالي» فيبدو الزرّ مفقوداً. الحصر يُبقي التذييل مثبَّتاً دائماً. */
+.tour-viewport {
+  flex: 1;
+  display: grid;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tour-slide {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* توسيط بصري لا حسابي: الكتلة (مسرح + نصّ) تُتوسَّط ثم تُرفع قليلاً بحشوة
+     سفلية، لأن العين تقرأ المتوسّط حسابياً منخفضاً عن مركز الشاشة.
+     التوسيط هنا صحيح لأن المسرح صار يملأ العرض — حين كان 300px ثابتة كان يترك
+     هواءً متساوياً فوقه وتحته فيبدو عائماً؛ والآن الفائض قليل فيُقسَم بلا أثر.
+     safe center: التوسيط العادي يقصّ أعلى المحتوى حين يفيض في حاوية قابلة
+     للتمرير، فلا يُبلَغ ما فوق. */
+  justify-content: safe center;
+  padding-block-end: var(--space-8);
+  gap: var(--space-5);
+  visibility: hidden;
+  opacity: 0;
+}
+
+.tour-slide.is-active {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* الشرائح غير الظاهرة: إيقافٌ لا إلغاء — يحفظ الإطار المحسوب ويُسكِت إعادة
+   الطلاء. الجولة شاشة يجلس عليها المستخدم يقرأ، فالحلقات في الخلفية كلفة
+   بطارية خالصة على التطبيق الأصلي. */
+.tour-slide:not(.is-active),
+.tour-slide:not(.is-active) *,
+.tour-slide:not(.is-active) *::before,
+.tour-slide:not(.is-active) *::after {
+  animation-play-state: paused !important;
+}
+
+/* إطار الإعادة عند الدخول إلى شريحة (تالٍ أو رجوع): تُكتب الحالة الابتدائية
+   كاملةً قبل أن تصير الشريحة مرئية. بدون هذا تُستأنف الحلقة الموقوفة من
+   منتصفها فيصل المستخدم إلى رسالة نصف مكتوبة. */
+.tour-slide.is-resetting,
+.tour-slide.is-resetting *,
+.tour-slide.is-resetting *::before,
+.tour-slide.is-resetting *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ===== المسرح =====
+   عرضه 300px ثابت في التخطيط: كل شريحة صُمِّمت على هذا العرض، ويبقى كذلك كي
+   تحتفظ أصناف مَرمى الحقيقية بمقاساتها ونِسَبها. التحجيم كلّه بـ zoom على
+   الحاوية — وzoom لا transform لأنه يُحجّم صندوق التخطيط معه، فيستردّ المساحة
+   بدل أن يترك فراغاً محجوزاً (وهو العطل الذي كان يزحف به النصّ على الزرّ).
+
+   المُعامل = الأصغر بين ما يسمح به العرض وما يسمح به الارتفاع:
+   العرض يحكم دائماً على الجوال الضيّق، والارتفاع يمنع التضخّم على الشاشات
+   الطويلة. */
+.tour-stage {
+  inline-size: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  /* المُعامل يحسبه fit() في tour.js ويكتبه على .tour — لا يُحسب هنا لأن zoom
+     يلزمه عددٌ بلا وحدة، وCSS لا تقسم طولاً على طول لتُنتج نسبة. والقياس في JS
+     أدقّ على كل حال: يقرأ المساحة المتبقّية فعلاً بعد النصّ والتذييل. */
+  zoom: var(--tour-scale, 1);
+  animation: tour-cut var(--tour-loop, 8s) linear var(--tour-iters, 3) forwards;
+}
+
+/* شبكة أمان لمحرّك بلا zoom: التحجيم بصريّ فقط، ويبقى overflow-y على المنصّة
+   هو ما يمنع الزحف على التذييل. */
+@supports not (zoom: 1) {
+  .tour-stage {
+    max-inline-size: 100%;
+    zoom: normal;
+    transform: scale(var(--tour-scale, 1));
+    transform-origin: top center;
+  }
+}
+
+/* القطع بين الدورتين: الحلقة تنتهي عند حالة «بَعد»، فالانتقال منها إلى حالة
+   البداية يقع داخل عتمة لا أمام العين. */
+@keyframes tour-cut {
+  0%    { opacity: 0; }
+  2.5%  { opacity: 1; }
+  100%  { opacity: 1; }
+}
+
+/* التحجيم يتولّاه fit() في JS. ما يبقى هنا هو الطباعة والتنفّس على الشاشات
+   القصيرة — وهي لا تُشتقّ من قياس فتبقى في CSS حيث تُقرأ. */
+@media (max-height: 700px) {
+  .tour-slide { gap: var(--space-4); }
+}
+@media (max-height: 620px) {
+  .tour-headline { font-size: var(--text-lg); }
+  .tour-foot { padding-block-start: var(--space-3); }
+}
+@media (max-height: 540px) {
+  .tour-slide { gap: var(--space-3); }
+  .tour-sub { font-size: var(--text-xs); }
+}
+
+/* الوضع الأفقي على الجوال: الارتفاع شحيح والعرض وفير — فالمسرح والنصّ جنباً
+   إلى جنب بدل أن يتكدّسا ويزحف النصّ على التذييل. */
+@media (max-height: 460px) and (orientation: landscape) {
+  .tour-slide {
+    flex-direction: row;
+    align-items: center;
+    justify-content: safe center;
+    gap: var(--space-5);
+  }
+  .tour-stage { --tour-scale: 0.62; flex: 0 0 auto; }
+  .tour-copy { text-align: start; max-inline-size: 300px; }
+  .tour-foot { padding-block-start: var(--space-2); gap: var(--space-2); }
+}
+
+/* ===== النصّ ===== */
+.tour-copy {
+  text-align: center;
+  max-inline-size: 340px;
+}
+
+.tour-headline {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.tour-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ===== التذييل =====
+   صفٌّ واحد: «رجوع» في البداية · النقاط في الوسط · «التالي» في النهاية —
+   وهي في RTL الزاوية السفلى اليسرى، أي جهة التقدّم في القراءة العربية.
+   الزرّ ليس بطل الشاشة: المسرح هو البطل، والزرّ أداةُ تقدّم بحجم إصبع.
+   يستثنى من ذلك الشريحة الأخيرة وحدها (‎.tour.is-last) حيث يصير الزرّ هو
+   الرسالة فيستحقّ عرض الشاشة. */
+/* شبكة 1fr·auto·1fr لا صفٌّ مرن: مع space-between تنزاح النقاط حين يختفي أحد
+   الطرفين (والزرّ ينتقل إلى سطره على الشريحة الأخيرة). العمود الأوسط يجعل
+   الوسط وسطاً حقيقياً مهما تغيّر الطرفان. */
+.tour-foot {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+}
+
+.tour-back { justify-self: start; }
+.tour-dots { justify-self: center; }
+.tour-next { justify-self: end; }
+
+.tour-dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tour-dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border-default);
+  transition: inline-size var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out);
+}
+
+.tour-dot.is-active {
+  inline-size: 18px;
+  background: var(--accent-500);
+}
+
+/* الشريحة التي مضت: أغمق من القادمة وأخفت من الحالية — يقرأ المستخدم موضعه
+   بلا عدّ. */
+.tour-dot.is-done { background: var(--accent-100); }
+
+/* ===== زرّ التقدّم =====
+   دائرة 56px في الزاوية: كبيرة كفايةً للإصبع، صغيرة كفايةً ألّا تنافس المسرح. */
+.tour-next {
+  flex: 0 0 auto;
+  inline-size: 56px;
+  block-size: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--accent-500);
+  color: var(--text-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: background-color var(--transition), transform var(--duration-fast) var(--ease-out);
+}
+.tour-next:hover { background: var(--accent-600); }
+.tour-next:active { transform: scale(0.94); }
+.tour-next svg { inline-size: 22px; block-size: 22px; }
+.tour-next .tour-next-text { display: none; }
+
+/* الشريحة الأخيرة: الزرّ يصير الوجهة لا الأداة، فينزل سطراً ويمتدّ ويتكلّم. */
+.tour.is-last .tour-next {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  inline-size: auto;
+  block-size: auto;
+  min-block-size: 52px;
+  border-radius: var(--radius-lg);
+  gap: var(--space-2);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin-block-start: var(--space-3);
+}
+.tour.is-last .tour-next .tour-next-text { display: inline; }
+
+/* ===== الرجوع ===== */
+.tour-back {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  visibility: hidden;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+}
+.tour-back.is-visible { visibility: visible; }
+
+/* بؤرة العنوان بلا حلقة مرئية إطلاقاً: هي بؤرة برمجية تُعلن المحتوى الجديد
+   لقارئ الشاشة عند تبديل الشريحة، والعنصر خارج دورة Tab أصلاً (tabindex="-1")
+   فلا يقصده أحدٌ بلوحة المفاتيح — وإظهار حلقة حوله يرسم إطاراً غامضاً حول
+   عنوانٍ لا يُنقر. */
+.tour-headline:focus,
+.tour-headline:focus-visible { outline: none; }
+
+/* ===== المدخل اليدوي تحت بطاقة الدخول ===== */
+/* «تلقائياً مرّة، ومتاحة دائماً» — هذا السطر هو نصف القاعدة الثاني: العلم يكتم
+   الفتح التلقائي، وهذا الرابط يُبقي الجولة في متناول من أرادها متى أراد. */
+.auth-tour-link {
+  display: none;
+  margin-block-start: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+.auth-tour-link button {
+  border: 0;
+  background: transparent;
+  color: var(--accent-600);
+  font: inherit;
+  font-size: inherit;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-block-size: 44px;
+}
+@media (max-width: 767px) {
+  .auth-tour-link { display: block; }
+}
+html.native .auth-tour-link { display: block; }
+
+/* ===== تقليل الحركة =====
+   ‎tokens.css:227 يصفّر متغيّرات ‎--duration-* فقط ولا يمسّ ‎animation — فبدون هذه
+   الكتلة يرى المستخدم حالة البداية جامدةً إلى الأبد. كل شريحة تكتب حالة سكونها
+   النهائية صراحةً في ملفها؛ وهنا نُلغي القطع ونثبّت المسرح ظاهراً. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-stage { animation: none !important; opacity: 1 !important; }
+  .tour-dot { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   أنماط الشرائح الستّ وحركاتها
+   كل كتلة محصورة بـ .tour-slide[data-slide="N"]، وكل حركة داخل
+   @keyframes تنتهي عند حالة «بَعد» — القطع بين الدورتين تتكفّل به
+   tour-cut على المسرح أعلاه.
+   ═══════════════════════════════════════════════════════════ */
+/* ساعة الشريحة — تقرأها tour-cut في القوقعة أيضاً بالوراثة،
+   فالقطع والحركة على ساعة واحدة لا ساعتين. */
+.tour-slide[data-slide="1"] {
+  --tour-loop: 8s;
+  --tour-iters: 3;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   الشريحة ١ — صفحة الحجز العامة · «ملعبك يحجز وأنت نايم»
+   كل قاعدة مسبوقة بـ .tour-slide[data-slide="1"] — لا تسريب على صفحة الدخول.
+   المدّة والتكرار يُقرآن من متغيّري القوقعة نفسيهما اللذين تقرأ منهما
+   tour-cut في tour.css:110 — فالقطع والحركة على ساعة واحدة لا ساعتين.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tour-slide[data-slide="1"] .tour-stage {
+  /* جسر ألوان الوجه العام — منقول حرفياً من public-shell.css:9-22.
+     أصناف .bp-* تقرأ --c-* وهي معرّفة هناك على `.lp, .bp` وحدهما،
+     وصفحة الدخول ليست أياً منهما. لا لون جديد: نفس التعيين حرفاً بحرف. */
+  --c-bg:       var(--surface-0);
+  --c-surface:  var(--surface-1);
+  --c-soft:     var(--surface-2);
+  --c-bdr:      var(--border-subtle);
+  --c-bdr-2:    var(--border-default);
+  --c-fg:       var(--text-primary);
+  --c-mute:     var(--text-secondary);
+  --c-faint:    var(--text-tertiary);
+  --c-brand:    var(--accent-500);
+  --c-brand-d:  var(--accent-600);
+  --c-brand-dd: var(--accent-700);
+  --c-brand-50: var(--accent-50);
+
+  /* booking-page.css:9 — هنا مسرح 300px لا صفحة، فالهامش أضيق */
+  --bp-gutter: var(--space-2);
+}
+
+/* ═══ خليّة التبديل ═══
+   النسختان الحقيقيّتان في نفس المربّع — لا عنصر واحد يتلوّن. */
+.tour-slide[data-slide="1"] .tour-swap {
+  display: grid;
+  position: relative;
+}
+.tour-slide[data-slide="1"] .tour-swap > .tour-layer {
+  grid-area: 1 / 1;
+}
+/* حالة البداية: «قبل» ظاهرة بشفافيّتها الطبيعية — لا نُعلنها كي لا نطمس
+   .btn:disabled (button.css:50) — و«بَعد» مخفيّة حتى تسوقها الـ keyframes
+   إلى حالة السكون وتثبّتها بـ forwards. */
+.tour-slide[data-slide="1"] .tour-layer--after { opacity: 0; }
+
+/* ═══ 1) شبكة المواعيد ═══
+   المصدر auto-fit minmax(108px,1fr) — على مسرح 300px نثبّتها 2×2 */
+.tour-slide[data-slide="1"] .bp-slots-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* اختيار موعد 7:00 م — الطبقتان متطابقتا النصّ والموضع، فالتلاشي المتقابل
+   يُقرأ تلوّناً لا نصّاً فوق نصّ. */
+.tour-slide[data-slide="1"] .tour-swap--slot .tour-layer--after {
+  /* الحلقة تبدأ مطبقة صفراً ثم تتّسع — والقيمة النهائية عين booking-page.css:954 */
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-brand) 20%, transparent);
+  animation: tour1SlotOn var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+.tour-slide[data-slide="1"] .tour-swap--slot .tour-layer--before {
+  animation: tour1SlotOff var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+@keyframes tour1SlotOn {
+  0%, 26% { opacity: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-brand) 20%, transparent); }
+  38%     { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-brand) 20%, transparent); }
+  100%    { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-brand) 20%, transparent); }
+}
+@keyframes tour1SlotOff {
+  0%, 26% { opacity: 1; }
+  38%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+
+/* ═══ 2) حلقة اللمس ═══ تهبط وتتمدّد وتخرج — ولا تعود إلى نقطة البداية */
+.tour-slide[data-slide="1"] .tour-tap {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 46px;
+  block-size: 46px;
+  margin-block-start: -23px;
+  margin-inline-start: -23px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--c-brand);
+  background: color-mix(in srgb, var(--c-brand) 12%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.35);
+  animation: tour1Tap var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+@keyframes tour1Tap {
+  0%, 16% { opacity: 0;    transform: scale(0.35); }
+  22%     { opacity: 0.9;  transform: scale(0.62); }
+  30%     { opacity: 0.5;  transform: scale(1.15); }
+  42%     { opacity: 0;    transform: scale(1.9); }
+  100%    { opacity: 0;    transform: scale(1.9); }
+}
+
+/* ═══ 3) شريط الفعل ═══
+   شريطٌ واحد لا شريطان: القشرة ثابتة والمحتوى وحده يتبدّل طبقتين. */
+.tour-slide[data-slide="1"] .bp-action-bar {
+  /* المصدر fixed لأنه يطفو فوق صفحة تُمرَّر؛ في المسرح لا صفحة تحته */
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  padding: var(--space-2) var(--bp-gutter);
+  padding-block-end: var(--space-2);
+  gap: var(--space-2);
+}
+/* booking-page.css:1087 يُخفي التلميح ما دام data-state ليس empty — وهنا
+   نحتاج النسختين معاً في نفس الخليّة كي يقع التبديل داخل keyframes. */
+.tour-slide[data-slide="1"] .bp-action-bar .bp-action-empty {
+  display: inline-flex;
+  font-size: var(--text-xs);
+}
+.tour-slide[data-slide="1"] .tour-swap--info {
+  flex: 1;
+  min-inline-size: 0;
+}
+.tour-slide[data-slide="1"] .bp-action-summary { gap: var(--space-2); }
+/* booking-page.css:1502 يصغّر الرقم على الجوال — والمسرح جوال دائماً */
+.tour-slide[data-slide="1"] .bp-action-price-amt { font-size: var(--text-xl); }
+/* booking-page.css:1504 يُخفي الميتا تحت 520px، والشريحة تحكي «سطر التاريخ
+   والوقت» — فنُعيدها ونضيّق قياسها لتسع عرض 300px */
+.tour-slide[data-slide="1"] .bp-action-meta {
+  display: flex;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tour-slide[data-slide="1"] .bp-action-cta {
+  --btn-px: 14px;
+  min-inline-size: 104px;
+  min-block-size: 44px;
+}
+
+/* التلميح يخرج أولاً ثم يدخل الملخّص — تداخل قصير كي لا يتراكب نصّان */
+.tour-slide[data-slide="1"] .tour-swap--info .tour-layer--before {
+  animation: tour1HintOut var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+.tour-slide[data-slide="1"] .tour-swap--info .tour-layer--after {
+  animation: tour1SumIn var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+@keyframes tour1HintOut {
+  0%, 38% { opacity: 1; }
+  45%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+@keyframes tour1SumIn {
+  0%, 43% { opacity: 0; }
+  52%     { opacity: 1; }
+  100%    { opacity: 1; }
+}
+
+/* ═══ 4) «متابعة» والسكون ═══
+   الزرّ المعطَّل يبقى على شفافيّته الحقيقية (button.css:50) وينزل فوقه الزرّ
+   الفعّال معتماً فيغطّيه تماماً — إضاءةٌ لا تمويهُ لونٍ واحد. ثم في السكون
+   نبضة ضوء واحدة حوله بلا تكبير ولا إزاحة — حركتان على العنصر نفسه. */
+.tour-slide[data-slide="1"] .tour-swap--cta .tour-layer--after {
+  animation:
+    tour1CtaOn   var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards,
+    tour1CtaGlow var(--tour-loop, 8s) var(--ease-out) var(--tour-iters, 3) forwards;
+}
+@keyframes tour1CtaOn {
+  0%, 41% { opacity: 0; }
+  50%     { opacity: 1; }
+  100%    { opacity: 1; }
+}
+@keyframes tour1CtaGlow {
+  0%, 58% { box-shadow: var(--ring-inset), 0 0 0 0 color-mix(in srgb, var(--accent-500) 0%, transparent); }
+  /* ذروة النبضة = عين --ring-focus في tokens.css:153 */
+  72%     { box-shadow: var(--ring-inset), 0 0 0 3px color-mix(in srgb, var(--accent-500) 24%, transparent); }
+  90%     { box-shadow: var(--ring-inset), 0 0 0 7px color-mix(in srgb, var(--accent-500) 0%, transparent); }
+  100%    { box-shadow: var(--ring-inset), 0 0 0 0 color-mix(in srgb, var(--accent-500) 0%, transparent); }
+}
+
+/* ═══ تقليل الحركة ═══ حالة السكون مباشرةً.
+   tokens.css:227 يصفّر --duration-* فقط ولا يمسّ animation. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="1"] .tour-stage * { animation: none !important; }
+
+  .tour-slide[data-slide="1"] .tour-layer--after { opacity: 1; }
+  .tour-slide[data-slide="1"] .tour-swap--slot .tour-layer--before,
+  .tour-slide[data-slide="1"] .tour-swap--info .tour-layer--before { opacity: 0; }
+  .tour-slide[data-slide="1"] .tour-swap--slot .tour-layer--after {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-brand) 20%, transparent);
+  }
+  .tour-slide[data-slide="1"] .tour-tap { opacity: 0; transform: scale(1.9); }
+  .tour-slide[data-slide="1"] .tour-swap--cta .tour-layer--after {
+    box-shadow: var(--ring-inset);
+  }
+}
+/* ===== الشريحة ٢ — «الطلب يوصلك، والقرار بيدك» =====
+   المكوّنات كلّها أصناف مَرمى الحقيقية: ‎.pending-bar (home.js:197-210) وكرت
+   الحجز (list.js:421-499 في وضع ‎.as-cards) ومودال التأكيد (booking-whatsapp.js:61).
+   وأصناف ‎.tour-* هنا للمسرح والحركة فقط. كل تغيير حالة داخل ‎@keyframes بلا JS. */
+
+.tour-slide[data-slide="2"] {
+  --tour-loop: 9s;
+  --tour-iters: 3;
+
+  /* لوحة الرسم: كل مكوّن بمقاسه الحقيقي على عرض 410px، ثم تُصغَّر اللوحة كاملةً
+     إلى عرض المسرح 300px — التصغير على الحاوية لا على المكوّنات (وهو ما تفعله
+     tour.css نفسها على الشاشات القصيرة). و410 هو أضيق عرض يسع فيه تذييل المودال
+     زرَّيه في سطر واحد كما في المصدر (‎.btn‎ لا يلتفّ نصّه: button.css:27). */
+  --s2-w: 410px;
+  --s2-h: 450px;
+  --s2-k: 0.731707;            /* 300 / 410 */
+}
+
+.tour-slide[data-slide="2"] .tour-stage {
+  display: block;                /* إطار واحد بدل عمود مرن */
+}
+
+.tour-slide[data-slide="2"] .tour-frame {
+  position: relative;
+  inline-size: 300px;
+  max-inline-size: 100%;
+  block-size: calc(var(--s2-h) * var(--s2-k));
+}
+
+.tour-slide[data-slide="2"] .tour-canvas {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--s2-w);
+  block-size: var(--s2-h);
+  transform: scale(var(--s2-k));
+  transform-origin: top right;   /* RTL: بداية السطر هي اليمين */
+}
+
+/* ─── طبقتان متراكبتان في خليّة واحدة: لا عنصر يتلوّن، بل نسختان حقيقيتان ─── */
+.tour-slide[data-slide="2"] .tour-swap {
+  display: inline-grid;
+  justify-items: start;
+  align-items: center;
+}
+.tour-slide[data-slide="2"] .tour-swap > * { grid-area: 1 / 1; }
+/* الشارة تُحاذي طرف الكرت كما تفعل ‎td.card-tag‎ حين تنكمش على محتواها */
+.tour-slide[data-slide="2"] .tour-swap--end { justify-items: end; }
+
+/* ─── ١) إشعار النظام — نصّه من send-booking-push/index.ts:149-157 ─── */
+.tour-slide[data-slide="2"] .tour-push {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3), var(--ring-inset);
+  opacity: 0;
+  transform: translateY(-130%);
+  animation: s2-push var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+.tour-slide[data-slide="2"] .tour-push-text {
+  display: block;
+  min-inline-size: 0;
+  line-height: var(--leading-snug);
+}
+.tour-slide[data-slide="2"] .tour-push-app {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-tertiary);
+}
+.tour-slide[data-slide="2"] .tour-push-title {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+.tour-slide[data-slide="2"] .tour-push-body {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-secondary);
+}
+
+@keyframes s2-push {
+  0%   { opacity: 0; transform: translateY(-130%); }
+  3%   { opacity: 0; transform: translateY(-130%); }
+  9%   { opacity: 1; transform: translateY(0); }
+  27%  { opacity: 1; transform: translateY(0); }
+  32%  { opacity: 0; transform: translateY(-130%); }
+  100% { opacity: 0; transform: translateY(-130%); }
+}
+
+/* ─── ٢) شريط الطلبات المعلّقة: عدّاد بثلاث طبقات + وميضة أو وميضتان ─── */
+
+/* الشريط في المصدر ‎<a>‎ — هنا ‎<span>‎ فلا يُنقر داخل مسرح تعريفي */
+.tour-slide[data-slide="2"] .pending-bar {
+  animation: s2-bar var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* عرض محجوز لأطول نصّ («طلب واحد») فلا يرتجف السطر عند تبديل العدّاد */
+.tour-slide[data-slide="2"] .tour-count > strong { white-space: nowrap; }
+.tour-slide[data-slide="2"] .tour-count-a { animation: s2-count-a var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="2"] .tour-count-b { opacity: 0; animation: s2-count-b var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="2"] .tour-count-c { opacity: 0; animation: s2-count-c var(--tour-loop) var(--ease-out) 3 forwards; }
+
+/* الوميض: حلقة كهرمانية + خلفية ‎:active الحقيقية، تنتهي عند قيمتي السكون */
+@keyframes s2-bar {
+  0%    { background: var(--warning-tint);
+          box-shadow: var(--shadow-1), 0 0 0 0 color-mix(in srgb, var(--warning) 34%, transparent); }
+  33%   { background: var(--warning-tint);
+          box-shadow: var(--shadow-1), 0 0 0 0 color-mix(in srgb, var(--warning) 34%, transparent); }
+  35.5% { background: color-mix(in srgb, var(--warning-tint) 84%, var(--warning));
+          box-shadow: var(--shadow-1), 0 0 0 6px color-mix(in srgb, var(--warning) 34%, transparent); }
+  38%   { background: var(--warning-tint);
+          box-shadow: var(--shadow-1), 0 0 0 0 color-mix(in srgb, var(--warning) 34%, transparent); }
+  40.5% { background: color-mix(in srgb, var(--warning-tint) 84%, var(--warning));
+          box-shadow: var(--shadow-1), 0 0 0 6px color-mix(in srgb, var(--warning) 34%, transparent); }
+  43%   { background: var(--warning-tint);
+          box-shadow: var(--shadow-1), 0 0 0 0 color-mix(in srgb, var(--warning) 34%, transparent); }
+  100%  { background: var(--warning-tint);
+          box-shadow: var(--shadow-1), 0 0 0 0 color-mix(in srgb, var(--warning) 34%, transparent); }
+}
+
+/* «طلب واحد» → «طلبان» عند وصول الإشعار → «طلب واحد» بعد القبول.
+   ثلاث طبقات لا طبقتان: كل طبقة تسير في اتجاه واحد ولا ترتدّ. */
+@keyframes s2-count-a {
+  0%   { opacity: 1; }
+  32%  { opacity: 1; }
+  35%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes s2-count-b {
+  0%   { opacity: 0; }
+  32%  { opacity: 0; }
+  35%  { opacity: 1; }
+  53%  { opacity: 1; }
+  57%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes s2-count-c {
+  0%   { opacity: 0; }
+  53%  { opacity: 0; }
+  57%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ─── ٣) كرت الحجز: تبديل الشارة + حلقة اللمس على «قبول الحجز» ─── */
+.tour-slide[data-slide="2"] .tour-chip-a { animation: s2-chip-a var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="2"] .tour-chip-b { opacity: 0; animation: s2-chip-b var(--tour-loop) var(--ease-out) 3 forwards; }
+
+@keyframes s2-chip-a {
+  0%   { opacity: 1; }
+  51%  { opacity: 1; }
+  55%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes s2-chip-b {
+  0%   { opacity: 0; }
+  51%  { opacity: 0; }
+  55%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.tour-slide[data-slide="2"] .tour-approve { position: relative; }
+
+.tour-slide[data-slide="2"] .tour-tap-dot,
+.tour-slide[data-slide="2"] .tour-tap-ring {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 22px;
+  block-size: 22px;
+  margin-block-start: -11px;
+  margin-inline-start: -11px;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.tour-slide[data-slide="2"] .tour-tap-dot {
+  background: color-mix(in srgb, var(--accent-500) 26%, transparent);
+  animation: s2-tap-dot var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="2"] .tour-tap-ring {
+  border: 2px solid var(--accent-500);
+  animation: s2-tap-ring var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+@keyframes s2-tap-dot {
+  0%   { opacity: 0; transform: scale(0.5); }
+  45%  { opacity: 0; transform: scale(0.5); }
+  47%  { opacity: 1; transform: scale(1); }
+  53%  { opacity: 0.85; transform: scale(1); }
+  57%  { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes s2-tap-ring {
+  0%   { opacity: 0; transform: scale(0.6); }
+  46%  { opacity: 0; transform: scale(0.6); }
+  48%  { opacity: 0.85; transform: scale(1); }
+  56%  { opacity: 0; transform: scale(2.8); }
+  100% { opacity: 0; transform: scale(2.8); }
+}
+
+/* ─── ٤) مودال «تأكيد الحجز» — يعلو بعد القبول ويبقى ─── */
+
+/* الخلفية مثبّتة داخل المسرح لا على الشاشة، وتبدأ تحت شارة الحالة فتبقى
+   الشارة الخضراء و‎.pending-bar مقروءتين في السكون (تنازل مقاس، لا تنازل بنية) */
+.tour-slide[data-slide="2"] .tour-modal {
+  position: absolute;
+  inset-block-start: 118px;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 4;
+  padding-inline: var(--space-2);
+  /* تصفير حشوة المناطق الآمنة: native.css يضعها على كل .modal-backdrop لأن
+     نوافذ التطبيق الحقيقية تملأ الشاشة وتصطدم بالنَقش. وهذه نافذة مرسومة داخل
+     مسرح 300px لا على الشاشة، فحشوة النَقش تزيحها بلا سبب. */
+  padding-block: 0;
+  opacity: 0;
+  animation: s2-backdrop var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+.tour-slide[data-slide="2"] .tour-modal .modal {
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  animation: s2-modal var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* التذييل يلتفّ بدل أن يُقصّ حين لا يسع الزرّان سطراً واحداً */
+.tour-slide[data-slide="2"] .tour-modal .modal-footer > div { flex-wrap: wrap; }
+
+@keyframes s2-backdrop {
+  0%   { opacity: 0; }
+  59%  { opacity: 0; }
+  63%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes s2-modal {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.98); }
+  59%  { opacity: 0; transform: translateY(14px) scale(0.98); }
+  65%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── تقليل الحركة: حالة السكون النهائية مباشرةً ───
+   tokens.css:227 يصفّر ‎--duration-* فقط ولا يمسّ ‎animation. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="2"] .tour-stage * { animation: none !important; }
+
+  .tour-slide[data-slide="2"] .tour-push { opacity: 0; transform: translateY(-130%); }
+  .tour-slide[data-slide="2"] .pending-bar { background: var(--warning-tint); box-shadow: var(--shadow-1); }
+  .tour-slide[data-slide="2"] .tour-count-a,
+  .tour-slide[data-slide="2"] .tour-count-b { opacity: 0; }
+  .tour-slide[data-slide="2"] .tour-count-c { opacity: 1; }
+  .tour-slide[data-slide="2"] .tour-chip-a { opacity: 0; }
+  .tour-slide[data-slide="2"] .tour-chip-b { opacity: 1; }
+  .tour-slide[data-slide="2"] .tour-tap-dot,
+  .tour-slide[data-slide="2"] .tour-tap-ring { opacity: 0; }
+  .tour-slide[data-slide="2"] .tour-modal { opacity: 1; }
+  .tour-slide[data-slide="2"] .tour-modal .modal { opacity: 1; transform: none; }
+}
+/* ═══ الشريحة ٣ — «ما تنسى تبلّغ أحد» ═══
+   كرت حجز حقيقي (‎.table--cards داخل ‎.table-wrapper.cards-only.as-cards) يرتفع،
+   لمسة على ‎.btn--wa، فقاعة الرسالة الجاهزة تدخل من جهة البداية وأسطرها تتتابع،
+   ثم تنزاح — فينقلب الشريط من ‎.wa-pending إلى ‎.wa-confirmed والزرّ من ‎.btn--wa
+   إلى ‎.btn--wa-quiet. كل تبديل حالة طبقتان متراكبتان في خليّة شبكة واحدة، وكل
+   حركة داخل ‎@keyframes لا بتبديل أصناف.
+   السكون هنا مطلق: واجهة مراسلة ساكنة هي الطبيعية، وأي نبض فيها يُقرأ «رسالة
+   عالقة في الإرسال». */
+
+.tour-slide[data-slide="3"] {
+  --tour-loop: 8.5s;
+  --tour-iters: 3;
+}
+
+/* ─── الكرت — وهو أيضاً مرجع الفقاعة العائمة فوقه ─── */
+.tour-slide[data-slide="3"] .tour-card {
+  position: relative;
+  animation: tour3-card var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* تصغير للمسرح: الكرت الحقيقي يحجز 120px لشارة حالة وصفية طويلة («بانتظار
+   تأكيدك»)، وشارتنا «حجز مؤكد» أقصر — نستردّ الفارق للعنوان كي يبقى
+   «9 أغسطس 2026 - 9:00 م» في سطر واحد على عرض 300px. */
+.tour-slide[data-slide="3"] .table-wrapper.as-cards .table--cards tbody tr:has(.card-tag) td:first-child {
+  padding-inline-end: 96px;
+}
+
+/* ─── تبديل الحالة: طبقتان في خليّة شبكة واحدة ───
+   الخليّة تأخذ عرض/ارتفاع أطول الطبقتين فلا يرتجف التخطيط عند الانقلاب. */
+.tour-slide[data-slide="3"] .tour-swap { display: grid; }
+.tour-slide[data-slide="3"] .tour-swap > * { grid-area: 1 / 1; }
+
+.tour-slide[data-slide="3"] .tour-swap--band { width: 100%; }
+
+/* الشريط: الطبقة «بَعد» فوق «قبل» في ترتيب الـ DOM — فتظهر مذيبةً ما تحتها
+   بخلفيتها المصمتة، ثم تختفي الأولى خلفها. */
+.tour-slide[data-slide="3"] .tour-swap--band .tour-before {
+  animation: tour3-band-before var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="3"] .tour-swap--band .tour-after {
+  animation: tour3-band-after var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* الزرّ: ‎.actions-inline تمدّ أبناءها ‎.btn بالتساوي، وابننا هنا غلاف الطبقتين
+   فنمنحه المدّ نفسه ليملأ ذيل الكرت كما يفعل زرّ واحد حقيقي. */
+.tour-slide[data-slide="3"] .tour-swap--btn { flex: 1 1 0; }
+.tour-slide[data-slide="3"] .tour-swap--btn > .btn { width: 100%; }
+.tour-slide[data-slide="3"] .tour-swap--btn .tour-before {
+  animation: tour3-btn-before var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="3"] .tour-swap--btn .tour-after {
+  animation: tour3-btn-after var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* ─── حلقة اللمس على الزرّ ─── */
+.tour-slide[data-slide="3"] .tour-tap {
+  justify-self: center;
+  align-self: center;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--radius-full);
+  border: 2px solid #FFFFFF;
+  background: color-mix(in srgb, #FFFFFF 30%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: tour3-tap var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* ─── فقاعة الرسالة الجاهزة ───
+   ليست مكوّناً من مَرمى (الرسالة تُفتح في واتساب لا في التطبيق)، فهي وحدها
+   ما رُسم هنا — بلون الزرّ الحقيقي ‎#25D366 كما في ‎button.css:147.
+   بلا علامتَي تسليم: المسجَّل ضغطة الموظّف لا تأكيدٌ من واتساب. */
+.tour-slide[data-slide="3"] .tour-wa {
+  position: absolute;
+  inset-inline-start: 10px;
+  inset-block-end: 10px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  inline-size: 224px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, #25D366 14%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, #25D366 30%, transparent);
+  border-radius: var(--radius-lg);
+  border-start-start-radius: var(--radius-xs);
+  box-shadow: var(--shadow-3);
+  font-size: var(--text-3xs);
+  line-height: 1.55;
+  color: var(--text-primary);
+  opacity: 0;
+  transform-origin: 100% 50%;
+  animation: tour3-bubble var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+.tour-slide[data-slide="3"] .tour-wa-line { opacity: 0; }
+.tour-slide[data-slide="3"] .tour-wa-line--1 { animation: tour3-line1 var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="3"] .tour-wa-line--2 { animation: tour3-line2 var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="3"] .tour-wa-line--3 { animation: tour3-line3 var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="3"] .tour-wa-line--4 { animation: tour3-line4 var(--tour-loop) var(--ease-out) 3 forwards; }
+.tour-slide[data-slide="3"] .tour-wa-line--5 { animation: tour3-line5 var(--tour-loop) var(--ease-out) 3 forwards; }
+
+/* ═══ الحركة — ساعة واحدة (8.5s) وكل النوافذ نِسَبٌ منها ═══
+   0–7 الكرت يرتفع · 10–19 اللمسة (وضغطة الزرّ 11–15) · 20–26 الفقاعة تدخل ·
+   23.5–29.2 الأسطر تتتابع (70ms = 0.82%) · حتى 48 قراءة · 48–54 الفقاعة تنزاح ·
+   55–59 الشريط والزرّ ينقلبان · 59–100 سكون تام (3.49s).
+   أسماء الـ keyframes مُنَسَّقة بسابقة ‎tour3- لأن ‎@keyframes عالميّة الاسم ولا
+   تقبل التصنيف بمُحدِّد. */
+
+@keyframes tour3-card {
+  0%   { opacity: 0; transform: translateY(12px); }
+  7%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tour3-tap {
+  0%, 10% { opacity: 0; transform: scale(0.4); }
+  12%     { opacity: 0.9; transform: scale(1); }
+  19%     { opacity: 0; transform: scale(3.2); }
+  100%    { opacity: 0; transform: scale(3.2); }
+}
+
+/* الزرّ الصارخ: ينخفض 1px تحت الإصبع كما يفعل ‎.btn:active في button.css:39 */
+@keyframes tour3-btn-before {
+  0%, 11%  { opacity: 1; transform: translateY(0); }
+  12.5%    { opacity: 1; transform: translateY(1px); }
+  15%      { opacity: 1; transform: translateY(0); }
+  58.5%    { opacity: 1; transform: translateY(0); }
+  59%      { opacity: 0; transform: translateY(0); }
+  100%     { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes tour3-btn-after {
+  0%, 55%  { opacity: 0; }
+  58.5%    { opacity: 1; }
+  100%     { opacity: 1; }
+}
+
+@keyframes tour3-band-before {
+  0%, 58.5% { opacity: 1; }
+  59%       { opacity: 0; }
+  100%      { opacity: 0; }
+}
+
+@keyframes tour3-band-after {
+  0%, 55% { opacity: 0; }
+  58.5%   { opacity: 1; }
+  100%    { opacity: 1; }
+}
+
+@keyframes tour3-bubble {
+  0%, 20% { opacity: 0; transform: translateX(26px) scale(0.97); }
+  26%     { opacity: 1; transform: translateX(0) scale(1); }
+  48%     { opacity: 1; transform: translateX(0) scale(1); }
+  54%     { opacity: 0; transform: translateX(20px) scale(0.98); }
+  100%    { opacity: 0; transform: translateX(20px) scale(0.98); }
+}
+
+@keyframes tour3-line1 {
+  0%, 23.5% { opacity: 0; transform: translateY(3px); }
+  25.9%     { opacity: 1; transform: translateY(0); }
+  100%      { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour3-line2 {
+  0%, 24.32% { opacity: 0; transform: translateY(3px); }
+  26.72%     { opacity: 1; transform: translateY(0); }
+  100%       { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour3-line3 {
+  0%, 25.14% { opacity: 0; transform: translateY(3px); }
+  27.54%     { opacity: 1; transform: translateY(0); }
+  100%       { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour3-line4 {
+  0%, 25.96% { opacity: 0; transform: translateY(3px); }
+  28.36%     { opacity: 1; transform: translateY(0); }
+  100%       { opacity: 1; transform: translateY(0); }
+}
+@keyframes tour3-line5 {
+  0%, 26.78% { opacity: 0; transform: translateY(3px); }
+  29.18%     { opacity: 1; transform: translateY(0); }
+  100%       { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ تقليل الحركة — حالة السكون النهائية مباشرةً ═══
+   tokens.css:227 يصفّر ‎--duration-* ولا يمسّ ‎animation، فبدون هذه الكتلة يبقى
+   المستخدم على حالة البداية أبداً: كرتٌ غائب وشريطٌ كهرماني لا ينقلب. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="3"] .tour-stage * { animation: none !important; }
+  .tour-slide[data-slide="3"] .tour-card { opacity: 1; transform: none; }
+  .tour-slide[data-slide="3"] .tour-swap--band .tour-before { opacity: 0; }
+  .tour-slide[data-slide="3"] .tour-swap--band .tour-after  { opacity: 1; }
+  .tour-slide[data-slide="3"] .tour-swap--btn .tour-before  { opacity: 0; }
+  .tour-slide[data-slide="3"] .tour-swap--btn .tour-after   { opacity: 1; }
+  .tour-slide[data-slide="3"] .tour-tap { opacity: 0; }
+  .tour-slide[data-slide="3"] .tour-wa  { opacity: 0; }
+  .tour-slide[data-slide="3"] .tour-wa-line { opacity: 1; transform: none; }
+}
+/* ساعة الشريحة — تقرأها tour-cut في القوقعة أيضاً بالوراثة،
+   فالقطع والحركة على ساعة واحدة لا ساعتين. */
+.tour-slide[data-slide="4"] {
+  --tour-loop: 9s;
+  --tour-iters: 3;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   الشريحة ٤ — حالة الدفع والتحصيل · شاشة الحجوزات وحدها
+   كل قاعدة مسبوقة بـ .tour-slide[data-slide="4"] — لا تسريب على صفحة الدخول.
+   ساعة واحدة: var(--tour-loop) = 9s، وكل النوافذ نِسَبٌ منها، و٣ دورات.
+   خطّ الزمن:  0–17% سكونُ «قبل» · 17–27% لمسة «تحصيل» · 24–30% فتح النافذة
+               30–55% قراءة · 44–54% لمسة «تحصيل كامل المبلغ» · 55–60% إغلاق
+               إلى الأمام · 58–62% انقلاب الشريط · 60% قفزة الأرقام معاً
+               62–100% سكونٌ تام (حالة «بَعد»).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* مِرساة المسرح — النافذة تُرسى عليه بدل الشاشة (‎.modal-backdrop أصلها fixed) */
+.tour-slide[data-slide="4"] .tour-screen {
+  position: relative;
+  inline-size: 100%;
+}
+
+/* ─── شبكة الإحصاءات: نفس المكوّن، تخطيط أضيق لمسرح 300px ─── */
+.tour-slide[data-slide="4"] .stats-grid {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.tour-slide[data-slide="4"] .stat-card {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: var(--space-2);
+  gap: 2px;
+}
+/* كرت «المدفوع» يحمل قيمةً وسطراً فرعياً — يأخذ حصّةً أوسع فلا يلتفّ رقمه */
+.tour-slide[data-slide="4"] .stat-card:nth-child(3) { flex-grow: 1.25; }
+
+.tour-slide[data-slide="4"] .stat-card-head {
+  gap: 4px;
+  margin-bottom: 2px;
+  min-block-size: 28px;   /* حجزُ سطرين للتسمية — فتتحاذى القيم في الكروت الثلاثة */
+}
+.tour-slide[data-slide="4"] .stat-icon-chip {
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--radius-xs);
+}
+.tour-slide[data-slide="4"] .stat-icon-chip svg.lucide,
+.tour-slide[data-slide="4"] .stat-icon-chip i[data-lucide] {
+  width: 11px;
+  height: 11px;
+}
+.tour-slide[data-slide="4"] .stat-label {
+  font-size: var(--text-3xs);
+  line-height: 1.2;
+}
+.tour-slide[data-slide="4"] .stat-value { font-size: var(--text-sm); }
+.tour-slide[data-slide="4"] .stat-sub {
+  font-size: var(--text-3xs);
+  white-space: nowrap;
+}
+
+/* ─── كرت الحجز: نفس بنية .table--cards + .as-cards، بمقاسٍ مصغّر ─── */
+.tour-slide[data-slide="4"] .table--cards { font-size: var(--text-2xs); }
+
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody td {
+  padding: 5px var(--space-3);
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table.table--cards tbody td:first-child {
+  padding-block: var(--space-2);
+  font-size: var(--text-2xs);
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody tr:has(.card-tag) td:first-child {
+  padding-inline-end: 84px;
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody td.card-tag {
+  inset-block-start: 7px;
+  inset-inline-end: var(--space-3);
+}
+.tour-slide[data-slide="4"] .chip-status {
+  font-size: var(--text-3xs);
+  padding: 2px 6px;
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody td:not(:first-child):not(.actions-cell):not(.card-tag)::before {
+  inset-inline-start: var(--space-3);
+  inset-block-start: 5px;
+  font-size: var(--text-3xs);
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody td.cell-paid:not(:first-child):not(.actions-cell):not(.card-tag) {
+  padding-inline-start: var(--space-3);
+}
+.tour-slide[data-slide="4"] .table-wrapper.as-cards .table--cards tbody td.actions-cell {
+  padding: 6px var(--space-2);
+}
+.tour-slide[data-slide="4"] .pay-band {
+  font-size: var(--text-3xs);
+  padding: 5px 8px;
+  margin-top: 5px;
+}
+
+/* ─── طبقتان في خليّةٍ واحدة: النسختان الحقيقيتان معاً، تتبادلان الشفافية ───
+   لا تبديل صنف ولا لمس للألوان — فلا تتولّى الـ transitions تمويه الارتداد. */
+.tour-slide[data-slide="4"] .tour-swap {
+  display: grid;
+  align-items: center;
+}
+.tour-slide[data-slide="4"] .tour-swap > * { grid-area: 1 / 1; }
+
+/* حالة السكون قبل انطلاق الحركة (لو أخّرها المشغّل) = حالة «قبل» */
+.tour-slide[data-slide="4"] .tour-layer--was { opacity: 1; }
+.tour-slide[data-slide="4"] .tour-layer--now { opacity: 0; }
+
+/* تبديل ذو مِلمَح (شريط الدفع · ذيل الأفعال) — تلاشٍ متقاطع 360ms حول اللحظة */
+.tour-slide[data-slide="4"] .tour-swap:not(.tour-swap--snap) > .tour-layer--was {
+  animation: tour-s4-out var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="4"] .tour-swap:not(.tour-swap--snap) > .tour-layer--now {
+  animation: tour-s4-in var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+
+/* تبديل الأرقام — قفزةٌ آنيّة لا تلاشٍ: فلا يرى المشاهد رقمين شبحيّين
+   يختلّ جمعهما. المدفوع والمتبقّي يقفزان في الإطار نفسه (60%). */
+.tour-slide[data-slide="4"] .tour-swap--snap > .tour-layer--was {
+  animation: tour-s4-snap-out var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="4"] .tour-swap--snap > .tour-layer--now {
+  animation: tour-s4-snap-in var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+
+/* نبضة تثبيت على قيمة «المدفوع» لحظة القيد — تنتهي عند السكون (scale 1) */
+.tour-slide[data-slide="4"] .tour-commit {
+  transform-origin: right center;
+  animation: tour-s4-commit var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+
+/* ─── نافذة «تسجيل دفعة» — بنية utils.openModal الحقيقية داخل المسرح ─── */
+.tour-slide[data-slide="4"] .tour-modal {
+  position: absolute;
+  inset: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  opacity: 0;
+  animation: tour-s4-backdrop var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="4"] .tour-modal .modal {
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  border-radius: var(--radius-md);
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  animation: tour-s4-panel var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="4"] .tour-modal .modal-header { padding: var(--space-2) var(--space-3); }
+.tour-slide[data-slide="4"] .tour-modal .modal-header h3 { font-size: var(--text-sm); }
+.tour-slide[data-slide="4"] .tour-modal .modal-close {
+  width: 22px;
+  height: 22px;
+}
+.tour-slide[data-slide="4"] .tour-modal .modal-close svg.lucide,
+.tour-slide[data-slide="4"] .tour-modal .modal-close i[data-lucide] {
+  width: 13px;
+  height: 13px;
+}
+.tour-slide[data-slide="4"] .tour-modal .modal-body {
+  padding: var(--space-3);
+  overflow: visible;
+  font-size: var(--text-2xs);
+}
+/* صندوق الصفوف — يقابل الأنماط السطرية في openPaymentDialog، بمقاسٍ مصغّر */
+.tour-slide[data-slide="4"] .tour-paybox {
+  background: var(--surface-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.tour-slide[data-slide="4"] .tour-payrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+.tour-slide[data-slide="4"] .tour-payrow__strong { font-weight: var(--weight-bold); }
+.tour-slide[data-slide="4"] .tour-paysep {
+  border-top: 1px solid var(--border-subtle);
+  margin: 3px 0;
+}
+.tour-slide[data-slide="4"] .tour-modal .btn--block {
+  --btn-h: 30px;
+  --btn-fs: var(--text-2xs);
+}
+
+/* ─── حلقة اللمس ─── */
+.tour-slide[data-slide="4"] .tour-tapwrap { position: relative; }
+
+.tour-slide[data-slide="4"] .tour-tap {
+  position: absolute;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-500);
+  background: color-mix(in srgb, var(--accent-500) 16%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+}
+/* فوق زرّ «تحصيل» — أوّل زرّي الذيل، وكلاهما flex:1 فمركزه عند ربع العرض */
+.tour-slide[data-slide="4"] .tour-tap--collect {
+  inset-block-start: 50%;
+  inset-inline-start: 25%;
+  margin-block-start: -15px;
+  margin-inline-start: -15px;
+  animation: tour-s4-tap-collect var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+/* فوق زرّ «تحصيل كامل المبلغ» الممتدّ */
+.tour-slide[data-slide="4"] .tour-tap--full {
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  margin-block-start: -15px;
+  margin-inline-start: -15px;
+  animation: tour-s4-tap-full var(--tour-loop, 9s) var(--ease-out) 3 forwards;
+}
+
+/* ─── الحركات: كلّها على الساعة نفسها، وكلّها إلى الأمام فقط ───
+   (‎@keyframes لا تقبل تسبيقاً بمُحدِّد، فالعزل بالتسمية: سابقة tour-s4-) */
+
+@keyframes tour-s4-out {
+  0%, 58%   { opacity: 1; }
+  62%, 100% { opacity: 0; }
+}
+@keyframes tour-s4-in {
+  0%, 58%   { opacity: 0; }
+  62%, 100% { opacity: 1; }
+}
+@keyframes tour-s4-snap-out {
+  0%, 59.9% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+@keyframes tour-s4-snap-in {
+  0%, 59.9% { opacity: 0; }
+  60%, 100% { opacity: 1; }
+}
+@keyframes tour-s4-commit {
+  0%, 59.9% { transform: scale(1); }
+  63%       { transform: scale(1.07); }
+  68%, 100% { transform: scale(1); }
+}
+@keyframes tour-s4-backdrop {
+  0%, 24%   { opacity: 0; }
+  30%, 55%  { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+@keyframes tour-s4-panel {
+  0%, 24%   { opacity: 0; transform: translateY(14px) scale(0.98); }
+  30%, 55%  { opacity: 1; transform: translateY(0) scale(1); }
+  /* الإغلاق إلى الأمام: تلاشٍ وانسياب لأعلى — لا انكماشَ عكسيّ */
+  60%, 100% { opacity: 0; transform: translateY(-12px) scale(1); }
+}
+@keyframes tour-s4-tap-collect {
+  0%, 17%   { opacity: 0; transform: scale(0.55); }
+  20%       { opacity: 1; transform: scale(1); }
+  23%       { opacity: 1; transform: scale(0.82); }
+  27%, 100% { opacity: 0; transform: scale(1.55); }
+}
+@keyframes tour-s4-tap-full {
+  0%, 44%   { opacity: 0; transform: scale(0.55); }
+  47%       { opacity: 1; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(0.82); }
+  54%, 100% { opacity: 0; transform: scale(1.55); }
+}
+
+/* ─── تقليل الحركة: tokens.css:227 يصفّر --duration-* فقط ولا يمسّ animation،
+   فنُطفئها هنا ونكتب حالة السكون النهائية صراحةً. ─── */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="4"] .tour-stage * { animation: none !important; }
+
+  .tour-slide[data-slide="4"] .tour-layer--was { opacity: 0 !important; }
+  .tour-slide[data-slide="4"] .tour-layer--now { opacity: 1 !important; }
+  .tour-slide[data-slide="4"] .tour-commit     { transform: none !important; }
+  .tour-slide[data-slide="4"] .tour-tap        { opacity: 0 !important; }
+  .tour-slide[data-slide="4"] .tour-modal {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+}
+/* ───────── الشريحة ٥ — لوحة اليوم ─────────
+   دورتان ثم سكون نهائي. كل تبديل حالة طبقتان متراكبتان لا عنصر يتلوّن،
+   وكل حركة داخل @keyframes حتى لا تتولّاها transitions المشروع. */
+
+.tour-slide[data-slide="5"] {
+  --tour-loop: 7.5s;
+  --tour-iters: 2;    /* tour-cut على المسرح يقطع دورتين لا ثلاثاً */
+}
+
+/* المسرح المصغّر — تحجيمٌ على الحاوية لا على المكوّنات.
+   الشريط ثلاث خلايا؛ عند 300px تصير الخليّة 75px فيُقصّ «1,700 ر.س» إلى
+   «1,7…» (وهو عين ما يحذّر منه تعليق splitMoney) ويلتفّ سطر المزيج فيصير
+   الشريط 139px والمشهد 464px — قِسْتُ ذلك في المتصفح. فنرسم بعرض جوال
+   حقيقي 400px ونُصغّر الحاوية إلى 300px: كل صنف يبقى بمقاسه ونسبه. */
+.tour-slide[data-slide="5"] .tour-fit {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: 300px;
+  max-width: 100%;
+  height: 330px;
+  overflow: hidden;
+}
+
+.tour-slide[data-slide="5"] .tour-scene {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 400px;
+  direction: rtl;
+  text-align: start;
+  transform: scale(0.75);
+  transform-origin: 100% 0;
+  pointer-events: none;
+}
+
+/* طبقتا شريط المؤشرات في خليّة واحدة — الهيكل والشريط الحيّ */
+.tour-slide[data-slide="5"] .tour-kpi {
+  display: grid;
+  align-items: start;
+}
+
+.tour-slide[data-slide="5"] .tour-kpi > .tour-layer {
+  grid-area: 1 / 1;
+}
+
+/* تبديل نصّ داخل الخليّة — النسختان الحقيقيتان فوق بعضهما.
+   التسمية «الإشغال اليوم» خارج التبديل فلا تخفت وهي لا تتغيّر. */
+.tour-slide[data-slide="5"] .tour-swap {
+  display: grid;
+}
+
+.tour-slide[data-slide="5"] .tour-swap > * {
+  grid-area: 1 / 1;
+}
+
+/* ── الحركة ─────────────────────────────────────────────
+   ساعة واحدة (--tour-loop) لكل العناصر، والنوافذ نِسَب منها:
+   0→15%   الهيكل واللمعة
+   11→16%  الموجة الأولى: الشريط ككتلة واحدة
+   17→24%  بطاقة «جدول اليوم» تنزل
+   24→57%  انتظار مرئي مقصود (fetchUtilization تستعلم كل أرضية)
+   57→70%  الموجة الثانية: «—» → «44%» وامتداد الشريط
+   70→100% سكون تام                                        */
+
+/* اللمعة: skeleton.css يجعلها infinite — نستبدلها بمرّة واحدة تنتهي وتسكن،
+   وإلا بقيت تجري في نافذة السكون. */
+.tour-slide[data-slide="5"] .skeleton {
+  animation: tour5-shimmer var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-layer--skel {
+  animation: tour5-skel-out var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-layer--live {
+  animation: tour5-strip-in var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-today {
+  animation: tour5-card-in var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-before {
+  animation: tour5-state-out var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-after,
+.tour-slide[data-slide="5"] .tour-after-bar {
+  animation: tour5-state-in var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+.tour-slide[data-slide="5"] .tour-after-bar .stat-bar-seg--success {
+  animation: tour5-bar-grow var(--tour-loop) var(--ease-out) 2 forwards;
+}
+
+@keyframes tour5-shimmer {
+  0%        { background-position: 200% 0; animation-timing-function: linear; }
+  15%, 100% { background-position: -100% 0; }
+}
+
+@keyframes tour5-skel-out {
+  0%, 11%   { opacity: 1; }
+  15%, 100% { opacity: 0; }
+}
+
+@keyframes tour5-strip-in {
+  0%, 11%   { opacity: 0; transform: translateY(5px); }
+  16%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tour5-card-in {
+  0%, 17%   { opacity: 0; transform: translateY(-7px); }
+  24%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tour5-state-out {
+  0%, 57%   { opacity: 1; }
+  62%, 100% { opacity: 0; }
+}
+
+@keyframes tour5-state-in {
+  0%, 57%   { opacity: 0; }
+  62%, 100% { opacity: 1; }
+}
+
+/* امتداد فقط — لا انكماش ولا ارتداد */
+@keyframes tour5-bar-grow {
+  0%, 61%   { width: 0%; }
+  70%, 100% { width: 44%; }
+}
+
+/* tokens.css:227 يصفّر --duration-* ولا يمسّ animation — فنكتب حالة السكون صراحةً */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="5"] .tour-stage * { animation: none !important; }
+
+  .tour-slide[data-slide="5"] .tour-layer--skel,
+  .tour-slide[data-slide="5"] .tour-before { opacity: 0 !important; }
+
+  .tour-slide[data-slide="5"] .tour-layer--live,
+  .tour-slide[data-slide="5"] .tour-today {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tour-slide[data-slide="5"] .tour-after,
+  .tour-slide[data-slide="5"] .tour-after-bar { opacity: 1 !important; }
+
+  .tour-slide[data-slide="5"] .tour-after-bar .stat-bar-seg--success { width: 44% !important; }
+
+  .tour-slide[data-slide="5"] .skeleton { background-image: none; }
+}
+/* ═══ الشريحة ٦ — «عميلك يرجع لك» ══════════════════════════════════════
+   بطاقة أختام في محفظة العميل + طلب ختم بيد الملعب. كل تغيير حالة داخل
+   @keyframes، وكل حلقة تنتهي عند حالة «بَعد»: سبع نقاط، 7 / 10، والصفّ خرج.
+   ساعة واحدة لكل الشريحة (8.5s) والنوافذ نِسَبٌ منها فلا تنجرف الحركات. */
+
+.tour-slide[data-slide="6"] { --tour-loop: 8.5s; --tour-iters: 3; }
+
+/* ── البطاقة المصغّرة ─────────────────────────────────────────────
+   التصغير عبر --wc-pad وحده: loyalty.css:207 يسمّيها لأن نزيف الشريط هامشٌ
+   سالب يساويها — فتغييرها يُصغّر البطاقة والشريط معاً بلا كسر. */
+.tour-slide[data-slide="6"] .wcard { --wc-pad: var(--space-3); flex: none; }
+
+/* ── عدّاد البطاقة: طبقتان في خليّة واحدة ────────────────────────
+   لا رقم يتلوّن ولا عدّاد دوّار قد يُرى راجعاً 7←6 — تلاشٍ رأسي قصير فقط.
+   والعرض واحد للنصّين (tnum من tokens.css:223) فلا يرتجف التخطيط. */
+.tour-slide[data-slide="6"] .tour-count {
+  display: grid;
+  justify-items: end;
+}
+.tour-slide[data-slide="6"] .tour-count > bdi {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+.tour-slide[data-slide="6"] .tour-count--was {
+  animation: t6-count-out var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="6"] .tour-count--now {
+  opacity: 0;
+  animation: t6-count-in var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* ── النقطة السابعة: نسختاها الحقيقيتان متراكبتان ─────────────────
+   .wcard-dot و.wcard-dot.is-filled ترسمان معاً في خليّة واحدة، فيبقى كل صنف
+   سليماً بلا عبث بألوانه. مقاس الغلاف = مقاس النقطة كي لا تختلّ فجوة الشريط. */
+.tour-slide[data-slide="6"] .tour-dot7 {
+  inline-size: .8rem;
+  block-size: .8rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.tour-slide[data-slide="6"] .tour-dot7 > * { grid-area: 1 / 1; }
+.tour-slide[data-slide="6"] .tour-dot7 .wcard-dot:not(.is-filled) {
+  animation: t6-dot-empty var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="6"] .tour-dot7 .wcard-dot.is-filled {
+  opacity: 0;
+  transform: scale(.4);
+  animation: t6-dot-fill var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="6"] .tour-ring {
+  inline-size: .8rem;
+  block-size: .8rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--wc-fg);
+  opacity: 0;
+  pointer-events: none;
+  animation: t6-ring var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* ── موضع الطلب: ارتفاع محجوز ────────────────────────────────────
+   المسرح ‎justify-content:center، فلو انكمش الموضع بخروج الصفّ لهبطت البطاقة
+   معه. الصفّ وحالة الفراغ في خليّة واحدة، والارتفاع ثابت في الحالتين. */
+.tour-slide[data-slide="6"] .tour-slot {
+  display: grid;
+  align-items: center;
+  min-block-size: 150px;
+  flex: none;
+}
+.tour-slide[data-slide="6"] .tour-slot > * { grid-area: 1 / 1; }
+
+/* أيقونات السطر: loyalty.css:382 يقيسها بـ ‎.stamp-req-meta i، وlucide يستبدل
+   الـ <i> بـ <svg> فتسقط القاعدة ويكبر المقاس إلى 24px الافتراضية. نُعيد نيّة
+   المصدر نفسها بلغة المشروع (svg.lucide كما في layout.css). */
+.tour-slide[data-slide="6"] .stamp-req-meta svg.lucide {
+  inline-size: .85rem;
+  block-size: .85rem;
+  flex: none;
+}
+
+/* ── الصفّ يخرج إلى الأمام ───────────────────────────────────────
+   انطواء ارتفاع + تلاشٍ ‎~220ms. ‎overflow:hidden فيُقصّ المحتوى ولا ينسحق،
+   و‎max-block-size الابتدائية هي حالة «قبل» الساكنة (‎.is-resetting يُلغي
+   الحركة فتبقى هذه هي المرئية). ولا يعود الصفّ أبداً. */
+.tour-slide[data-slide="6"] .stamp-req {
+  overflow: hidden;
+  max-block-size: 11rem;
+  animation: t6-row-out var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* لمسة «وافق»: حلقة تتمدّد وتخبو داخل الزرّ (خارج تدفّق الفليكس فلا تزحزح نصّه) */
+.tour-slide[data-slide="6"] .tour-approve {
+  position: relative;
+  animation: t6-press var(--tour-loop) var(--ease-out) 3 forwards;
+}
+.tour-slide[data-slide="6"] .tour-tap {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 50%;
+  background: var(--text-on-accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: t6-tap var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* حالة الفراغ: حشوتها ‎--space-12 رأسياً (utilities.css:7) وهي مقاس صفحة كاملة
+   لا مسرحٍ بعرض 300px — نصفّرها ونترك الحجز الرأسي للموضع نفسه. */
+.tour-slide[data-slide="6"] .empty-state {
+  padding: 0;
+  opacity: 0;
+  animation: t6-done-in var(--tour-loop) var(--ease-out) 3 forwards;
+}
+
+/* ═══ الحركات ═══════════════════════════════════════════════════════
+   0%→26%   سكون «قبل»: ستّ نقاط · 6 / 10 · الطلب معلّق
+   26%→34%  لمسة «وافق»
+   30.5%    الصفّ ينطوي ويخبو (~220ms) — خروجٌ بلا رجعة
+   32.5%    النقطة السابعة تمتلئ بزنبرك، وحلقة تتمدّد حولها
+   33.5%    العدّاد يتبدّل تلاشياً رأسياً 6 / 10 → 7 / 10
+   41%→100% سكونٌ تام عند حالة «بَعد» — توهّجٌ ثابت لا نابض */
+
+@keyframes t6-tap {
+  0%, 26% { opacity: 0; transform: scale(.25); }
+  28.5%   { opacity: .5; }
+  34%     { opacity: 0; transform: scale(1.6); }
+  100%    { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes t6-press {
+  0%, 27% { transform: scale(1); }
+  28.6%   { transform: scale(.955); }
+  30.4%   { transform: scale(1); }
+  100%    { transform: scale(1); }
+}
+
+@keyframes t6-row-out {
+  0%, 30.5% { opacity: 1; max-block-size: 11rem; }
+  33.1%     { opacity: 0; max-block-size: 0; }
+  100%      { opacity: 0; max-block-size: 0; }
+}
+
+@keyframes t6-done-in {
+  0%, 33.1% { opacity: 0; transform: translateY(6px); }
+  37.5%     { opacity: 1; transform: translateY(0); }
+  100%      { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes t6-dot-empty {
+  0%, 32.5% { opacity: 1; }
+  34.5%     { opacity: 0; }
+  100%      { opacity: 0; }
+}
+
+/* الزنبرك مسموح هنا لأن الحركة أمامية: النقطة تُختم ولا تُنتزع.
+   التوهّج قيمة بيضاء صريحة لأن هذا هو تعبير المصدر فوق البطاقة نفسها
+   (loyalty.css:223 و275 يستعملان rgb(255 255 255 / …)) ولأن الظلّ يتدرّج. */
+@keyframes t6-dot-fill {
+  0%, 32.5% {
+    opacity: 0;
+    transform: scale(.4);
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0);
+    animation-timing-function: var(--ease-spring);
+  }
+  35.5% { opacity: 1; transform: scale(1.15); }
+  38.5% { transform: scale(1); box-shadow: 0 0 0 0 rgb(255 255 255 / 0); }
+  41%   { box-shadow: 0 0 7px 1px rgb(255 255 255 / .42); }
+  100%  { opacity: 1; transform: scale(1); box-shadow: 0 0 7px 1px rgb(255 255 255 / .42); }
+}
+
+@keyframes t6-ring {
+  0%, 33.5% { opacity: 0; transform: scale(1); }
+  35%       { opacity: .55; }
+  41%       { opacity: 0; transform: scale(2.8); }
+  100%      { opacity: 0; transform: scale(2.8); }
+}
+
+@keyframes t6-count-out {
+  0%, 33.5% { opacity: 1; transform: translateY(0); }
+  36%       { opacity: 0; transform: translateY(-5px); }
+  100%      { opacity: 0; transform: translateY(-5px); }
+}
+
+@keyframes t6-count-in {
+  0%, 35% { opacity: 0; transform: translateY(5px); }
+  38.5%   { opacity: 1; transform: translateY(0); }
+  100%    { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ تقليل الحركة ══════════════════════════════════════════════════
+   tokens.css:227 يصفّر ‎--duration-* فقط ولا يمسّ ‎animation — فبدونها يرى
+   المستخدم حالة البداية جامدةً أبداً. نُلغي الحركة ونكتب حالة السكون صراحةً.
+   المُحدِّدات مطابقة للأساس وموضعها بعده، فالترتيب يحسم بلا ‎!important. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-slide[data-slide="6"] .tour-stage * { animation: none !important; }
+
+  .tour-slide[data-slide="6"] .tour-count--was { opacity: 0; }
+  .tour-slide[data-slide="6"] .tour-count--now { opacity: 1; }
+
+  .tour-slide[data-slide="6"] .tour-dot7 .wcard-dot:not(.is-filled) { opacity: 0; }
+  .tour-slide[data-slide="6"] .tour-dot7 .wcard-dot.is-filled {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 7px 1px rgb(255 255 255 / .42);
+  }
+  .tour-slide[data-slide="6"] .tour-ring { opacity: 0; }
+  .tour-slide[data-slide="6"] .tour-tap { opacity: 0; }
+
+  .tour-slide[data-slide="6"] .stamp-req { opacity: 0; max-block-size: 0; }
+  .tour-slide[data-slide="6"] .empty-state { opacity: 1; transform: none; }
+}
