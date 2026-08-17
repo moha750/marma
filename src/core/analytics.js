@@ -9,10 +9,18 @@
 //
 // ملاحظة: معاينات *.pages.dev تسجّل في الإنتاج (مفيد للتحقق، ضجيج مهمل)؛
 // التطوير المحلي (localhost) لا يسجّل أبدًا.
+//
+// استثناء التطبيق الأصلي من شرط localhost مقصود ولازم: Capacitor يخدم الحزمة من
+// `https://localhost` على أندرويد و`capacitor://localhost` على iOS
+// (capacitor.config.json: androidScheme/iosScheme) — فشرط المضيف وحده كان يُسكت
+// القياس داخل التطبيق كلّه بصمت. ونكشفه من window.Capacitor لا من window.native
+// لأن index.html و book.html يحمّلان هذا الملف بلا native.js.
 window.track = (function () {
   var noop = { event: function () {} };
   try {
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return noop;
+    var isNativeApp = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function'
+      && window.Capacitor.isNativePlatform());
+    if (!isNativeApp && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return noop;
     if (navigator.webdriver) return noop;
     if (localStorage.getItem('marma:analytics-optout') === '1') return noop;
   } catch (_) {
