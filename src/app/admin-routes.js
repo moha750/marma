@@ -7,6 +7,7 @@ window.appRoutes = [
   { name: 'admin-revenue',       path: '/admin/revenue',       title: 'الإيرادات' },
   { name: 'admin-tenants',       path: '/admin/tenants',       title: 'الملاعب' },
   { name: 'admin-tenant-details', path: '/admin/tenants/:id',   title: 'تفاصيل الملعب', activeNav: 'admin-tenants' },
+  { name: 'admin-leads',         path: '/admin/leads',         title: 'متابعة العملاء' },
   { name: 'admin-admins',        path: '/admin/admins',        title: 'المشرفون' },
   { name: 'admin-broadcast',     path: '/admin/broadcast',     title: 'بثّ رسالة' },
   { name: 'admin-audit',         path: '/admin/audit',         title: 'سجلّ النشاط' },

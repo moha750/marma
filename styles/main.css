@@ -35,6 +35,7 @@
 @import url('./components/public.css');
 @import url('./components/subscription.css');
 @import url('./components/loyalty.css');
+@import url('./components/leads.css');
 @import url('./components/public-shell.css'); /* أساس مشترك للوجه العام — قبل .lp و.bp */
 @import url('./components/landing.css');
 @import url('./components/booking-page.css');

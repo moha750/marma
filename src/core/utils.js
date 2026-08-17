@@ -492,6 +492,7 @@ window.utils = {
 
     // رسائل auth شائعة
     if (msg.includes('Invalid login credentials')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+    if (msg.includes('NO_LEADS_ACCESS')) return 'لا تملك وصولاً إلى دفتر متابعة العملاء';
     if (msg.includes('User already registered')) return 'هذا البريد الإلكتروني مسجل مسبقاً';
     if (msg.includes('Email not confirmed')) return 'يرجى تأكيد البريد الإلكتروني أولاً';
     if (msg.includes('Password should be')) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
