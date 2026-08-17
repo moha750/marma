@@ -252,6 +252,14 @@ select.form-control {
    (مثل عدّادات الأرضيات/الموظفين) عند ضيق الحاوية دون بلوغ نقطة الفصل. */
 .form-row > * { min-width: 0; }
 
+/* المسافة السفلية تخصّ الصف لا أبناءه: هوامش عناصر الشبكة لا تنطبق، فلو بقيت
+   على .form-group لتضاعفت (هامش ١٦ + فجوة ١٦ = ٣٢) حين ينهار العمودان إلى
+   عمود واحد على الجوال. الشرط :has يستثني الصفوف التي تحوي حقولاً عارية. */
+.form-row:has(> .form-group) { margin-bottom: var(--space-4); }
+.form-row > .form-group { margin-bottom: 0; }
+/* آخر صفٍ لا يدفع حاويته — الحشوة تكفي (كصندوق «عميل جديد» في نافذة الحجز). */
+.form-row:last-child { margin-bottom: 0; }
+
 @media (max-width: 640px) {
   .form-row.cols-2,
   .form-row.cols-3 { grid-template-columns: 1fr; }
