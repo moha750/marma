@@ -9,7 +9,7 @@ window.adminAudit = (function () {
     end_trial:          { label: 'إنهاء التجربة',     icon: 'calendar-x',   cls: 'expired' },
     grant_lifetime:     { label: 'منح وصول دائم',     icon: 'gem',          cls: 'active'  },
     revoke_lifetime:    { label: 'إلغاء الوصول الدائم', icon: 'gem',        cls: 'expired' },
-    set_limits:         { label: 'تعديل الحدود',      icon: 'sliders-horizontal', cls: 'grace' }
+    set_limits:         { label: 'تعديل الحدود',      icon: 'sliders-horizontal', cls: 'warn' }
   };
 
   const fmtDate = (v) => v ? window.utils.formatDate(v) : '—';

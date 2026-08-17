@@ -175,7 +175,7 @@ window.auth = (function () {
     return ctx;
   }
 
-  // التحقق من أن tenant نشط (داخل التجربة أو الاشتراك أو فترة السماح)
+  // التحقق من أن tenant نشط (داخل التجربة أو الاشتراك — لا سماح بعد الانتهاء)
   // يضيف status إلى context المُرجَع
   // مرر redirectTo=false للحصول على الخطأ فقط بدون توجيه (يستخدمه SPA boot)
   async function requireActiveTenant(redirectTo = '/subscription') {

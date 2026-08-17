@@ -8,7 +8,6 @@
     if (t.suspended) return { cls: 'expired', label: 'موقوف' };
     if (t.lifetime) return { cls: 'lifetime', label: 'وصول دائم' };
     if (!isActive) return { cls: 'expired', label: 'منتهٍ' };
-    if (t.subscription_ends_at && new Date(t.subscription_ends_at) < new Date()) return { cls: 'grace', label: 'فترة سماح' };
     if (t.subscription_status === 'active') return { cls: 'active', label: 'مشترك' };
     return { cls: 'trial', label: 'تجربة' };
   }

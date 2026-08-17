@@ -241,8 +241,7 @@ Supabase و Cloudflare و Firebase **مزوّدو خدمة** لا أطراف ث�
 |---|---|
 | `subscription_status` | `active` — **اشتراك مدفوع لا تجربة** |
 | `trial_ends_at` | ٢٧ يونيو ٢٠٢٦ (منقضٍ — لا يهمّ) |
-| `subscription_ends_at` | **٥ سبتمبر ٢٠٢٦** |
-| `hard_lock` | ٨ سبتمبر ٢٠٢٦ |
+| `subscription_ends_at` | **٥ سبتمبر ٢٠٢٦** — وهو تاريخ القفل نفسه، لا سماح بعده |
 | `is_active` | **true** |
 
 فلا إجراء مطلوب الآن. لكن **المراجع يدخل مرّتين**: مرّة لمراجعة الاختبار المغلق
@@ -256,16 +255,16 @@ Supabase و Cloudflare و Firebase **مزوّدو خدمة** لا أطراف ث�
 **الاستعلام للتحقّق في أي وقت:**
 ```sql
 select u.email, t.subscription_status, t.subscription_ends_at,
-       now() < coalesce(t.subscription_ends_at, t.trial_ends_at) + interval '3 days' as is_active
+       now() < coalesce(t.subscription_ends_at, t.trial_ends_at) as is_active
   from auth.users u
   join public.profiles p on p.id = u.id
   join public.tenants  t on t.id = p.tenant_id
  where u.email = '8ffdc4143c@emailax.pro';
 ```
 
-> **أمّا المختبِرون الـ ١٢ فقصّة أخرى:** الحساب الجديد يأخذ **٣ أيام تجربة + ٣
-> سماح = ٦ أيام** ثم يُقفل (`handle_new_user` ← `now() + interval '3 days'`،
-> و`hard_lock = effective_end + 3 days`). عدّاد الـ ١٤ يومًا لا ينكسر — قوقل
+> **أمّا المختبِرون الـ ١٢ فقصّة أخرى:** الحساب الجديد يأخذ **٧ أيام تجربة** ثم
+> يُقفل فوراً — لا سماح بعدها (`create_owner_tenant` ←
+> `now() + interval '7 days'`). عدّاد الـ ١٤ يومًا لا ينكسر — قوقل
 > تشترط الاشتراك في المسار لا الاستخدام اليومي — لكن **ملاحظاتهم تتوقّف من اليوم
 > السادس**. مدِّد اشتراكاتهم بنفس `update` أعلاه إن أردت اختبارًا حقيقيًا.
 
