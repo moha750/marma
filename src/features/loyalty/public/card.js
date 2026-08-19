@@ -9,7 +9,7 @@
 //   غير ذلك  → الزرّان معاً — البطاقة تُفتح لاحقاً على الجوال
 //
 // وفي كل الأحوال البطاقة أعلاه بنفس الـ QR: لا أحد يُترك بلا بطاقة لو تعثّرت
-// المحفظة. ولهذا يعود مسار جوجل عند الفشل إلى هنا بـ ?gw= بدل صفحة خطأ.
+// المحفظة. ولهذا يعود المساران عند الفشل إلى هنا بـ ?gw= أو ?aw= بدل صفحة خطأ.
 (function () {
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = (v) => window.utils.escapeHtml(v == null ? '' : String(v));
@@ -133,18 +133,30 @@
     return apple + google;
   }
 
-  // رسائل عودة مسار جوجل (wallet-google يُعيد التوجيه إلى هنا عند التعثّر)
-  const GW_NOTES = {
-    off: 'خدمة Google Wallet غير مُفعَّلة بعد على هذا الملعب — بطاقتك أعلاه تعمل كما هي.',
-    err: 'تعذّرت إضافة البطاقة إلى Google Wallet الآن — جرّب لاحقاً، وبطاقتك أعلاه تعمل كما هي.'
+  // رسائل عودة مسارَي المحفظتين — كلاهما يُعيد التوجيه إلى هنا عند التعثّر
+  // بدل صفحة خطأ: البطاقة أعلاه بالـ QR تعمل، والملعب يختم منها.
+  const WALLET_NOTES = {
+    gw: {
+      off: 'خدمة Google Wallet غير مُفعَّلة بعد على هذا الملعب — بطاقتك أعلاه تعمل كما هي.',
+      err: 'تعذّرت إضافة البطاقة إلى Google Wallet الآن — جرّب لاحقاً، وبطاقتك أعلاه تعمل كما هي.'
+    },
+    aw: {
+      off: 'خدمة Apple Wallet غير مُفعَّلة بعد على هذا الملعب — بطاقتك أعلاه تعمل كما هي.',
+      // aw=blocked لا نصّ له عمداً: البطاقة الموقوفة ترسم بانرها الخاص أعلاه
+      err: 'تعذّرت إضافة البطاقة إلى Apple Wallet الآن — جرّب لاحقاً، وبطاقتك أعلاه تعمل كما هي.'
+    }
   };
 
   function gwNote() {
-    const code = (new URLSearchParams(location.search).get('gw') || '').trim();
-    if (!GW_NOTES[code]) return '';
-    return `<div class="lcard-note lcard-note--warn">
-      <i data-lucide="info"></i>${esc(GW_NOTES[code])}
-    </div>`;
+    const q = new URLSearchParams(location.search);
+    const out = [];
+    for (const key of ['gw', 'aw']) {
+      const msg = WALLET_NOTES[key][(q.get(key) || '').trim()];
+      if (msg) out.push(`<div class="lcard-note lcard-note--warn">
+        <i data-lucide="info"></i>${esc(msg)}
+      </div>`);
+    }
+    return out.join('');
   }
 
   function drawQr() {

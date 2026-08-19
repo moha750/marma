@@ -154,6 +154,22 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
   return await buildPkpass(files, CERTS);
 }
 
+// ─── السقوط اللطيف ───────────────────────────────────────────────────────
+// الشهادات تنتهي صلاحيتها سنوياً، وقد تغيب من الأسرار بعد إعادة نشرٍ ناقصة.
+// وقتها كان العميل يرى «internal error» نصّاً إنجليزياً على صفحة بيضاء — وهو
+// نفس عطب رابطٍ لا يعمل الذي أُصلح في مسار جوجل. فنعيده إلى بطاقته برمز سبب:
+// الـ QR في يده يعمل، والملعب يختم منه، والمحفظة ترفٌ لا شرط.
+const appleConfigured = () => !!(CERTS.certPem && CERTS.keyPem && CERTS.wwdrPem);
+
+const backToCard = (payload: string, reason: string) =>
+  new Response(null, {
+    status: 302,
+    headers: {
+      location: `${SITE}/card?c=${encodeURIComponent(payload)}&aw=${reason}`,
+      "cache-control": "no-store",
+    },
+  });
+
 // ─── المسارات ────────────────────────────────────────────────────────────
 
 function passResponse(bytes: Uint8Array, lastModified: string): Response {
@@ -196,11 +212,22 @@ Deno.serve(async (req) => {
       }
       const serial = check.serial;
 
+      if (!appleConfigured()) {
+        console.error("[wallet-apple] شهادات آبل غير مضبوطة في الأسرار");
+        return backToCard(parts[1], "off");
+      }
+
       const card = await loadCard(db, serial);
       if (!card) return new Response("not found", { status: 404 });
-      if (card.status !== "active") return new Response("gone", { status: 410 });
+      if (card.status !== "active") return backToCard(parts[1], "blocked");
 
-      return passResponse(await buildPassBundle(card), card.pass_updated_at);
+      try {
+        return passResponse(await buildPassBundle(card), card.pass_updated_at);
+      } catch (err) {
+        // شهادة منتهية، أو صورة تعطّل الحزمة — لا يُترك العميل أمام ٥٠٠
+        console.error("[wallet-apple] فشل بناء الحزمة:", err);
+        return backToCard(parts[1], "err");
+      }
     }
 
     // ── PassKit: تسجيل جهاز / إلغاؤه ──
