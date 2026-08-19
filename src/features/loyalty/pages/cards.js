@@ -99,7 +99,14 @@
               <div class="actions-inline">
                 <button class="btn btn--ghost btn--sm" data-share="${esc(c.serial)}"
                   data-name="${esc(c.customer_name)}" data-phone="${esc(c.customer_phone)}">
-                  <i data-lucide="send"></i> إرسال للعميل
+                  <i data-lucide="send"></i> إرسال
+                </button>
+                ${isOwner && c.status === 'active' ? `
+                  <button class="btn btn--ghost btn--sm" data-gift="${c.id}">
+                    <i data-lucide="gift"></i> إهداء
+                  </button>` : ''}
+                <button class="btn btn--ghost btn--sm" data-detail="${c.id}">
+                  <i data-lucide="list"></i> التفاصيل
                 </button>
               </div>
             </td>
@@ -113,11 +120,16 @@
         window.utils.renderIcons(body);
         body.querySelectorAll('[data-card]').forEach((tr) =>
           tr.addEventListener('click', (e) => {
-            if (e.target.closest('[data-share]')) return;   // زر الإرسال لا يفتح التفاصيل
+            // أزرار الخليّة تتكفّل بنفسها — وإلا فُتحت التفاصيل مرّتين
+            if (e.target.closest('.actions-inline')) return;
             openDetail(tr.dataset.card);
           }));
         body.querySelectorAll('[data-share]').forEach((b) =>
           b.addEventListener('click', () => shareCard(b.dataset.share, b.dataset.name, b.dataset.phone)));
+        body.querySelectorAll('[data-detail]').forEach((b) =>
+          b.addEventListener('click', () => openDetail(b.dataset.detail)));
+        body.querySelectorAll('[data-gift]').forEach((b) =>
+          b.addEventListener('click', () => openDetail(b.dataset.gift, 'gift')));
       }
 
       // إرسال رابط البطاقة عبر واتساب — قناة التوزيع الأعلى تحويلاً عندنا.
@@ -134,7 +146,9 @@
 
       // ─── تفاصيل البطاقة ──────────────────────────────────
 
-      async function openDetail(cardId) {
+      // focus: 'gift' يفتح النافذة على حقل الإهداء مباشرةً — من ضغط «إهداء»
+      // قصَدَ الإهداء، فلا يُترك يبحث عنه بين القسائم والحركات
+      async function openDetail(cardId, focus) {
         let ctrl;
         try {
           const d = await window.loyaltyApi.cardDetail(cardId);
@@ -147,6 +161,11 @@
           });
           ctrl.modal.querySelector('[data-action="close"]').addEventListener('click', ctrl.close);
           bindDetail(ctrl, d);
+
+          if (focus === 'gift') {
+            const gi = ctrl.modal.querySelector('#gift-delta');
+            if (gi) { gi.scrollIntoView({ block: 'center' }); gi.focus(); }
+          }
         } catch (err) {
           window.utils.toast(window.utils.formatError(err), 'error');
         }
