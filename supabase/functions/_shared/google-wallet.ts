@@ -18,7 +18,7 @@
 //     وإلا ردّت كل النداءات 403 بلا سبب ظاهر.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { availableReward, type CardRow, lastEarnReason, linkSig, SITE } from "./loyalty-card.ts";
+import { availableReward, type CardRow, lastTx, linkSig, SITE } from "./loyalty-card.ts";
 
 const ISSUER = Deno.env.get("GOOGLE_ISSUER_ID") ?? "";
 const API = "https://walletobjects.googleapis.com/walletobjects/v1";
@@ -237,17 +237,25 @@ async function objectPayload(
   }
 
   const messages: Record<string, string>[] = [];
+  const last = notify ? await lastTx(db, card.id) : null;
+  const earned = !!last && last.delta > 0;
   if (notify) {
-    // الـ id يحمل السبب مع الرصيد: هدية ثم ختمٌ عند الرصيد نفسه حدثان لا واحد
-    const gifted = await lastEarnReason(db, card.id) === "gift";
-    messages.push({
-      id: `${gifted ? "gift" : "bal"}-${balance}`,
-      header: gifted ? "🎁 هدية من الملعب" : "شكراً على حضورك ⚽️",
-      body: gifted
-        ? `أهداك الملعب أختاماً — رصيدك الآن ${balance} / ${threshold}`
-        : `تم زيادة رصيدك — ${balance} / ${threshold}`,
-      messageType: "TEXT_AND_NOTIFY",
-    });
+    // رسالة الرصيد لا تُرسَل إلا مع زيادة: النقص (تصحيح، سحب، انتهاء، إصدار
+    // قسيمة) يُكتب في البطاقة ولا يُرنّ. والـ id يحمل السبب مع الرصيد — هدية
+    // ثم ختمٌ عند الرصيد نفسه حدثان لا واحد.
+    const gifted = earned && last.reason === "gift";
+    if (earned) {
+      messages.push({
+        id: `${gifted ? "gift" : "bal"}-${balance}`,
+        header: gifted ? "🎁 هدية من الملعب" : "شكراً على حضورك ⚽️",
+        body: gifted
+          ? `أهداك الملعب أختاماً — رصيدك الآن ${balance} / ${threshold}`
+          : `تم زيادة رصيدك — ${balance} / ${threshold}`,
+        messageType: "TEXT_AND_NOTIFY",
+      });
+    }
+    // المكافأة تُعلَن دائماً ولو نقص الرصيد — بل **خاصّةً** حينها: إصدار
+    // القسيمة هو نفسه ما خصم العتبة وأعاد الرصيد صفراً.
     if (reward) {
       messages.push({
         id: `reward-${reward.code}`,

@@ -17,7 +17,9 @@ window.notificationBell = (function () {
     trial_extended: 'hourglass',
     staff_joined: 'user-plus',
     tenant_new: 'store',
-    broadcast: 'megaphone'
+    broadcast: 'megaphone',
+    loyalty_stamp_pending: 'stamp',
+    loyalty_redeem: 'gift'
   };
   function iconFor(type) { return ICONS[type] || 'bell'; }
 

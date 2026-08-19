@@ -123,24 +123,32 @@ export async function loadCardById(
 }
 
 /**
- * سبب آخر حركةٍ موجبة على البطاقة — به وحده تعرف طبقةُ المحفظة أن تقول
- * «هدية» لا «شكراً على حضورك». الحالةُ في قاعدتنا رصيدٌ مجرّد لا يحمل قصّته،
- * فنسأل الدفتر عن آخر سطرٍ زاده.
+ * آخر حركة على البطاقة — بها وحدها تعرف طبقةُ المحفظة **ماذا** تقول للعميل
+ * و**هل** تقول شيئاً أصلاً. الحالةُ في قاعدتنا رصيدٌ مجرّد لا يحمل قصّته،
+ * فنسأل الدفتر عن آخر سطرٍ حرّكه.
  *
- * الحركات السالبة (إصدار قسيمة، انتهاء صلاحية) مستثناة عمداً: صرفُ قسيمةٍ لا
- * يُلغي أن آخر ما زاد الرصيد كان هدية.
+ * وتُقرأ الحركة بإشارتها لا بسببها وحده، لأن الرصيد ينقص في أربع حالات كلّها
+ * لا تُشكر عليها: تصحيح المالك، سحبُ ختمٍ عند إلغاء الحجز، انتهاء الصلاحية،
+ * وإصدارُ القسيمة عند العتبة (يخصم العتبة كاملةً فيعود الرصيد صفراً). ولو
+ * نظرنا إلى آخر حركةٍ **موجبة** كما كنا نفعل، لصمتت هذه الأربع في الدفتر
+ * وصرخت في جوال العميل بنصّ «تم زيادة رصيدك» — وأسوأها بلوغُ العتبة: يُخبَر
+ * بأن رصيده زاد إلى صفر في اللحظة التي استحقّ فيها مكافأته.
  */
-export async function lastEarnReason(
+export interface LastTx { reason: string; delta: number }
+
+export async function lastTx(
   db: SupabaseClient,
   cardId: string,
-): Promise<string | null> {
+): Promise<LastTx | null> {
   const { data } = await db
     .from("loyalty_transactions")
-    .select("reason")
-    .eq("card_id", cardId).gt("delta", 0)
+    .select("reason, delta")
+    .eq("card_id", cardId)
     .order("created_at", { ascending: false })
     .limit(1).maybeSingle();
-  return (data as { reason: string } | null)?.reason ?? null;
+  if (!data) return null;
+  const row = data as { reason: string; delta: number | string };
+  return { reason: row.reason, delta: Number(row.delta) };
 }
 
 export async function availableReward(

@@ -24,7 +24,7 @@ import {
   availableReward,
   type CardRow,
   checkPayload,
-  lastEarnReason,
+  lastTx,
   linkSig,
   loadCard,
   safeEqual,
@@ -63,7 +63,10 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
   const template = String(prog.template ?? "classic");
 
   const reward = await availableReward(db, card.id);
-  const gifted = await lastEarnReason(db, card.id) === "gift";
+  // آخر حركة تحكم نصّ الإشعار: موجبة تُشكر أو تُهنّئ، وسالبة تصمت
+  const last = await lastTx(db, card.id);
+  const earned = !!last && last.delta > 0;
+  const gifted = earned && last.reason === "gift";
   const locations = await tenantLocations(db, card.tenant_id, tenantName);
   const [r, g, b] = hexToRgb(bg);
   const fgRgb = hexToRgb(fg);
@@ -144,9 +147,15 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
       // بالقيمة الجديدة. بلا هذا السطر كان الرصيد يتغيّر ولا يدري صاحبه.
       headerFields: [{
         key: "bal", label: "الأختام", value: `${balance} / ${threshold}`,
-        changeMessage: gifted
-          ? "🎁 هدية من الملعب — رصيدك الآن %@"
-          : "شكراً على حضورك ⚽️ تم زيادة رصيدك %@",
+        // بلا changeMessage تُحدَّث آبل الحقلَ صامتاً — وهذا هو المطلوب عند
+        // النقص: التصحيح والسحب والانتهاء وإصدارُ القسيمة لا يُهنَّأ عليها.
+        ...(earned
+          ? {
+            changeMessage: gifted
+              ? "🎁 هدية من الملعب — رصيدك الآن %@"
+              : "شكراً على حضورك ⚽️ تم زيادة رصيدك %@",
+          }
+          : {}),
       }],
       primaryFields: [{
         key: "reward",
