@@ -129,7 +129,7 @@
         body.querySelectorAll('[data-detail]').forEach((b) =>
           b.addEventListener('click', () => openDetail(b.dataset.detail)));
         body.querySelectorAll('[data-gift]').forEach((b) =>
-          b.addEventListener('click', () => openDetail(b.dataset.gift, 'gift')));
+          b.addEventListener('click', () => openGift(b.dataset.gift, load)));
       }
 
       // إرسال رابط البطاقة عبر واتساب — قناة التوزيع الأعلى تحويلاً عندنا.
@@ -144,11 +144,102 @@
         window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
       }
 
+      // ─── الإهداء ─────────────────────────────────────────
+      // نافذةٌ مستقلّة صغيرة لا تفاصيلُ البطاقة: من قصَدَ الإهداء لا يحتاج
+      // القسائمَ ولا سجلّ الحركات ولا رمز الاستبدال. غرضٌ واحد وحقلان وزرّ.
+      //
+      // تُستدعى من مكانين — زرّ الصفّ وزرّ داخل التفاصيل — فتُكتب مرّة واحدة.
+      // و onDone يفرّق بينهما: الأول يُحدّث القائمة، والثاني يُعيد فتح التفاصيل.
+      async function openGift(cardId, onDone) {
+        let d;
+        try {
+          d = await window.loyaltyApi.cardDetail(cardId);
+        } catch (err) {
+          window.utils.toast(window.utils.formatError(err), 'error');
+          return;
+        }
+        if (!alive) return;
+
+        const name = (d.customer && d.customer.full_name) || 'العميل';
+        const bal = Math.round(Number((d.card || {}).balance || 0));
+
+        const ctrl = window.utils.openModal({
+          title: 'إهداء أختام',
+          size: 'sm',
+          body: `
+            <div class="loy-gift-modal">
+              <div class="loy-gift-who">
+                <div class="loy-gift-name">${esc(name)}</div>
+                <div class="loy-gift-bal">الرصيد الآن <b>${AR(bal)}</b> ختماً</div>
+              </div>
+
+              <label class="form-label" for="gift-delta">عدد الأختام المُهداة</label>
+              <div class="loy-gift-quick">
+                ${[1, 2, 3, 5, 10].map((n) =>
+                  `<button type="button" class="btn btn--ghost btn--sm" data-quick="${n}">${AR(n)}</button>`).join('')}
+              </div>
+              <input class="form-control" id="gift-delta" type="number" min="1" max="50" step="1"
+                     inputmode="numeric" placeholder="أو اكتب العدد">
+
+              <label class="form-label" for="gift-note" style="margin-block-start:var(--space-3)">
+                مناسبة الإهداء <span class="text-tertiary">(اختيارية — تُسجَّل في الدفتر)</span>
+              </label>
+              <input class="form-control" id="gift-note" maxlength="80" placeholder="مثلاً: اعتذار عن تأخير الملعب">
+
+              <p class="loy-gift-hint">
+                <i data-lucide="bell"></i>
+                يصل ${esc(name)} إشعارٌ على جواله: «هدية من الملعب».
+              </p>
+            </div>`,
+          footer: `
+            <button type="button" class="btn btn--ghost" data-action="close">إلغاء</button>
+            <button type="button" class="btn btn--primary" id="gift-go">
+              <i data-lucide="gift"></i> أهدِ الآن
+            </button>`
+        });
+
+        const m = ctrl.modal;
+        const input = m.querySelector('#gift-delta');
+        const goBtn = m.querySelector('#gift-go');
+
+        m.querySelector('[data-action="close"]').addEventListener('click', ctrl.close);
+
+        // الأزرار السريعة تُراكم لا تستبدل: ٣ ثم ٢ = ٥، فمن أخطأ يضغط أكثر
+        // لا يمسح ويبدأ. والحقل يبقى قابلاً للكتابة لمن أراد عدداً غريباً.
+        m.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => {
+          const next = Number(input.value || 0) + Number(b.dataset.quick);
+          input.value = String(Math.min(50, next));
+          input.focus();
+        }));
+
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') goBtn.click(); });
+
+        goBtn.addEventListener('click', async () => {
+          const delta = Number(input.value || 0);
+          const note = m.querySelector('#gift-note').value;
+          if (!(delta > 0)) { window.utils.toast('أدخل عدد الأختام المُهداة', 'error'); input.focus(); return; }
+          if (delta > 50) { window.utils.toast('أقصى إهداء ٥٠ ختماً في المرة', 'error'); return; }
+
+          goBtn.disabled = true;
+          try {
+            // الدالّة تُعيد تفاصيل البطاقة بعد الحركة، فالرصيد الجديد بلا نداءٍ ثانٍ
+            const after = await window.loyaltyApi.gift(cardId, delta, note);
+            const newBal = Math.round(Number(((after || {}).card || {}).balance || 0));
+            ctrl.close();
+            window.utils.toast(`أُهديت ${AR(delta)} أختام — الرصيد الآن ${AR(newBal)}`, 'success');
+            if (typeof onDone === 'function') await onDone();
+          } catch (err) {
+            window.utils.toast(window.utils.formatError(err), 'error');
+            goBtn.disabled = false;
+          }
+        });
+
+        input.focus();
+      }
+
       // ─── تفاصيل البطاقة ──────────────────────────────────
 
-      // focus: 'gift' يفتح النافذة على حقل الإهداء مباشرةً — من ضغط «إهداء»
-      // قصَدَ الإهداء، فلا يُترك يبحث عنه بين القسائم والحركات
-      async function openDetail(cardId, focus) {
+      async function openDetail(cardId) {
         let ctrl;
         try {
           const d = await window.loyaltyApi.cardDetail(cardId);
@@ -161,11 +252,6 @@
           });
           ctrl.modal.querySelector('[data-action="close"]').addEventListener('click', ctrl.close);
           bindDetail(ctrl, d);
-
-          if (focus === 'gift') {
-            const gi = ctrl.modal.querySelector('#gift-delta');
-            if (gi) { gi.scrollIntoView({ block: 'center' }); gi.focus(); }
-          }
         } catch (err) {
           window.utils.toast(window.utils.formatError(err), 'error');
         }
@@ -197,15 +283,10 @@
             </div>
 
             ${isOwner ? `
-              <div class="loy-gift">
-                <div class="form-label"><i data-lucide="gift"></i> إهداء أختام</div>
-                <div class="loy-adjust">
-                  <input class="form-control" id="gift-delta" type="number" min="1" max="50" step="1"
-                         placeholder="عدد الأختام" style="max-width:11rem">
-                  <input class="form-control" id="gift-note" maxlength="80" placeholder="مناسبة الإهداء (تُسجَّل)">
-                  <button class="btn btn--primary btn--sm" id="gift-go">أهدِ الآن</button>
-                </div>
-              </div>
+              ${c.status === 'active' ? `
+                <button class="btn btn--primary btn--sm loy-gift-open" id="gift-open">
+                  <i data-lucide="gift"></i> إهداء أختام
+                </button>` : ''}
 
               <!-- التصحيح مطويّ عمداً: هو الاستثناء لا الإجراء المعتاد، وإبرازه
                    بجانب الإهداء يجعل الخطأ في متناول اليد كالصواب -->
@@ -261,28 +342,8 @@
         const m = ctrl.modal;
         const reopen = async () => { ctrl.close(); await load(); openDetail(d.card.id); };
 
-        const giftBtn = m.querySelector('#gift-go');
-        if (giftBtn) giftBtn.addEventListener('click', async () => {
-          const delta = Number(m.querySelector('#gift-delta').value || 0);
-          const note = m.querySelector('#gift-note').value;
-          if (!(delta > 0)) { window.utils.toast('أدخل عدد الأختام المُهداة', 'error'); return; }
-          // الإهداء لا رجعة فيه من الواجهة (والقسيمة قد تُصدَر فوراً عند العتبة)
-          const ok = await window.utils.confirm({
-            title: 'إهداء أختام',
-            message: `إهداء ${AR(delta)} ختماً إلى ${(d.customer && d.customer.full_name) || 'هذا العميل'}؟ سيصله إشعار على جواله.`,
-            confirmText: 'أهدِ'
-          });
-          if (!ok) return;
-          giftBtn.disabled = true;
-          try {
-            await window.loyaltyApi.gift(d.card.id, delta, note);
-            window.utils.toast('تم الإهداء', 'success');
-            await reopen();
-          } catch (err) {
-            window.utils.toast(window.utils.formatError(err), 'error');
-            giftBtn.disabled = false;
-          }
-        });
+        const giftBtn = m.querySelector('#gift-open');
+        if (giftBtn) giftBtn.addEventListener('click', () => openGift(d.card.id, reopen));
 
         const adjBtn = m.querySelector('#adj-go');
         if (adjBtn) adjBtn.addEventListener('click', async () => {
