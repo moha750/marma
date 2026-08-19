@@ -46,6 +46,10 @@ verify_jwt = false
 [functions.send-booking-push]
 verify_jwt = false
 
+# إشعار دفعٍ عامّ بحمولةٍ جاهزة — يناديها التريجر مثل أختها تماماً
+[functions.send-owner-push]
+verify_jwt = false
+
 [functions.send-weekly-summary]
 verify_jwt = false
 
