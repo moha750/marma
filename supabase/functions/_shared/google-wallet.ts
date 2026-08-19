@@ -7,8 +7,11 @@
 // توكن OAuth. الفرق الوحيد هو النطاق (scope). ونوقّع بـ WebCrypto لا بمكتبة:
 // التبعية الوحيدة في هذا المسار هي ما يمنع تحديثاً خارجياً من تعطيل الإنتاج.
 //
-// نموذج المزامنة يختلف عن آبل جذرياً: لا إشعار ولا سحب — نكتب حالة البطاقة
+// نموذج المزامنة يختلف عن آبل جذرياً: لا نبضة ولا سحب — نكتب حالة البطاقة
 // على خادم جوجل (PUT) فتظهر على جهاز العميل من نفسها. §6.4
+//
+// والإشعار جزء من نفس الكتابة لا قناة ثانية: messages[] بـ TEXT_AND_NOTIFY
+// داخل الكائن. جوجل تُميّزها بـ id فلا تُعيد الرنين على id رأته.
 //
 // الأسرار: GOOGLE_SA_JSON (ملف حساب الخدمة كاملاً) · GOOGLE_ISSUER_ID
 //   • حساب الخدمة يجب أن يُضاف في Wallet Console → Users بصلاحية Developer،
@@ -198,11 +201,20 @@ function classPayload(card: CardRow, classId: string): Record<string, unknown> {
   };
 }
 
+/**
+ * @param notify يُضيف messages بـ TEXT_AND_NOTIFY فيرنّ جوال العميل. جوجل
+ *        تُميّز الرسائل بـ id: نفس الـ id لا يُعيد الرنين مهما تكرّر الـ PUT،
+ *        و id جديد يرنّ مرة واحدة. فنشتقّ الـ id من الحالة نفسها (الرصيد،
+ *        رمز القسيمة) فتصير المزامنة الدورية صامتة والتغيّر الحقيقي وحده
+ *        هو ما يُشعِر. ويُطفأ عند الحفظ الأول: من أضاف بطاقته للتوّ لا يُشكر
+ *        على حضورٍ لم يحدث.
+ */
 async function objectPayload(
   card: CardRow,
   classId: string,
   objectId: string,
   reward: { code: string; label: string } | null,
+  notify: boolean,
 ): Promise<Record<string, unknown>> {
   const prog = (card.loyalty_programs ?? {}) as Record<string, string | number | boolean | null>;
   const threshold = Number(prog.reward_threshold ?? 10);
@@ -223,6 +235,24 @@ async function objectPayload(
     text.push({ id: "terms", header: "شروط البرنامج", body: String(prog.reward_terms) });
   }
 
+  const messages: Record<string, string>[] = [];
+  if (notify) {
+    messages.push({
+      id: `bal-${balance}`,
+      header: "شكراً على حضورك ⚽️",
+      body: `تم زيادة رصيدك — ${balance} / ${threshold}`,
+      messageType: "TEXT_AND_NOTIFY",
+    });
+    if (reward) {
+      messages.push({
+        id: `reward-${reward.code}`,
+        header: "🎁 مكافأتك جاهزة",
+        body: `${reward.label} — رمز ${reward.code}`,
+        messageType: "TEXT_AND_NOTIFY",
+      });
+    }
+  }
+
   return {
     id: objectId,
     classId,
@@ -240,6 +270,7 @@ async function objectPayload(
       alternateText: card.serial.substring(0, 8),
     },
     textModulesData: text,
+    ...(messages.length ? { messages } : {}),
     linksModuleData: {
       uris: [{
         uri: `${SITE}/card?c=${card.serial}.${sig}#out`,
@@ -321,7 +352,7 @@ export async function syncGoogleCard(
   // صرف قسيمة يعني حذف secondaryLoyaltyPoints، والدمج لا يحذف حقلاً غائباً —
   // فتبقى «مكافأة جاهزة» معروضة على بطاقة في جيب عميلٍ صرفها فعلاً.
   const reward = await availableReward(db, card.id);
-  const payload = await objectPayload(card, classId, objectId, reward);
+  const payload = await objectPayload(card, classId, objectId, reward, !opts.create);
 
   const res = opts.create
     ? await upsert("loyaltyObject", objectId, payload, "PUT")

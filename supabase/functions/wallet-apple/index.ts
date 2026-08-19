@@ -96,7 +96,11 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
     { key: "member", label: "العضو", value: member },
   ];
   if (reward) {
-    secondary.push({ key: "code", label: "رمز المكافأة", value: reward.code });
+    // حقلٌ لا وجود له إلا مع قسيمة جاهزة، فظهوره نفسه هو الحدث
+    secondary.push({
+      key: "code", label: "رمز المكافأة", value: reward.code,
+      changeMessage: "🎁 مكافأتك جاهزة — رمز %@",
+    });
   } else {
     secondary.push({
       key: "left", label: "الباقي",
@@ -133,7 +137,13 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
     sharingProhibited: true,
     ...(locations.length ? { locations, maxDistance: 300 } : {}),
     storeCard: {
-      headerFields: [{ key: "bal", label: "الأختام", value: `${balance} / ${threshold}` }],
+      // changeMessage هو ما يجعل آبل تعرض إشعاراً على شاشة القفل بدل تحديثٍ
+      // صامت. تعرضه عند اختلاف قيمة الحقل عن النسخة السابقة، و %@ تُستبدل
+      // بالقيمة الجديدة. بلا هذا السطر كان الرصيد يتغيّر ولا يدري صاحبه.
+      headerFields: [{
+        key: "bal", label: "الأختام", value: `${balance} / ${threshold}`,
+        changeMessage: "شكراً على حضورك ⚽️ تم زيادة رصيدك %@",
+      }],
       primaryFields: [{
         key: "reward",
         label: reward ? "مكافأة جاهزة" : "المكافأة",
