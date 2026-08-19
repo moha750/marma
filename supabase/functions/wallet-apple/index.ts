@@ -24,6 +24,7 @@ import {
   availableReward,
   type CardRow,
   checkPayload,
+  lastEarnReason,
   linkSig,
   loadCard,
   safeEqual,
@@ -62,6 +63,7 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
   const template = String(prog.template ?? "classic");
 
   const reward = await availableReward(db, card.id);
+  const gifted = await lastEarnReason(db, card.id) === "gift";
   const locations = await tenantLocations(db, card.tenant_id, tenantName);
   const [r, g, b] = hexToRgb(bg);
   const fgRgb = hexToRgb(fg);
@@ -142,7 +144,9 @@ async function buildPassBundle(card: CardRow): Promise<Uint8Array> {
       // بالقيمة الجديدة. بلا هذا السطر كان الرصيد يتغيّر ولا يدري صاحبه.
       headerFields: [{
         key: "bal", label: "الأختام", value: `${balance} / ${threshold}`,
-        changeMessage: "شكراً على حضورك ⚽️ تم زيادة رصيدك %@",
+        changeMessage: gifted
+          ? "🎁 هدية من الملعب — رصيدك الآن %@"
+          : "شكراً على حضورك ⚽️ تم زيادة رصيدك %@",
       }],
       primaryFields: [{
         key: "reward",

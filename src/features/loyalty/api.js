@@ -51,7 +51,19 @@ window.loyaltyApi = (function () {
     return data;
   }
 
-  // تعديل يدوي للأختام (للمالك) — يُسجَّل في الدفتر باسم المُنفِّذ
+  // إهداء أختام (للمالك) — موجبٌ فقط، وسببه 'gift' في الدفتر فيُميَّز عن
+  // التصحيح في العرض وفي نصّ الإشعار الذي يصل جوال العميل
+  async function gift(cardId, delta, note) {
+    const { data, error } = await sb().rpc('loyalty_gift', {
+      p_card_id: cardId,
+      p_delta: delta,
+      p_note: note || null
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // تصحيح خطأ (للمالك) — ± يُسجَّل في الدفتر باسم المُنفِّذ
   async function adjust(cardId, delta, note) {
     const { data, error } = await sb().rpc('loyalty_adjust', {
       p_card_id: cardId,
@@ -146,7 +158,7 @@ window.loyaltyApi = (function () {
 
   return {
     getProgram, saveProgram,
-    listCards, cardDetail, enroll, adjust,
+    listCards, cardDetail, enroll, gift, adjust,
     pendingStamps, decideStamp,
     scanLookup, applyReward, redeemReward, releaseReward,
     uploadLoyaltyAsset: uploadAsset

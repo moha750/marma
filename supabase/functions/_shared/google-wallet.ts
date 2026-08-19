@@ -18,7 +18,7 @@
 //     وإلا ردّت كل النداءات 403 بلا سبب ظاهر.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { availableReward, type CardRow, linkSig, SITE } from "./loyalty-card.ts";
+import { availableReward, type CardRow, lastEarnReason, linkSig, SITE } from "./loyalty-card.ts";
 
 const ISSUER = Deno.env.get("GOOGLE_ISSUER_ID") ?? "";
 const API = "https://walletobjects.googleapis.com/walletobjects/v1";
@@ -210,6 +210,7 @@ function classPayload(card: CardRow, classId: string): Record<string, unknown> {
  *        على حضورٍ لم يحدث.
  */
 async function objectPayload(
+  db: SupabaseClient,
   card: CardRow,
   classId: string,
   objectId: string,
@@ -237,10 +238,14 @@ async function objectPayload(
 
   const messages: Record<string, string>[] = [];
   if (notify) {
+    // الـ id يحمل السبب مع الرصيد: هدية ثم ختمٌ عند الرصيد نفسه حدثان لا واحد
+    const gifted = await lastEarnReason(db, card.id) === "gift";
     messages.push({
-      id: `bal-${balance}`,
-      header: "شكراً على حضورك ⚽️",
-      body: `تم زيادة رصيدك — ${balance} / ${threshold}`,
+      id: `${gifted ? "gift" : "bal"}-${balance}`,
+      header: gifted ? "🎁 هدية من الملعب" : "شكراً على حضورك ⚽️",
+      body: gifted
+        ? `أهداك الملعب أختاماً — رصيدك الآن ${balance} / ${threshold}`
+        : `تم زيادة رصيدك — ${balance} / ${threshold}`,
       messageType: "TEXT_AND_NOTIFY",
     });
     if (reward) {
@@ -352,7 +357,7 @@ export async function syncGoogleCard(
   // صرف قسيمة يعني حذف secondaryLoyaltyPoints، والدمج لا يحذف حقلاً غائباً —
   // فتبقى «مكافأة جاهزة» معروضة على بطاقة في جيب عميلٍ صرفها فعلاً.
   const reward = await availableReward(db, card.id);
-  const payload = await objectPayload(card, classId, objectId, reward, !opts.create);
+  const payload = await objectPayload(db, card, classId, objectId, reward, !opts.create);
 
   const res = opts.create
     ? await upsert("loyaltyObject", objectId, payload, "PUT")

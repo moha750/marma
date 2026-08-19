@@ -122,6 +122,27 @@ export async function loadCardById(
   return data as unknown as CardRow;
 }
 
+/**
+ * سبب آخر حركةٍ موجبة على البطاقة — به وحده تعرف طبقةُ المحفظة أن تقول
+ * «هدية» لا «شكراً على حضورك». الحالةُ في قاعدتنا رصيدٌ مجرّد لا يحمل قصّته،
+ * فنسأل الدفتر عن آخر سطرٍ زاده.
+ *
+ * الحركات السالبة (إصدار قسيمة، انتهاء صلاحية) مستثناة عمداً: صرفُ قسيمةٍ لا
+ * يُلغي أن آخر ما زاد الرصيد كان هدية.
+ */
+export async function lastEarnReason(
+  db: SupabaseClient,
+  cardId: string,
+): Promise<string | null> {
+  const { data } = await db
+    .from("loyalty_transactions")
+    .select("reason")
+    .eq("card_id", cardId).gt("delta", 0)
+    .order("created_at", { ascending: false })
+    .limit(1).maybeSingle();
+  return (data as { reason: string } | null)?.reason ?? null;
+}
+
 export async function availableReward(
   db: SupabaseClient,
   cardId: string,

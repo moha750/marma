@@ -20,7 +20,8 @@
     reward_void:   'إلغاء قسيمة',
     expiry:        'انتهاء صلاحية',
     adjust:        'تسوية',
-    signup_bonus:  'مكافأة انضمام'
+    signup_bonus:  'مكافأة انضمام',
+    gift:          'إهداء من الملعب'
   };
 
   const page = {
@@ -177,11 +178,26 @@
             </div>
 
             ${isOwner ? `
-              <div class="loy-adjust">
-                <input class="form-control" id="adj-delta" type="number" step="1" placeholder="± عدد الأختام" style="max-width:11rem">
-                <input class="form-control" id="adj-note" maxlength="80" placeholder="سبب التعديل (يُسجَّل)">
-                <button class="btn btn--ghost btn--sm" id="adj-go">تعديل</button>
-              </div>` : ''}
+              <div class="loy-gift">
+                <div class="form-label"><i data-lucide="gift"></i> إهداء أختام</div>
+                <div class="loy-adjust">
+                  <input class="form-control" id="gift-delta" type="number" min="1" max="50" step="1"
+                         placeholder="عدد الأختام" style="max-width:11rem">
+                  <input class="form-control" id="gift-note" maxlength="80" placeholder="مناسبة الإهداء (تُسجَّل)">
+                  <button class="btn btn--primary btn--sm" id="gift-go">أهدِ الآن</button>
+                </div>
+              </div>
+
+              <!-- التصحيح مطويّ عمداً: هو الاستثناء لا الإجراء المعتاد، وإبرازه
+                   بجانب الإهداء يجعل الخطأ في متناول اليد كالصواب -->
+              <details class="loy-correct">
+                <summary>تصحيح خطأ</summary>
+                <div class="loy-adjust">
+                  <input class="form-control" id="adj-delta" type="number" step="1" placeholder="± عدد الأختام" style="max-width:11rem">
+                  <input class="form-control" id="adj-note" maxlength="80" placeholder="سبب التصحيح (يُسجَّل)">
+                  <button class="btn btn--ghost btn--sm" id="adj-go">صحّح</button>
+                </div>
+              </details>` : ''}
 
             <div class="loy-detail-section">
               <div class="form-label">القسائم</div>
@@ -226,15 +242,38 @@
         const m = ctrl.modal;
         const reopen = async () => { ctrl.close(); await load(); openDetail(d.card.id); };
 
+        const giftBtn = m.querySelector('#gift-go');
+        if (giftBtn) giftBtn.addEventListener('click', async () => {
+          const delta = Number(m.querySelector('#gift-delta').value || 0);
+          const note = m.querySelector('#gift-note').value;
+          if (!(delta > 0)) { window.utils.toast('أدخل عدد الأختام المُهداة', 'error'); return; }
+          // الإهداء لا رجعة فيه من الواجهة (والقسيمة قد تُصدَر فوراً عند العتبة)
+          const ok = await window.utils.confirm({
+            title: 'إهداء أختام',
+            message: `إهداء ${AR(delta)} ختماً إلى ${(d.customer && d.customer.full_name) || 'هذا العميل'}؟ سيصله إشعار على جواله.`,
+            confirmText: 'أهدِ'
+          });
+          if (!ok) return;
+          giftBtn.disabled = true;
+          try {
+            await window.loyaltyApi.gift(d.card.id, delta, note);
+            window.utils.toast('تم الإهداء', 'success');
+            await reopen();
+          } catch (err) {
+            window.utils.toast(window.utils.formatError(err), 'error');
+            giftBtn.disabled = false;
+          }
+        });
+
         const adjBtn = m.querySelector('#adj-go');
         if (adjBtn) adjBtn.addEventListener('click', async () => {
           const delta = Number(m.querySelector('#adj-delta').value || 0);
           const note = m.querySelector('#adj-note').value;
-          if (!delta) { window.utils.toast('أدخل قيمة التعديل', 'error'); return; }
+          if (!delta) { window.utils.toast('أدخل قيمة التصحيح', 'error'); return; }
           adjBtn.disabled = true;
           try {
             await window.loyaltyApi.adjust(d.card.id, delta, note);
-            window.utils.toast('تم التعديل', 'success');
+            window.utils.toast('تم التصحيح', 'success');
             await reopen();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
