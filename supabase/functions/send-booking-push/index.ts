@@ -25,8 +25,8 @@ interface RequestBody {
 
 const REMINDER_ELAPSED: Record<number, string> = {
   1: "منذ ساعة",
-  2: "منذ ٦ ساعات",
-  3: "منذ ١٢ ساعة",
+  2: "منذ 6 ساعات",
+  3: "منذ 12 ساعة",
   4: "منذ يوم",
 };
 
@@ -42,6 +42,7 @@ interface PushSubscriptionRow {
 function formatArabicDateTime(iso: string): string {
   const d = new Date(iso);
   const date = new Intl.DateTimeFormat("ar-EG", {
+    numberingSystem: "latn",
     weekday: "long",
     day: "numeric",
     month: "short",

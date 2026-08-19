@@ -9,7 +9,6 @@
 //   أنواع الخصم        → تُربط بحجز فعلي فيُخصم من فاتورته ويظهر الأثر في التقارير
 (function () {
   const esc = (v) => window.utils.escapeHtml(v == null ? '' : String(v));
-  const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
 
   const page = {
     async mount(container, ctx) {
@@ -53,7 +52,7 @@
               <label class="form-label" for="manual">إدخال يدوي</label>
               <div class="scan-manual">
                 <input class="form-control" id="manual" dir="ltr" autocomplete="off"
-                  placeholder="آخر ٦ خانات من رمز البطاقة">
+                  placeholder="آخر 6 خانات من رمز البطاقة">
                 <button class="btn btn--ghost" id="manual-go">بحث</button>
               </div>
               <div class="form-help">الرمز مطبوع على ظهر بطاقة العميل وأسفل رمز QR.</div>
@@ -207,7 +206,7 @@
                 <div class="scan-phone" dir="ltr">${esc(cu.phone)}</div>
               </div>
               <div class="scan-balance">
-                <div class="scan-balance-value">${AR(Math.round(Number(c.balance || 0)))}</div>
+                <div class="scan-balance-value">${Math.round(Number(c.balance || 0))}</div>
                 <div class="scan-balance-cap">ختماً</div>
               </div>
             </div>
@@ -216,7 +215,7 @@
               <div class="scan-pending">
                 <div class="scan-pending-head">
                   <i data-lucide="stamp"></i>
-                  <span>${AR((d.pending || []).length)} ختم بانتظار قرارك</span>
+                  <span>${(d.pending || []).length} ختم بانتظار قرارك</span>
                 </div>
                 ${d.pending.map((p) => `
                   <div class="scan-pending-row" data-prow="${esc(p.id)}">

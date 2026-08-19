@@ -3,7 +3,6 @@
 // كل عرض هنا مشتقّ من الخادم: الرصيد وعدّادات القسائم تُحسب داخل قاعدة البيانات
 // من دفتر الحركات، فلا حساب في الواجهة يمكن أن ينحرف عمّا في بطاقة العميل.
 (function () {
-  const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
   const esc = (v) => window.utils.escapeHtml(v == null ? '' : String(v));
 
   const REWARD_STATUS = {
@@ -83,13 +82,13 @@
           <tr data-card="${c.id}" class="is-clickable">
             <td data-label="العميل" class="fw-semibold">${esc(c.customer_name)}</td>
             <td data-label="الجوال" dir="ltr" class="text-start">${esc(c.customer_phone)}</td>
-            <td data-label="الأختام">${AR(Math.round(Number(c.balance || 0)))}</td>
+            <td data-label="الأختام">${Math.round(Number(c.balance || 0))}</td>
             <td data-label="قسائم متاحة">
               ${Number(c.rewards_available) > 0
-                ? `<span class="status-badge status-badge--active">${AR(c.rewards_available)}</span>`
+                ? `<span class="status-badge status-badge--active">${c.rewards_available}</span>`
                 : '<span class="text-tertiary">—</span>'}
             </td>
-            <td data-label="مصروفة">${AR(c.rewards_redeemed || 0)}</td>
+            <td data-label="مصروفة">${c.rewards_redeemed || 0}</td>
             <td data-label="الحالة" class="card-tag">
               <span class="status-badge status-badge--${c.status === 'active' ? 'active' : 'muted'}">
                 ${c.status === 'active' ? 'نشطة' : 'موقوفة'}</span>
@@ -170,13 +169,13 @@
             <div class="loy-gift-modal">
               <div class="loy-gift-who">
                 <div class="loy-gift-name">${esc(name)}</div>
-                <div class="loy-gift-bal">الرصيد الآن <b>${AR(bal)}</b> ختماً</div>
+                <div class="loy-gift-bal">الرصيد الآن <b>${bal}</b> ختماً</div>
               </div>
 
               <label class="form-label" for="gift-delta">عدد الأختام المُهداة</label>
               <div class="loy-gift-quick">
                 ${[1, 2, 3, 5, 10].map((n) =>
-                  `<button type="button" class="btn btn--ghost btn--sm" data-quick="${n}">${AR(n)}</button>`).join('')}
+                  `<button type="button" class="btn btn--ghost btn--sm" data-quick="${n}">${n}</button>`).join('')}
               </div>
               <input class="form-control" id="gift-delta" type="number" min="1" max="50" step="1"
                      inputmode="numeric" placeholder="أو اكتب العدد">
@@ -218,7 +217,7 @@
           const delta = Number(input.value || 0);
           const note = m.querySelector('#gift-note').value;
           if (!(delta > 0)) { window.utils.toast('أدخل عدد الأختام المُهداة', 'error'); input.focus(); return; }
-          if (delta > 50) { window.utils.toast('أقصى إهداء ٥٠ ختماً في المرة', 'error'); return; }
+          if (delta > 50) { window.utils.toast('أقصى إهداء 50 ختماً في المرة', 'error'); return; }
 
           goBtn.disabled = true;
           try {
@@ -226,7 +225,7 @@
             const after = await window.loyaltyApi.gift(cardId, delta, note);
             const newBal = Math.round(Number(((after || {}).card || {}).balance || 0));
             ctrl.close();
-            window.utils.toast(`أُهديت ${AR(delta)} أختام — الرصيد الآن ${AR(newBal)}`, 'success');
+            window.utils.toast(`أُهديت ${delta} أختام — الرصيد الآن ${newBal}`, 'success');
             if (typeof onDone === 'function') await onDone();
           } catch (err) {
             window.utils.toast(window.utils.formatError(err), 'error');
@@ -265,11 +264,11 @@
           <div class="loy-detail">
             <div class="loy-detail-head">
               <div>
-                <div class="loy-detail-balance">${AR(Math.round(Number(c.balance || 0)))}</div>
+                <div class="loy-detail-balance">${Math.round(Number(c.balance || 0))}</div>
                 <div class="loy-detail-cap">أختام</div>
               </div>
               <div>
-                <div class="loy-detail-balance">${AR(c.rewards_available || 0)}</div>
+                <div class="loy-detail-balance">${c.rewards_available || 0}</div>
                 <div class="loy-detail-cap">قسائم متاحة</div>
               </div>
               <div>
@@ -328,7 +327,7 @@
               ${txs.length ? `<div class="loy-txs">${txs.map((t) => `
                 <div class="loy-tx">
                   <span class="loy-tx-delta ${Number(t.delta) >= 0 ? 'is-plus' : 'is-minus'}">
-                    ${Number(t.delta) >= 0 ? '+' : '−'}${AR(Math.abs(Math.round(Number(t.delta))))}
+                    ${Number(t.delta) >= 0 ? '+' : '−'}${Math.abs(Math.round(Number(t.delta)))}
                   </span>
                   <span class="loy-tx-reason">${esc(TX_REASON[t.reason] || t.reason)}${t.note ? ' · ' + esc(t.note) : ''}</span>
                   <span class="loy-tx-date">${esc(window.utils.formatDate(t.created_at))}</span>

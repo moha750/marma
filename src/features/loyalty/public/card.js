@@ -13,7 +13,6 @@
 (function () {
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = (v) => window.utils.escapeHtml(v == null ? '' : String(v));
-  const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
 
   const root = $('#root');
   const payload = (new URLSearchParams(location.search).get('c') || '').trim();
@@ -68,7 +67,7 @@
             </div>
             <div class="wcard-balance">
               <div class="wcard-mini-label">الأختام</div>
-              <div class="wcard-mini-value">${AR(balance)} / ${AR(threshold)}</div>
+              <div class="wcard-mini-value">${balance} / ${threshold}</div>
             </div>
           </div>
           <div class="wcard-strip wcard-strip--stamps">${dots}</div>
@@ -80,7 +79,7 @@
             <div><div class="wcard-mini-label">العضو</div>
                  <div class="wcard-mini-value">${esc(d.member)}</div></div>
             <div><div class="wcard-mini-label">${reward ? 'رمز المكافأة' : 'الباقي'}</div>
-                 <div class="wcard-mini-value">${reward ? esc(reward.code) : AR(Math.max(0, threshold - balance)) + ' حجوزات'}</div></div>
+                 <div class="wcard-mini-value">${reward ? esc(reward.code) : Math.max(0, threshold - balance) + ' حجوزات'}</div></div>
           </div>
           <div class="wcard-qr" id="qr-slot"></div>
         </div>

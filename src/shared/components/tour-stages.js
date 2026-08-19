@@ -487,7 +487,7 @@ window.tourStages = [
         </div>
       </div>
       <div class="stamp-req-count">
-        <bdi dir="ltr">٦ / ١٠</bdi>
+        <bdi dir="ltr">6 / 10</bdi>
         <small>الرصيد الآن</small>
       </div>
       <div class="stamp-req-actions">

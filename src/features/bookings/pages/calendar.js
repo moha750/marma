@@ -341,7 +341,7 @@
 
       calendar = new window.FullCalendar.Calendar(calendarEl, {
         initialView: isMobile ? 'timeGridDay' : 'timeGridWeek',
-        locale: 'ar',
+        locale: 'ar-u-nu-latn',
         // ملف لغة FC العربي لا يعرّف noEventsText، فيرجع للإنجليزي افتراضياً — نضبطه يدوياً
         noEventsText: 'لا مواعيد في هذه الفترة',
         direction: 'rtl',

@@ -611,9 +611,9 @@ body.hud-off #controls,body.hud-off #help{display:none}
     <!-- البوستر / العد التنازلي -->
     <div id="poster">
       <svg class="p-mark"><use href="#mark"/></svg>
-      <div class="p-tt">إعلان مَرمى — ٤٥ ثانية</div>
+      <div class="p-tt">إعلان مَرمى — 45 ثانية</div>
       <div class="p-sb">اضغط «تشغيل» أو مفتاح المسافة · H لإخفاء الأزرار</div>
-      <div id="cd">٣</div>
+      <div id="cd">3</div>
     </div>
 
   </div>
@@ -630,10 +630,10 @@ body.hud-off #controls,body.hud-off #help{display:none}
 </div>
 <div id="help" hidden>
   <b>طريقة تسجيل الفيديو:</b><br>
-  ١· اجعل النافذة بنسبة 9:16 (أو اضغط F11 ثم قصّ الفيديو لاحقًا) — زوم المتصفح 100٪.<br>
-  ٢· شغّل المسجل: <b>Win + Alt + R</b> (مسجل ويندوز) أو OBS بكانفس 1080×1920.<br>
-  ٣· اضغط <b>H</b> لإخفاء هذا الشريط، ثم <b>مفتاح المسافة</b> للتشغيل — يبدأ عد تنازلي ٣ ٢ ١ داخل الكادر.<br>
-  ٤· المشهد الأخير يثبت عند الثانية 45 — أوقف التسجيل ثم قصّ الطرفين في أي محرر.
+  1· اجعل النافذة بنسبة 9:16 (أو اضغط F11 ثم قصّ الفيديو لاحقًا) — زوم المتصفح 100٪.<br>
+  2· شغّل المسجل: <b>Win + Alt + R</b> (مسجل ويندوز) أو OBS بكانفس 1080×1920.<br>
+  3· اضغط <b>H</b> لإخفاء هذا الشريط، ثم <b>مفتاح المسافة</b> للتشغيل — يبدأ عد تنازلي 3 2 1 داخل الكادر.<br>
+  4· المشهد الأخير يثبت عند الثانية 45 — أوقف التسجيل ثم قصّ الطرفين في أي محرر.
 </div>
 
 <script>
@@ -660,7 +660,7 @@ body.hud-off #controls,body.hud-off #help{display:none}
   var TYPE = {id:'typeUrl', start:8.7, dur:1.8, text:'marma.help/ملاعب الفهد'};
   /* الستارة الخضراء معطّلة — الانتقالات صارت مزيجًا: قطع حاد / دفع اتجاهي / Match‑Cut (أُبقي المنطق احتياطًا) */
   var SWEEPS = [], SW_HALF = 0.38;
-  var CD_DIGITS = ['٣','٢','١'];
+  var CD_DIGITS = ['3','2','1'];
 
   var stage = document.getElementById('stage');
   var poster = document.getElementById('poster');
@@ -796,7 +796,7 @@ body.hud-off #controls,body.hud-off #help{display:none}
     cancelAnimationFrame(raf); clearCountdown();
     resetVisuals();
     state = 'counting';
-    playBtn.disabled = true; playBtn.textContent = '… ٣ ٢ ١';
+    playBtn.disabled = true; playBtn.textContent = '… 3 2 1';
     poster.classList.remove('is-off');
     poster.classList.add('is-counting');
     CD_DIGITS.forEach(function(d, i){

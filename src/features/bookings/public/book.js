@@ -144,7 +144,7 @@
       <section class="bp-section" id="bp-section-date" data-step="date">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">١</span>
+            <span class="bp-section-title-num">1</span>
             <span>اختر التاريخ</span>
           </h2>
         </div>
@@ -154,7 +154,7 @@
       <section class="bp-section" id="bp-section-slot" data-step="slot">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">٢</span>
+            <span class="bp-section-title-num">2</span>
             <span>اختر الموعد</span>
           </h2>
         </div>
@@ -164,7 +164,7 @@
       <section class="bp-section" id="bp-section-form" data-step="form">
         <div class="bp-section-head">
           <h2 class="bp-section-title">
-            <span class="bp-section-title-num">٣</span>
+            <span class="bp-section-title-num">3</span>
             <span>بياناتك</span>
           </h2>
         </div>
@@ -178,9 +178,9 @@
 
     mountFieldHero(document.getElementById('bp-hero'), { showBreadcrumb: true });
     mountStepper(document.getElementById('bp-stepper'), [
-      { key: 'date', label: 'التاريخ', num: '١' },
-      { key: 'slot', label: 'الموعد',  num: '٢' },
-      { key: 'form', label: 'بياناتك', num: '٣' }
+      { key: 'date', label: 'التاريخ', num: '1' },
+      { key: 'slot', label: 'الموعد',  num: '2' },
+      { key: 'form', label: 'بياناتك', num: '3' }
     ]);
     mountFieldInfo(document.getElementById('bp-field-info-host'));
     mountCalendar(document.getElementById('bp-calendar-host'));
@@ -664,8 +664,8 @@
     let cursorMonth = new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
     let selected = new Date(initialDate);
 
-    const arNum = new Intl.NumberFormat('ar-EG');
-    const arMonth = new Intl.DateTimeFormat('ar-EG', { month: 'long', year: 'numeric' });
+    const arNum = new Intl.NumberFormat('ar-EG', { numberingSystem: 'latn' });
+    const arMonth = new Intl.DateTimeFormat('ar-EG', { numberingSystem: 'latn', month: 'long', year: 'numeric' });
     const arWeekday = new Intl.DateTimeFormat('ar-EG', { weekday: 'short' });
 
     function build() {
@@ -1395,7 +1395,6 @@
     if (!card || !card.serial) return '';
     const p = card.program || {};
     const esc = window.utils.escapeHtml;
-    const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
     const thr = Number(card.threshold) || 0;
     const bal = Math.max(0, Number(card.balance) || 0);
     const ready = Number(card.rewards_available) || 0;
@@ -1409,12 +1408,12 @@
             <strong>${esc(p.name || 'بطاقة الولاء')}</strong>
             <span>${esc(p.reward || '')}</span>
           </div>
-          <div class="bp-loyalty-count"><bdi dir="ltr">${AR(bal)} / ${AR(thr)}</bdi></div>
+          <div class="bp-loyalty-count"><bdi dir="ltr">${bal} / ${thr}</bdi></div>
         </div>
         <div class="bp-loyalty-bar"><span style="inline-size:${pct}%"></span></div>
         ${ready > 0
-          ? `<p class="bp-loyalty-ready"><i data-lucide="gift"></i> لديك ${AR(ready)} مكافأة جاهزة — اعرضها عند الكاونتر</p>`
-          : `<p class="bp-loyalty-left">باقٍ ${AR(Math.max(0, thr - bal))} حجوزات على مكافأتك</p>`}
+          ? `<p class="bp-loyalty-ready"><i data-lucide="gift"></i> لديك ${ready} مكافأة جاهزة — اعرضها عند الكاونتر</p>`
+          : `<p class="bp-loyalty-left">باقٍ ${Math.max(0, thr - bal)} حجوزات على مكافأتك</p>`}
         <a class="btn btn--primary btn--lg bp-loyalty-btn" href="${esc(window.utils.path('/card'))}?c=${encodeURIComponent(card.serial)}">
           <i data-lucide="wallet"></i>
           <span>افتح بطاقتي وأضِفها للمحفظة</span>

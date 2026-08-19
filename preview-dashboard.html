@@ -74,7 +74,7 @@ function iso(h, m, dayOffset) {
   return d.toISOString();
 }
 
-const FIELDS = [{ id: 'f1', name: 'الملعب الرئيسي' }, { id: 'f2', name: 'ملعب رقم ٢' }];
+const FIELDS = [{ id: 'f1', name: 'الملعب الرئيسي' }, { id: 'f2', name: 'ملعب رقم 2' }];
 
 function mk(id, h, dur, name, field, status, price, paid, dayOffset) {
   return {
@@ -86,29 +86,29 @@ function mk(id, h, dur, name, field, status, price, paid, dayOffset) {
 
 const TODAY = [
   mk('b1', 8,  1, 'عبدالله الشمري',   'الملعب الرئيسي', 'completed', 200, 200),
-  mk('b2', 10, 1, 'فريق الصقور',      'ملعب رقم ٢',     'confirmed', 250, 250),
+  mk('b2', 10, 1, 'فريق الصقور',      'ملعب رقم 2',     'confirmed', 250, 250),
   mk('b3', 12, 2, 'محمد العتيبي',     'الملعب الرئيسي', 'confirmed', 400, 0),
-  mk('b4', 16, 1, 'خالد بن سعد',      'ملعب رقم ٢',     'pending',   250, 0),
+  mk('b4', 16, 1, 'خالد بن سعد',      'ملعب رقم 2',     'pending',   250, 0),
   mk('b5', 18, 1, 'نادي الشباب الحي', 'الملعب الرئيسي', 'confirmed', 300, 150),
-  mk('b6', 20, 1, 'سلطان الدوسري',    'ملعب رقم ٢',     'cancelled', 250, 0),
+  mk('b6', 20, 1, 'سلطان الدوسري',    'ملعب رقم 2',     'cancelled', 250, 0),
   mk('b7', 21, 1, 'ماجد الحربي',      'الملعب الرئيسي', 'confirmed', 300, 300)
 ];
 
 const TOMORROW = [
   mk('t1', 9,  1, 'يوسف القحطاني', 'الملعب الرئيسي', 'confirmed', 250, 0, 1),
-  mk('t2', 11, 1, 'فهد المطيري',    'ملعب رقم ٢',     'pending',   250, 0, 1),
+  mk('t2', 11, 1, 'فهد المطيري',    'ملعب رقم 2',     'pending',   250, 0, 1),
   mk('t3', 17, 1, 'تركي العنزي',    'الملعب الرئيسي', 'confirmed', 300, 0, 1),
-  mk('t4', 19, 1, 'فريق النسور',    'ملعب رقم ٢',     'confirmed', 300, 0, 1),
+  mk('t4', 19, 1, 'فريق النسور',    'ملعب رقم 2',     'confirmed', 300, 0, 1),
   mk('t5', 21, 1, 'بندر الزهراني',  'الملعب الرئيسي', 'confirmed', 300, 0, 1),
-  mk('t6', 22, 1, 'راكان السبيعي',  'ملعب رقم ٢',     'confirmed', 300, 0, 1)
+  mk('t6', 22, 1, 'راكان السبيعي',  'ملعب رقم 2',     'confirmed', 300, 0, 1)
 ];
 
 const PENDING = [
-  mk('p1', 16, 1, 'خالد بن سعد',   'ملعب رقم ٢',     'pending', 250, 0),
-  mk('p2', 11, 1, 'فهد المطيري',    'ملعب رقم ٢',     'pending', 250, 0, 1),
+  mk('p1', 16, 1, 'خالد بن سعد',   'ملعب رقم 2',     'pending', 250, 0),
+  mk('p2', 11, 1, 'فهد المطيري',    'ملعب رقم 2',     'pending', 250, 0, 1),
   mk('p3', 14, 1, 'أحمد الغامدي',   'الملعب الرئيسي', 'pending', 300, 0, 2),
   mk('p4', 15, 1, 'زياد الرشيد',    'الملعب الرئيسي', 'pending', 300, 0, 3),
-  mk('p5', 18, 1, 'وليد الخالدي',   'ملعب رقم ٢',     'pending', 250, 0, 3)
+  mk('p5', 18, 1, 'وليد الخالدي',   'ملعب رقم 2',     'pending', 250, 0, 3)
 ];
 
 window.api = {
@@ -203,7 +203,7 @@ window.loyaltyApi = {
       { id: 'p2', card_id: 'c2', serial: 'MRM67890', customer_name: 'فهد المطيري',
         customer_phone: '0555000222', delta: 1, balance: 3, threshold: 10,
         booking_id: 'b2', booking_start: new Date(now - 2 * 864e5).toISOString(),
-        field_name: 'ملعب ٢', created_at: new Date(now - 72e5).toISOString() }
+        field_name: 'ملعب 2', created_at: new Date(now - 72e5).toISOString() }
     ];
   },
   async decideStamp() { return { ok: true }; },

@@ -6,7 +6,6 @@
 // الرفض لا يُخفي الصفّ فحسب: هو قرارٌ مسجَّل (مَن ومتى) لأن العميل قد يسأل.
 (function () {
   const esc = (s) => window.utils.escapeHtml(String(s == null ? '' : s));
-  const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
 
   const page = {
     async mount(container, ctx) {
@@ -68,7 +67,7 @@
                     </div>
                   </div>
                   <div class="stamp-req-count">
-                    <bdi dir="ltr">${AR(Number(r.balance) || 0)} / ${AR(Number(r.threshold) || 0)}</bdi>
+                    <bdi dir="ltr">${Number(r.balance) || 0} / ${Number(r.threshold) || 0}</bdi>
                     <small>الرصيد الآن</small>
                   </div>
                   <div class="stamp-req-actions">

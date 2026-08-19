@@ -59,7 +59,7 @@
               <div class="form-group">
                 <label class="form-label" for="acct-pass">كلمة المرور الجديدة</label>
                 <input type="password" class="form-control" id="acct-pass" minlength="6" required autocomplete="new-password">
-                <span class="form-help">٦ أحرف على الأقل.</span>
+                <span class="form-help">6 أحرف على الأقل.</span>
               </div>
               <div class="form-group">
                 <label class="form-label" for="acct-pass2">تأكيد كلمة المرور</label>
@@ -104,7 +104,7 @@
         e.preventDefault();
         const p1 = container.querySelector('#acct-pass').value;
         const p2 = container.querySelector('#acct-pass2').value;
-        if (p1.length < 6) { window.utils.toast('كلمة المرور قصيرة (٦ أحرف على الأقل)', 'error'); return; }
+        if (p1.length < 6) { window.utils.toast('كلمة المرور قصيرة (6 أحرف على الأقل)', 'error'); return; }
         if (p1 !== p2) { window.utils.toast('كلمتا المرور غير متطابقتين', 'error'); return; }
         const btn = container.querySelector('#pass-save');
         btn.disabled = true;

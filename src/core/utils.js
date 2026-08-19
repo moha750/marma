@@ -29,7 +29,7 @@ const currencyFormatter = new Intl.NumberFormat('ar-EG', {
   maximumFractionDigits: 2
 });
 
-const relTimeFormatter = new Intl.RelativeTimeFormat('ar', { numeric: 'auto' });
+const relTimeFormatter = new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' });
 
 // نسخة احتياطية للحافظة حين لا تتوفّر Clipboard API
 function fallbackCopy(text) {

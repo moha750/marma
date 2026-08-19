@@ -52,9 +52,9 @@
 
   const DURATIONS = [
     { v: '',    label: 'الفترة كاملة مجاناً' },
-    { v: '60',  label: '٦٠ دقيقة' },
-    { v: '90',  label: '٩٠ دقيقة' },
-    { v: '120', label: '١٢٠ دقيقة' }
+    { v: '60',  label: '60 دقيقة' },
+    { v: '90',  label: '90 دقيقة' },
+    { v: '120', label: '120 دقيقة' }
   ];
 
   // ─── حساب التباين (WCAG) ───────────────────────────────────
@@ -82,11 +82,10 @@
   const fgFor = (bg) => (contrast(bg, '#FFFFFF') >= contrast(bg, '#14160F') ? '#FFFFFF' : '#14160F');
   const labelFor = (bg, fg) => mix(bg, fg, 0.62);
 
-  const AR = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
-
   // مرآة loyalty_reward_label في قاعدة البيانات (20260730222010_loyalty_hardening.sql).
   // البطاقة تحمل التسمية التي يولّدها الخادم، فأي اختلاف هنا = معاينة تكذب.
-  // وأرقامها غربية لأن to_char(...,'FM999') يخرجها غربية — لا AR() هنا أبداً.
+  // وأرقامها لاتينية لأن to_char(...,'FM999') يخرجها لاتينية — وهو نظام الأرقام
+  // في كل الواجهة، فلا تحويل هنا أبداً.
   function serverRewardLabel(kind, value, custom) {
     const c = String(custom == null ? '' : custom).trim();
     if (c) return c;
@@ -294,9 +293,9 @@
       function renderStats() {
         const s = state.stats || {};
         const cards = [
-          { label: 'بطاقات', value: AR(s.cards || 0), icon: 'credit-card' },
-          { label: 'قسائم متاحة', value: AR(s.rewards_available || 0), icon: 'ticket' },
-          { label: 'أختام آخر ٣٠ يوماً', value: AR(Math.round(Number(s.stamps_30d || 0))), icon: 'stamp' },
+          { label: 'بطاقات', value: s.cards || 0, icon: 'credit-card' },
+          { label: 'قسائم متاحة', value: s.rewards_available || 0, icon: 'ticket' },
+          { label: 'أختام آخر 30 يوماً', value: Math.round(Number(s.stamps_30d || 0)), icon: 'stamp' },
           { label: 'خصومات مصروفة', value: window.utils.formatCurrency(s.discount_30d || 0), icon: 'wallet' }
         ];
         return `<div class="loy-stats">${cards.map((c) => `
@@ -359,7 +358,7 @@
               <div class="form-group">
                 <label class="form-label" for="f-threshold">كم ختماً للمكافأة؟ <span class="required">*</span></label>
                 <input class="form-control" id="f-threshold" type="number" min="2" max="50" step="1" value="${form.reward_threshold}">
-                <div class="form-help">بين ٢ و ٥٠ — كل حجز مكتمل ومُسدَّد يرفع طلب ختمٍ لموافقتك.</div>
+                <div class="form-help">بين 2 و 50 — كل حجز مكتمل ومُسدَّد يرفع طلب ختمٍ لموافقتك.</div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="f-kind">ما المكافأة؟ <span class="required">*</span></label>
@@ -416,7 +415,7 @@
               <select class="form-control" id="f-value">
                 ${DURATIONS.map((d) => `<option value="${d.v}"${String(form.reward_value || '') === d.v ? ' selected' : ''}>${d.label}</option>`).join('')}
               </select>
-              <div class="form-help">تُحتسب تناسبياً: ٦٠ دقيقة على حجز ١٢٠ دقيقة تخصم نصف السعر.</div>
+              <div class="form-help">تُحتسب تناسبياً: 60 دقيقة على حجز 120 دقيقة تخصم نصف السعر.</div>
             </div>
             ${maxValueHtml()}`;
         }
@@ -426,7 +425,7 @@
             <label class="form-label" for="f-value">${isPct ? 'نسبة الخصم (٪)' : 'مبلغ الخصم (ريال)'} <span class="required">*</span></label>
             <input class="form-control" id="f-value" type="number" ${isPct ? 'min="5" max="100"' : 'min="1"'} step="1"
               value="${window.utils.escapeHtml(form.reward_value)}">
-            ${isPct ? '<div class="form-help">بين ٥٪ و ١٠٠٪.</div>' : ''}
+            ${isPct ? '<div class="form-help">بين 5٪ و 100٪.</div>' : ''}
           </div>
           ${maxValueHtml()}`;
       }
@@ -521,7 +520,7 @@
                   </label>
                   ${form.hero_url ? '<button type="button" class="btn btn--danger-quiet btn--sm" data-role="clear-hero">إزالة</button>' : ''}
                 </div>
-                <div class="form-help">صورة عريضة لملعبك — تُقصّ إلى ١٠٣٢×٣٣٦ تلقائياً.</div>
+                <div class="form-help">صورة عريضة لملعبك — تُقصّ إلى 1032×336 تلقائياً.</div>
               </div>` : ''}
           </div></div>`;
       }
@@ -749,9 +748,9 @@
       function validate() {
         if (!String(form.name || '').trim()) return 'اسم البرنامج مطلوب';
         const thr = Number(form.reward_threshold);
-        if (!(thr >= 2 && thr <= 50)) return 'عدد الأختام يجب أن يكون بين ٢ و ٥٠';
+        if (!(thr >= 2 && thr <= 50)) return 'عدد الأختام يجب أن يكون بين 2 و 50';
         const v = form.reward_value === '' ? null : Number(form.reward_value);
-        if (form.reward_kind === 'percent_discount' && !(v >= 5 && v <= 100)) return 'نسبة الخصم يجب أن تكون بين ٥٪ و ١٠٠٪';
+        if (form.reward_kind === 'percent_discount' && !(v >= 5 && v <= 100)) return 'نسبة الخصم يجب أن تكون بين 5٪ و 100٪';
         if (form.reward_kind === 'amount_discount' && !(v > 0)) return 'مبلغ الخصم يجب أن يكون أكبر من صفر';
         if (form.reward_kind === 'free_item' && !String(form.reward_label || '').trim()) return 'اكتب وصف المكافأة العينية';
         if (form.template === 'photo' && !form.hero_url) return 'قالب «صورة الملعب» يحتاج صورة — ارفعها أو غيّر القالب';

@@ -68,7 +68,7 @@
         e.preventDefault();
         const p1 = document.getElementById('pass').value;
         const p2 = document.getElementById('pass2').value;
-        if (p1.length < 6) { window.utils.toast('كلمة المرور قصيرة (٦ أحرف على الأقل)', 'error'); return; }
+        if (p1.length < 6) { window.utils.toast('كلمة المرور قصيرة (6 أحرف على الأقل)', 'error'); return; }
         if (p1 !== p2) { window.utils.toast('كلمتا المرور غير متطابقتين', 'error'); return; }
         submitBtn.disabled = true;
         submitBtn.querySelector('.btn-text').textContent = 'جارٍ التحديث...';
