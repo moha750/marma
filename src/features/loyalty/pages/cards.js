@@ -293,9 +293,12 @@
                 <summary>تصحيح خطأ</summary>
                 <div class="loy-adjust">
                   <input class="form-control" id="adj-delta" type="number" step="1" placeholder="± عدد الأختام" style="max-width:11rem">
-                  <input class="form-control" id="adj-note" maxlength="80" placeholder="سبب التصحيح (يُسجَّل)">
+                  <input class="form-control" id="adj-note" maxlength="80" required placeholder="سبب التصحيح (إلزامي)">
                   <button class="btn btn--ghost btn--sm" id="adj-go">صحّح</button>
                 </div>
+                <!-- المعاينة تُظهر أثر الرقم قبل الضغط: الرصيد لا يُقرأ من
+                     الحقل بل من نتيجته، و«الرصيد لا يكفي» تُقال قبل النداء -->
+                <p class="loy-correct-preview" id="adj-preview" hidden></p>
               </details>` : ''}
 
             <div class="loy-detail-section">
@@ -345,10 +348,54 @@
         if (giftBtn) giftBtn.addEventListener('click', () => openGift(d.card.id, reopen));
 
         const adjBtn = m.querySelector('#adj-go');
+        const adjDelta = m.querySelector('#adj-delta');
+        const adjNote = m.querySelector('#adj-note');
+        const adjPrev = m.querySelector('#adj-preview');
+        const balNow = Math.round(Number((d.card || {}).balance || 0));
+
+        // معاينة حيّة: «٧ ← ٤». والخصم الذي يتجاوز الرصيد يُقال هنا لا بعد
+        // النداء — القاعدة ترفضه على أي حال، لكن الرفض المتأخّر يبدو عطلاً.
+        function drawPreview() {
+          if (!adjPrev) return;
+          const delta = Number(adjDelta.value || 0);
+          if (!delta) { adjPrev.hidden = true; return; }
+          const after = balNow + delta;
+          adjPrev.hidden = false;
+          if (after < 0) {
+            adjPrev.className = 'loy-correct-preview is-bad';
+            adjPrev.textContent = `الرصيد ${AR(balNow)} لا يكفي لخصم ${AR(Math.abs(delta))}`;
+          } else {
+            adjPrev.className = 'loy-correct-preview';
+            adjPrev.textContent = `الرصيد: ${AR(balNow)} ← ${AR(after)}`;
+          }
+        }
+        if (adjDelta) adjDelta.addEventListener('input', drawPreview);
+
         if (adjBtn) adjBtn.addEventListener('click', async () => {
-          const delta = Number(m.querySelector('#adj-delta').value || 0);
-          const note = m.querySelector('#adj-note').value;
-          if (!delta) { window.utils.toast('أدخل قيمة التصحيح', 'error'); return; }
+          const delta = Number(adjDelta.value || 0);
+          const note = String(adjNote.value || '').trim();
+          if (!delta) { window.utils.toast('أدخل قيمة التصحيح', 'error'); adjDelta.focus(); return; }
+          if (note.length < 3) {
+            window.utils.toast('اكتب سبب التصحيح — يبقى في سجلّ البطاقة', 'error');
+            adjNote.focus();
+            return;
+          }
+          if (balNow + delta < 0) {
+            window.utils.toast(`الرصيد ${AR(balNow)} لا يكفي لهذا الخصم`, 'error');
+            adjDelta.focus();
+            return;
+          }
+
+          // التصحيح وحده بلا نافذةٍ تسبقه، فالتأكيد هو ما يقوم مقامها
+          const ok = await window.utils.confirm({
+            title: 'تصحيح الرصيد',
+            message: `${delta > 0 ? 'إضافة' : 'خصم'} ${AR(Math.abs(delta))} ختماً — `
+              + `الرصيد يصير ${AR(balNow + delta)}. يُسجَّل باسمك ولا يمكن التراجع من هنا.`,
+            confirmText: 'صحّح',
+            danger: delta < 0
+          });
+          if (!ok) return;
+
           adjBtn.disabled = true;
           try {
             await window.loyaltyApi.adjust(d.card.id, delta, note);
