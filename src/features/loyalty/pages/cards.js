@@ -281,16 +281,13 @@
               </div>` : ''}
             </div>
 
+            <!-- الإهداء مدخله زرّ الصفّ وحده: نافذةٌ فوق نافذة تكديسٌ لا يخدم
+                 أحداً، ونافذة التفاصيل موضع القراءة لا موضع المنح.
+                 والتصحيح مكشوفٌ بلا طيّ — إخفاؤه خلف ضغطةٍ يجعله سرّاً، ومن
+                 فتح التفاصيل ليُصحّح لا يُطالَب بأن يكتشف مكان التصحيح. -->
             ${isOwner ? `
-              ${c.status === 'active' ? `
-                <button class="btn btn--primary btn--sm loy-gift-open" id="gift-open">
-                  <i data-lucide="gift"></i> إهداء أختام
-                </button>` : ''}
-
-              <!-- التصحيح مطويّ عمداً: هو الاستثناء لا الإجراء المعتاد، وإبرازه
-                   بجانب الإهداء يجعل الخطأ في متناول اليد كالصواب -->
-              <details class="loy-correct">
-                <summary>تصحيح خطأ</summary>
+              <div class="loy-correct">
+                <div class="form-label">تصحيح خطأ</div>
                 <div class="loy-adjust">
                   <input class="form-control" id="adj-delta" type="number" step="1" placeholder="± عدد الأختام" style="max-width:11rem">
                   <input class="form-control" id="adj-note" maxlength="80" required placeholder="سبب التصحيح (إلزامي)">
@@ -299,7 +296,7 @@
                 <!-- المعاينة تُظهر أثر الرقم قبل الضغط: الرصيد لا يُقرأ من
                      الحقل بل من نتيجته، و«الرصيد لا يكفي» تُقال قبل النداء -->
                 <p class="loy-correct-preview" id="adj-preview" hidden></p>
-              </details>` : ''}
+              </div>` : ''}
 
             <div class="loy-detail-section">
               <div class="form-label">القسائم</div>
@@ -343,9 +340,6 @@
       function bindDetail(ctrl, d) {
         const m = ctrl.modal;
         const reopen = async () => { ctrl.close(); await load(); openDetail(d.card.id); };
-
-        const giftBtn = m.querySelector('#gift-open');
-        if (giftBtn) giftBtn.addEventListener('click', () => openGift(d.card.id, reopen));
 
         const adjBtn = m.querySelector('#adj-go');
         const adjDelta = m.querySelector('#adj-delta');
