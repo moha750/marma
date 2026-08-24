@@ -40,8 +40,13 @@ window.adminAudit = (function () {
       case 'support_request':
       case 'support_denied':
         return d.reason ? `السبب: ${d.reason}` : '—';
-      case 'support_start':
-        return `${d.origin === 'member_request' ? 'بدعوة من الملعب' : 'بموافقة المالك'}${d.reason ? ' · ' + d.reason : ''}`;
+      case 'support_start': {
+        // السطر الذي يدافع عن المشرف يوم يُسأل لا يجوز أن يجامله: الدخول المباشر
+        // يُكتب دخولاً مباشراً، لا «بموافقة المالك» — موافقةٌ لم تكن.
+        const how = { member_request: 'بدعوة من الملعب', direct: 'دخول مباشر بلا إذن' }[d.origin]
+                 || 'بموافقة المالك';
+        return `${how}${d.reason ? ' · ' + d.reason : ''}`;
+      }
       case 'support_end': {
         const who = ({ owner: 'أنهاها الملعب', support: 'أنهاها الدعم', expiry: 'انتهت وحدها' })[d.ended_by] || '—';
         return `${d.minutes} دقيقة · ${who}`;

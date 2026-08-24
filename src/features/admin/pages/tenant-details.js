@@ -67,13 +67,16 @@
     const live = (sessions || []).find((s) => s.is_live);
     if (!live) {
       return {
-        line: 'لا جلسة مفتوحة. الطلب يصل جوّال المالك، ولا يُفتح شيء قبل موافقته.',
-        actions: [{ act: 'sup-request', label: 'اطلب الدخول نيابةً', cls: 'btn--primary' }]
+        line: 'لا جلسة مفتوحة. الطلب يستأذن المالك أوّلاً؛ والدخول المباشر يفتح فوراً بلا إذنه ويُسجَّل باسمك.',
+        actions: [
+          { act: 'sup-request', label: 'اطلب الدخول نيابةً', cls: 'btn--primary' },
+          { act: 'sup-direct', label: 'دخول مباشر', cls: 'btn--ghost' }
+        ]
       };
     }
     if (live.status === 'active' && live.is_mine) {
       return {
-        line: `جلستك مفتوحة — تنتهي ${fmtDateTime(live.expires_at)}`,
+        line: `جلستك مفتوحة${live.origin === 'direct' ? ' · دخول مباشر لا يراه المالك — أنهِها بنفسك' : ''} — تنتهي ${fmtDateTime(live.expires_at)}`,
         cls: 'danger',
         actions: [
           { act: 'sup-open', label: 'افتح حساب الملعب', cls: 'btn--primary', id: live.id },
@@ -445,6 +448,40 @@
               ctrl.close();
               window.utils.toast('وصل الطلب جوّال المالك', 'success');
               await load();
+            } catch (err) {
+              window.utils.toast(window.utils.formatError(err), 'error');
+              btn.disabled = false;
+            }
+          });
+        });
+
+        const supDirectBtn = byAct('sup-direct');
+        if (supDirectBtn) supDirectBtn.addEventListener('click', () => {
+          const ctrl = window.utils.openModal({
+            title: 'دخول مباشر لحساب الملعب',
+            body: `
+              <p class="text-sm text-secondary">تدخل الآن بلا موافقة المالك، وتعمل داخل حسابه كأنك هو. لا يصله إشعار ولا يظهر له شريط. المال والهويّة (الاشتراك، جوّال المالك، حذف الحساب) تبقى مقفلة.</p>
+              <p class="text-xs text-secondary">يُسجَّل السطر في دفترك باسمك مع هذا السبب — دفاعك لو سُئلت لاحقاً.</p>
+              <form id="dir-form" autocomplete="off">
+                <div class="form-group">
+                  <label class="form-label" for="dir-reason">سبب الدخول</label>
+                  <textarea class="form-control" id="dir-reason" rows="2" maxlength="200" required
+                            placeholder="مثال: الوزيه أذن شفهياً بالهاتف، أضبط له الأوقات"></textarea>
+                </div>
+              </form>`,
+            footer: `
+              <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+              <button type="submit" class="btn btn--primary" form="dir-form" id="dir-submit">ادخل الآن</button>`
+          });
+          ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+          ctrl.modal.querySelector('#dir-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = (ctrl.modal.querySelector('#dir-reason').value || '').trim();
+            const btn = ctrl.modal.querySelector('#dir-submit');
+            btn.disabled = true;
+            try {
+              await window.supportApi.adminDirectSession(t.id, reason);
+              window.location.href = appPath('/dashboard');
             } catch (err) {
               window.utils.toast(window.utils.formatError(err), 'error');
               btn.disabled = false;

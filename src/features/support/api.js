@@ -42,6 +42,15 @@ window.supportApi = (function () {
     return data;
   }
 
+  // الدخول المباشر — بلا موافقة المالك. قرار مالك المنصّة، ومقصورٌ على المشرف.
+  async function adminDirectSession(tenantId, reason) {
+    const { data, error } = await sb().rpc('admin_direct_support_session', {
+      p_tenant_id: tenantId, p_reason: reason
+    });
+    if (error) throw error;
+    return data;
+  }
+
   async function adminClaimSession(sessionId) {
     const { error } = await sb().rpc('admin_claim_support_session', { p_id: sessionId });
     if (error) throw error;
@@ -55,6 +64,6 @@ window.supportApi = (function () {
 
   return {
     currentSession, requestHelp, respondToSupport, endSession,
-    adminRequestSession, adminClaimSession, adminListSessions
+    adminRequestSession, adminDirectSession, adminClaimSession, adminListSessions
   };
 })();
