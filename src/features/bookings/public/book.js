@@ -1055,6 +1055,53 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // التحويل البنكي — أيبان المالك (اختياريّ)
+  // ═══════════════════════════════════════════════════════════════
+
+  // يظهر حين وضعه المالك وحين للحجز مبلغٌ فعليّ. «عند التواصل» أو «مجاني»
+  // لا مبلغَ فيهما يُحوَّل، فعرضُ حسابٍ بنكيّ عندهما إرباكٌ لا خدمة.
+  function payIban(price) {
+    const raw = state.tenantInfo && state.tenantInfo.payment_iban;
+    if (!raw) return null;
+    if (price == null || !(Number(price) > 0)) return null;
+    return String(raw).replace(/\s+/g, '').toUpperCase();
+  }
+
+  function formatIban(iban) {
+    return iban.replace(/(.{4})/g, '$1 ').trim();
+  }
+
+  function renderPayBlock(price) {
+    const iban = payIban(price);
+    if (!iban) return '';
+    return `
+      <div class="bp-pay">
+        <div class="bp-pay-head">
+          <i data-lucide="landmark"></i>
+          <span>حوّل المبلغ لتأكيد الحجز</span>
+        </div>
+        <button type="button" class="bp-pay-iban" data-action="copy-iban"
+                data-iban="${window.utils.escapeHtml(iban)}" title="انسخ الأيبان">
+          <code dir="ltr">${window.utils.escapeHtml(formatIban(iban))}</code>
+          <i data-lucide="copy"></i>
+        </button>
+        <p class="bp-pay-note">حوّل المبلغ على هذا الأيبان ثم أرسل الإيصال لإدارة الملعب.</p>
+      </div>
+    `;
+  }
+
+  function bindPayCopy(scope) {
+    const btn = scope.querySelector('[data-action="copy-iban"]');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      await window.utils.copyToClipboard(btn.dataset.iban);
+      btn.dataset.copied = 'true';
+      window.utils.toast('تم نسخ الأيبان', 'success');
+      setTimeout(() => { delete btn.dataset.copied; }, 1600);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // SUMMARY MODAL + SUBMIT
   // ═══════════════════════════════════════════════════════════════
 
@@ -1113,6 +1160,7 @@
           <span>الإجمالي</span>
           <strong>${window.utils.formatPrice(state.selectedSlot.price)}</strong>
         </div>
+        ${renderPayBlock(state.selectedSlot.price)}
         <p class="bp-summary-note">سيتواصل معك الملعب لتأكيد الحجز.</p>
       </div>
     `;
@@ -1139,6 +1187,7 @@
     let settled = false;
     const close = () => { if (!settled) { settled = true; ctrl.close(); } };
     ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', close);
+    bindPayCopy(ctrl.modal);
 
     const confirmBtn = ctrl.modal.querySelector('#bp-confirm-btn');
     confirmBtn.addEventListener('click', async () => {
@@ -1224,6 +1273,7 @@
               <span>الإجمالي</span>
               <strong>${window.utils.formatPrice(totalPrice)}</strong>
             </div>
+            ${renderPayBlock(totalPrice)}
           </div>
         </div>
 
@@ -1249,6 +1299,7 @@
       </div>
     `;
     window.utils.renderIcons(root);
+    bindPayCopy(root);
 
     // البطاقة لا توجد بعد وقت الحجز — تُصدر بعد انتهائه وسداده. فالزرّ يفتح
     // البابَ الدائم بالرقم الذي كتبه للتوّ، لا رابطَ بطاقةٍ لم تُخلق.

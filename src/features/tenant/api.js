@@ -26,7 +26,17 @@ window.tenantApi = (function () {
     return cachedTenantId;
   }
 
-  async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner }) {
+  // تطبيع الأيبان: بلا فراغات وبحروف كبيرة. العميل يكتبه منسوخًا من تطبيق بنكه
+  // «SA03 8000 ...» — والقيد في القاعدة لا يقبل فراغًا، فنُنقّيه هنا لا نردّه.
+  function normalizeIban(value) {
+    return String(value || '').replace(/[\s\u200f\u200e-]/g, '').toUpperCase();
+  }
+
+  function isValidIban(value) {
+    return /^SA[0-9]{22}$/.test(normalizeIban(value));
+  }
+
+  async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner, payment_iban }) {
     const tenantId = await getMyTenantId();
     const patch = {};
     if (name !== undefined) patch.name = name;
@@ -34,6 +44,13 @@ window.tenantApi = (function () {
     if (cover_image_url !== undefined) patch.cover_image_url = cover_image_url || null;
     if (logo_url !== undefined) patch.logo_url = logo_url || null;
     if (show_manage_banner !== undefined) patch.show_manage_banner = show_manage_banner;
+    if (payment_iban !== undefined) {
+      const iban = normalizeIban(payment_iban);
+      if (iban && !isValidIban(iban)) {
+        throw new Error('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة');
+      }
+      patch.payment_iban = iban || null;
+    }
     const { data, error } = await sb()
       .from('tenants')
       .update(patch)
@@ -172,5 +189,5 @@ window.tenantApi = (function () {
     cachedTenantId = null;
   }
 
-  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover, uploadTenantLogo, removeTenantLogo, _resetTenantIdCache };
+  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover, uploadTenantLogo, removeTenantLogo, normalizeIban, isValidIban, _resetTenantIdCache };
 })();

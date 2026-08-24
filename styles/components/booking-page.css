@@ -1146,6 +1146,62 @@
   margin: 0;
 }
 
+/* ── التحويل البنكي: أيبان المالك (نافذة المراجعة + شاشة النجاح) ── */
+.bp-pay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--c-soft);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-md);
+  text-align: start;
+}
+.bp-pay-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--c-fg);
+}
+.bp-pay-head svg.lucide,
+.bp-pay-head i[data-lucide] { width: 15px; height: 15px; color: var(--c-brand); }
+.bp-pay-iban {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+.bp-pay-iban:hover { border-color: var(--c-brand); }
+.bp-pay-iban code {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+  color: var(--c-fg);
+  background: none;
+  padding: 0;
+}
+.bp-pay-iban svg.lucide,
+.bp-pay-iban i[data-lucide] { width: 15px; height: 15px; color: var(--c-faint); flex-shrink: 0; }
+.bp-pay-iban[data-copied] {
+  border-color: var(--c-brand);
+  background: var(--c-brand-50);
+}
+.bp-pay-note {
+  font-size: var(--text-xs);
+  color: var(--c-faint);
+  margin: 0;
+  line-height: 1.6;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    12) SUCCESS SCREEN
    ═══════════════════════════════════════════════════════════════════ */
@@ -1490,6 +1546,9 @@
   background: color-mix(in srgb, var(--c-brand) 14%, transparent);
   color: var(--accent-300);
   border-color: color-mix(in srgb, var(--c-brand) 30%, transparent);
+}
+[data-theme="dark"] .bp-pay-iban[data-copied] {
+  background: color-mix(in srgb, var(--c-brand) 14%, transparent);
 }
 [data-theme="dark"] .bp-success-check-bg {
   fill: color-mix(in srgb, var(--c-brand) 18%, transparent);
