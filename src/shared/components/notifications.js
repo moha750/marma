@@ -19,7 +19,8 @@ window.notificationBell = (function () {
     tenant_new: 'store',
     broadcast: 'megaphone',
     loyalty_stamp_pending: 'stamp',
-    loyalty_redeem: 'gift'
+    loyalty_redeem: 'gift',
+    support_session: 'user-cog'
   };
   function iconFor(type) { return ICONS[type] || 'bell'; }
 
