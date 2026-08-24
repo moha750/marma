@@ -81,3 +81,15 @@
     border-block-start: 1px solid var(--border-subtle);
   }
 }
+
+/* عدّاد الخانات في نموذج الطريقة: يطمئن أثناء الكتابة بدل رسالة خطأ بعد الحفظ.
+   محايدٌ وهو فارغ، تحذيريٌّ وهو ناقص، أخضرُ حين يكتمل العدد. */
+.pay-count {
+  display: inline-block;
+  margin-inline-start: var(--space-1);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  font-weight: var(--weight-medium);
+}
+.pay-count[data-state="short"] { color: var(--warning-ink); }
+.pay-count[data-state="ok"]    { color: var(--success); }

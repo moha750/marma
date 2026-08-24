@@ -165,6 +165,10 @@
               <input type="text" class="form-control" name="iban" dir="ltr" maxlength="34"
                      autocapitalize="characters" spellcheck="false"
                      placeholder="SA00 0000 0000 0000 0000 0000" value="${esc(formatIban(m.iban))}">
+              <span class="form-help">
+                الأيبان السعودي ٢٤ خانة: SA ثم ٢٢ رقمًا — انسخه من تطبيق بنكك.
+                <span id="pm-iban-count" class="pay-count"></span>
+              </span>
             </div>
           ` : ''}
           ${kind === 'wallet' ? `
@@ -172,7 +176,10 @@
               <label class="form-label">رقم الجوال <span class="required">*</span></label>
               <input type="tel" class="form-control" name="phone" dir="ltr" maxlength="10"
                      inputmode="numeric" placeholder="05XXXXXXXX" value="${esc(m.phone)}">
-              <span class="form-help">الرقم الذي تستقبل عليه التحويلات.</span>
+              <span class="form-help">
+                ١٠ أرقام تبدأ بـ ٠٥ — الرقم الذي تستقبل عليه التحويلات.
+                <span id="pm-phone-count" class="pay-count"></span>
+              </span>
             </div>
             <div class="form-group">
               <label class="form-label">المحافظ التي تستقبل على هذا الرقم <span class="required">*</span></label>
@@ -206,6 +213,33 @@
         title: `${existing ? 'تعديل' : 'إضافة'} — ${KIND_META[kind].label}`,
         body, footer
       });
+
+      // عدّادٌ حيّ: «كم بقي؟» سؤالٌ يُجاب أثناء الكتابة لا بعد الحفظ برسالة خطأ
+      const counter = (input, out, want, clean) => {
+        if (!input || !out) return;
+        const paint = () => {
+          const n = clean(input.value).length;
+          out.textContent = `${n}/${want}`;
+          out.dataset.state = n === 0 ? '' : (n === want ? 'ok' : 'short');
+        };
+        input.addEventListener('input', paint);
+        paint();
+      };
+
+      const ibanInput = ctrl.modal.querySelector('input[name="iban"]');
+      counter(ibanInput, ctrl.modal.querySelector('#pm-iban-count'), 24,
+        (v) => String(v).replace(/[\s-]/g, ''));
+      // إعادة التجميع عند الخروج: يكتبه ملتصقًا فيراه مجموعاتٍ رباعية كبنكه
+      if (ibanInput) {
+        ibanInput.addEventListener('blur', () => {
+          const grouped = formatIban(window.api.normalizeIban(ibanInput.value));
+          if (grouped) ibanInput.value = grouped;
+        });
+      }
+
+      counter(ctrl.modal.querySelector('input[name="phone"]'),
+        ctrl.modal.querySelector('#pm-phone-count'), 10,
+        (v) => String(v).replace(/[\s-]/g, ''));
 
       const chips = ctrl.modal.querySelector('#pm-wallets');
       if (chips) {
