@@ -240,6 +240,27 @@ ALTER PUBLICATION supabase_realtime ADD TABLE bookings, customers, fields;
 - `window.tenantApi.getMyTenantId()` يحتفظ بـ tenant_id الحالي
 - جميع INSERTs تتضمّن `tenant_id` (NOT NULL)
 
+### الدخول نيابةً (support impersonation)
+
+الثقب الوحيد المقصود في العزل، ومكانه `public.get_my_tenant_id()` نفسها:
+
+```sql
+coalesce(support_session_tenant(), (select tenant_id from profiles where id = auth.uid()))
+```
+
+لأن كل سياسة RLS تنتهي إلى هذه الدالّة، فتعديلها هنا يسري على كل جدولٍ حاضرٍ
+وكل جدولٍ يُضاف لاحقاً — بلا سياسة إضافية واحدة. ومن كتب سياسةً جديدة بالنمط
+المعتاد (`tenant_id = get_my_tenant_id()`) فقد غطّى النيابة دون أن يدري.
+
+الشروط الثلاثة في `support_session_tenant()` (جلسة `active` · `expires_at`
+في المستقبل · والفاعل مشرفٌ عام **الآن**) هي كل ما يحرس الباب. وسقوط أيّها
+يُغلقه في نفس اللحظة — بلا وظيفة مجدولة ولا تنظيف.
+
+والمقفل داخل الجلسة بتريجرات لا بإخفاءٍ في الواجهة: `subscriptions` (كلّها)،
+و`profiles` (تعديلاً وحذفاً)، وأعمدة الاشتراك والإيقاف في `tenants`.
+
+انظر `supabase/migrations/20260824120000_support_impersonation.sql`.
+
 ## ما هو **خارج** هذه البنية حالياً
 
 - لا بناء (build step) → لا tree-shaking، لا minification

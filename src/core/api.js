@@ -20,7 +20,8 @@ window.api = Object.assign({},
   window.tenantApi        || {},
   window.offersApi        || {},
   window.loyaltyApi       || {},
-  window.adminApi         || {}
+  window.adminApi         || {},
+  window.supportApi       || {}
 );
 
 // تحذير لو في تطوير وأحدها مفقود

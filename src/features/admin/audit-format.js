@@ -9,7 +9,11 @@ window.adminAudit = (function () {
     end_trial:          { label: 'إنهاء التجربة',     icon: 'calendar-x',   cls: 'expired' },
     grant_lifetime:     { label: 'منح وصول دائم',     icon: 'gem',          cls: 'active'  },
     revoke_lifetime:    { label: 'إلغاء الوصول الدائم', icon: 'gem',        cls: 'expired' },
-    set_limits:         { label: 'تعديل الحدود',      icon: 'sliders-horizontal', cls: 'warn' }
+    set_limits:         { label: 'تعديل الحدود',      icon: 'sliders-horizontal', cls: 'warn' },
+    support_request:    { label: 'طلب دخول نيابةً',    icon: 'shield-question', cls: 'warn'    },
+    support_denied:     { label: 'رُفض طلب النيابة',   icon: 'shield-x',        cls: 'expired' },
+    support_start:      { label: 'دخول نيابةً',        icon: 'user-cog',        cls: 'warn'    },
+    support_end:        { label: 'انتهت النيابة',      icon: 'user-check',      cls: 'active'  }
   };
 
   const fmtDate = (v) => v ? window.utils.formatDate(v) : '—';
@@ -33,7 +37,15 @@ window.adminAudit = (function () {
       case 'end_subscription':
       case 'grant_lifetime':
       case 'revoke_lifetime':
+      case 'support_request':
+      case 'support_denied':
         return d.reason ? `السبب: ${d.reason}` : '—';
+      case 'support_start':
+        return `${d.origin === 'member_request' ? 'بدعوة من الملعب' : 'بموافقة المالك'}${d.reason ? ' · ' + d.reason : ''}`;
+      case 'support_end': {
+        const who = ({ owner: 'أنهاها الملعب', support: 'أنهاها الدعم', expiry: 'انتهت وحدها' })[d.ended_by] || '—';
+        return `${d.minutes} دقيقة · ${who}`;
+      }
       default:
         return '—';
     }

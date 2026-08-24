@@ -287,6 +287,10 @@ window.layout = (function () {
               <span class="nav-label">${window.native && window.native.isIOS ? 'ثبّت على iPhone' : 'ثبّت التطبيق'}</span>
             </button>
           ` : ''}
+          <button type="button" class="more-sheet-help" id="more-sheet-help">
+            <span class="nav-icon"><i data-lucide="life-buoy"></i></span>
+            <span class="nav-label">مساعدة</span>
+          </button>
           ${isSuperAdminCached ? `
             <a href="${window.utils.path('/admin/overview')}" data-nav-key="admin">
               <span class="nav-icon"><i data-lucide="shield"></i></span>
@@ -339,6 +343,12 @@ window.layout = (function () {
     // فبلا نقله هنا يصير الخروج متعذّراً على الجوال أصلاً.
     const signout = moreSheetCtrl.body.querySelector('#more-sheet-signout');
     if (signout) signout.addEventListener('click', () => window.auth.signOut());
+
+    const help = moreSheetCtrl.body.querySelector('#more-sheet-help');
+    if (help) help.addEventListener('click', () => {
+      if (moreSheetCtrl) moreSheetCtrl.close();
+      if (window.helpCoach) window.helpCoach.openSheet();
+    });
 
     // التثبيت: iOS بلا beforeinstallprompt ⇒ نافذة تعليمات يدوية، وغيره prompt برمجي
     const install = moreSheetCtrl.body.querySelector('#more-sheet-install');
@@ -501,6 +511,9 @@ window.layout = (function () {
                 <button type="button" class="item" id="user-menu-palette">
                   <i data-lucide="command"></i><span>لوحة الأوامر</span>
                 </button>
+                <button type="button" class="item" id="user-menu-help">
+                  <i data-lucide="life-buoy"></i><span>مساعدة</span>
+                </button>
                 <div class="divider"></div>
                 <button type="button" class="item danger" id="signout-btn">
                   <i data-lucide="log-out"></i><span>تسجيل الخروج</span>
@@ -513,6 +526,9 @@ window.layout = (function () {
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
         <div class="main-area">
+          <!-- النيابة فوق الاشتراك: «أحدٌ يعدّل في حسابك الآن» يسبق «جدّد
+               اشتراكك» في كل حال — الأوّل يجري الآن والثاني يمكن أن ينتظر. -->
+          <div id="support-banner-slot"></div>
           <div id="trial-banner-slot"></div>
 
           <header class="app-header">
@@ -567,6 +583,11 @@ window.layout = (function () {
     document.getElementById('user-menu-palette').addEventListener('click', () => {
       userMenu.classList.remove('open');
       if (window.commandPalette) window.commandPalette.open();
+    });
+
+    document.getElementById('user-menu-help').addEventListener('click', () => {
+      userMenu.classList.remove('open');
+      if (window.helpCoach) window.helpCoach.openSheet();
     });
 
     // ورقة «المزيد» في الشريط السفلي
@@ -690,6 +711,12 @@ window.layout = (function () {
       }, 500);
       window.realtime.on('tenants:change', onTenantOrSub);
       window.realtime.on('subscriptions:change', onTenantOrSub);
+    }
+
+    // شريط النيابة: يُركَّب دائماً وإن لم تكن ثمّة جلسة — هو من يسأل الخادم،
+    // ومن يسمع القناة الحيّة، فلا بدّ أن يكون حاضراً قبل أن يقع شيء.
+    if (window.supportBanner) {
+      window.supportBanner.mount(document.getElementById('support-banner-slot'));
     }
 
     window.utils.renderIcons(root);

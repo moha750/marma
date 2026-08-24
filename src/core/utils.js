@@ -493,6 +493,16 @@ window.utils = {
     if (msg.includes('NOT_OWNER')) return 'هذه العملية متاحة لمالك الملعب فقط';
     if (msg.includes('NOT_SUPER_ADMIN')) return 'هذه العملية للمشرف العام فقط';
     if (msg.includes('NO_LEADS_ACCESS')) return 'لا تملك وصولاً إلى دفتر متابعة العملاء';
+
+    // جلسة «الدخول نيابةً»
+    if (msg.includes('SUPPORT_FORBIDDEN')) return 'هذا الإجراء ممنوع أثناء جلسة الدعم — يخصّ الاشتراك أو هويّة الحساب، وهو للمالك وحده';
+    if (msg.includes('SUPPORT_SESSION_EXISTS')) return 'يوجد طلب أو جلسة مفتوحة لهذا الملعب — أنهِها أولاً';
+    if (msg.includes('SUPPORT_REASON_REQUIRED')) return 'اكتب سبب الدخول — المالك سيقرؤه قبل أن يوافق';
+    if (msg.includes('SUPPORT_SESSION_NOT_FOUND')) return 'الجلسة غير موجودة';
+    if (msg.includes('SUPPORT_SESSION_NOT_PENDING')) return 'لم يعد هذا الطلب بانتظار ردّك';
+    if (msg.includes('SUPPORT_SESSION_NOT_INVITED')) return 'لم تعد هذه الدعوة قائمة';
+    if (msg.includes('SUPPORT_SESSION_EXPIRED')) return 'انتهت صلاحية الطلب — اطلب جلسة جديدة';
+    if (msg.includes('NO_TENANT')) return 'حسابك غير مرتبط بأي ملعب';
     if (msg.includes('UNAUTHENTICATED')) return 'يجب تسجيل الدخول أولاً';
 
     // حدود الأرضيات والموظفين

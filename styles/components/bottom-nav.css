@@ -185,7 +185,8 @@
   padding-block-start: var(--space-3);
 }
 
-.more-sheet-install {
+.more-sheet-install,
+.more-sheet-help {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -203,7 +204,8 @@
   text-align: start;
 }
 
-.more-sheet-install .nav-icon {
+.more-sheet-install .nav-icon,
+.more-sheet-help .nav-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -212,12 +214,14 @@
   color: var(--text-secondary);
 }
 
-.more-sheet-install .nav-icon svg.lucide {
+.more-sheet-install .nav-icon svg.lucide,
+.more-sheet-help .nav-icon svg.lucide {
   width: 18px;
   height: 18px;
 }
 
-.more-sheet-install:active {
+.more-sheet-install:active,
+.more-sheet-help:active {
   background: var(--surface-2);
 }
 

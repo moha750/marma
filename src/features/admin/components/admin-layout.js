@@ -140,6 +140,9 @@ window.layout = (function () {
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
         <div class="main-area">
+          <!-- المشرف يرى شريط النيابة في لوحته أيضاً: قد يفتح جلسةً ثم يعود
+               إلى هنا، فيبقى «أنت داخل حساب فلان» أمامه لا خلفه. -->
+          <div id="support-banner-slot"></div>
           <header class="app-header">
             <div class="app-header-start">
               <button class="menu-toggle" id="menu-toggle" aria-label="القائمة">
@@ -226,6 +229,10 @@ window.layout = (function () {
           }
         }
       ]);
+    }
+
+    if (window.supportBanner) {
+      window.supportBanner.mount(document.getElementById('support-banner-slot'), { shell: 'admin' });
     }
 
     window.utils.renderIcons(root);

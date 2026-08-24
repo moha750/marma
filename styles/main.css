@@ -41,6 +41,7 @@
 @import url('./components/booking-page.css');
 @import url('./components/legal.css');
 @import url('./components/tour.css');
+@import url('./components/support.css');
 /* آخر ملف: أنماط التطبيق الأصلي محصورة كلها تحت html.native، ويجب أن تتغلّب
    على ما سبقها (حشوات المناطق الآمنة تعدّل ارتفاعات مُعرَّفة في layout.css). */
 @import url('./components/native.css');

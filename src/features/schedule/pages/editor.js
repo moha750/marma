@@ -223,7 +223,9 @@
 
         const acts = container.querySelector('#sch-actions');
         if (acts) {
-          acts.innerHTML = isOwner ? `<button class="btn btn--ghost" id="sch-apply-all"><i data-lucide="copy-check"></i> تطبيق على كل الأيام</button>` : '';
+          acts.innerHTML = isOwner ? `
+            <button class="btn btn--ghost" data-help="schedule-time"><i data-lucide="circle-help"></i> كيف أعدّل الوقت؟</button>
+            <button class="btn btn--ghost" id="sch-apply-all"><i data-lucide="copy-check"></i> تطبيق على كل الأيام</button>` : '';
           const ab = acts.querySelector('#sch-apply-all');
           if (ab) ab.addEventListener('click', openApplyAllModal);
           window.utils.renderIcons(acts);

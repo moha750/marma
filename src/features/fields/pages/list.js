@@ -8,6 +8,9 @@
         <div class="page-subtitle">أرضيات الملعب القابلة للحجز</div>
       </div>
       <div class="actions">
+        <button class="btn btn--ghost" data-help="field-images">
+          <i data-lucide="circle-help"></i> كيف أضيف صوراً؟
+        </button>
         <button class="btn btn--primary" id="add-field-btn">
           <i data-lucide="plus"></i> إضافة أرضية
         </button>

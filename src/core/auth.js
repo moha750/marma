@@ -102,17 +102,50 @@ window.auth = (function () {
     if (!user) {
       throw new Error('UNAUTHENTICATED');
     }
+    const TENANT_COLS = 'id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url, show_manage_banner';
+    // maybeSingle لا single: غياب الصفّ صار حالةً محتملة لها معنى (جلسة نيابة)
+    // لا خطأً بذاته. والحالة الباطلة الحقيقية نرفعها بأنفسنا في آخر السطور.
     const { data, error } = await window.sb
       .from('profiles')
-      .select('id, tenant_id, full_name, role, tenants(id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url, show_manage_banner)')
+      .select(`id, tenant_id, full_name, role, tenants(${TENANT_COLS})`)
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     if (error) {
       console.error('فشل جلب الملف الشخصي:', error);
       throw error;
     }
-    currentProfile = data;
-    return data;
+    if (data) {
+      currentProfile = data;
+      return data;
+    }
+
+    // ── لا صفّ عضوية: قد يكون الدعم داخل جلسة نيابة ──────────────────────
+    // المشرف لا profile له بالتصميم (ليس مالك ملعب)، وكانت هذه الحال تُقرأ
+    // «حساب باطل» فيُسجَّل خروجه. وداخل الجلسة صار له ملعبٌ فعلاً — تمنحه
+    // get_my_tenant_id في القاعدة — فنصوغ له ملفّاً يطابق ما تراه RLS.
+    //
+    // الاسم صريح: كل ما يعرضه التطبيق من هويّة أثناء الجلسة يجب أن يقول «دعم»،
+    // فلا يظنّ ناظرٌ إلى الشاشة أن المالك هو من يفعل. والدور 'owner' لأن
+    // is_owner في القاعدة تقول ذلك — واجهةٌ تخالف صلاحيتها الحقيقية تُربك فقط.
+    const support = window.supportApi ? await window.supportApi.currentSession().catch(() => null) : null;
+    if (support && support.viewer === 'support') {
+      const { data: tenant, error: tErr } = await window.sb
+        .from('tenants').select(TENANT_COLS).eq('id', support.tenant_id).single();
+      if (tErr) throw tErr;
+      currentProfile = {
+        id: user.id,
+        tenant_id: support.tenant_id,
+        full_name: 'الدعم الفنّي',
+        role: 'owner',
+        is_support: true,
+        tenants: tenant
+      };
+      return currentProfile;
+    }
+
+    const missing = new Error('PGRST116: profile not found');
+    missing.code = 'PGRST116';
+    throw missing;
   }
 
   // جلب حالة الاشتراك من السيرفر (RPC مخصص)

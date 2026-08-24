@@ -173,6 +173,8 @@ window.router = (function () {
       currentInstance = pageModule;
       currentName = targetName;
       window.utils && window.utils.renderIcons(container);
+      // «رُسمت صفحة» — يستهلكه مرشد المساعدة ليستأنف دليلاً عبر صفحتين
+      window.dispatchEvent(new CustomEvent('marma:page-mounted', { detail: { route: targetName } }));
     } catch (err) {
       console.error('فشل تحميل الصفحة', targetName, err);
       const msg = window.utils ? window.utils.formatError(err) : (err && err.message) || 'خطأ';

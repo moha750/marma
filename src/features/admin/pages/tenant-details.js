@@ -59,6 +59,81 @@
       </div>`;
   }
 
+  // ── قسم «الدخول نيابةً» ───────────────────────────────────────────────
+  // الحالة الحيّة وحدها هي ما يقرّر ما يُعرض. وترتيب الفروع هنا هو ترتيب
+  // الأولوية عند المشرف: جلستي المفتوحة أوّلاً، ثم دعوةٌ تنتظرني، ثم طلبٌ
+  // معلّق، ثم جلسة زميل — وأخيراً لا شيء، وهي الحال الغالبة.
+  function supportState(sessions) {
+    const live = (sessions || []).find((s) => s.is_live);
+    if (!live) {
+      return {
+        line: 'لا جلسة مفتوحة. الطلب يصل جوّال المالك، ولا يُفتح شيء قبل موافقته.',
+        actions: [{ act: 'sup-request', label: 'اطلب الدخول نيابةً', cls: 'btn--primary' }]
+      };
+    }
+    if (live.status === 'active' && live.is_mine) {
+      return {
+        line: `جلستك مفتوحة — تنتهي ${fmtDateTime(live.expires_at)}`,
+        cls: 'danger',
+        actions: [
+          { act: 'sup-open', label: 'افتح حساب الملعب', cls: 'btn--primary', id: live.id },
+          { act: 'sup-end', label: 'أنهِ الجلسة', cls: 'btn--ghost', id: live.id }
+        ]
+      };
+    }
+    if (live.status === 'active') {
+      return {
+        line: `جلسة مفتوحة باسم ${live.actor || 'مشرف آخر'} — تنتهي ${fmtDateTime(live.expires_at)}`,
+        cls: 'danger',
+        actions: []
+      };
+    }
+    if (live.status === 'invited') {
+      return {
+        line: `الملعب طلب المساعدة${live.reason ? ' — ' + window.utils.escapeHtml(live.reason) : ''}. الدعوة إذنٌ قائم: لا موافقة ثانية بعدها.`,
+        cls: 'warn',
+        actions: [{ act: 'sup-claim', label: 'ادخل الآن', cls: 'btn--primary', id: live.id }]
+      };
+    }
+    // pending
+    return {
+      line: live.is_mine
+        ? 'طلبك بانتظار موافقة المالك — وصله إشعارٌ على جوّاله.'
+        : `طلب ${live.actor || 'مشرف آخر'} بانتظار موافقة المالك.`,
+      cls: 'warn',
+      actions: live.is_mine
+        ? [{ act: 'sup-end', label: 'ألغِ الطلب', cls: 'btn--ghost', id: live.id }]
+        : []
+    };
+  }
+
+  function renderSupport(sessions) {
+    const st = supportState(sessions);
+    const past = (sessions || []).filter((s) => !s.is_live).slice(0, 3);
+    return `
+      <div class="card" style="margin-bottom:var(--space-4)">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap">
+            <div class="text-sm">
+              <div class="fw-semibold" style="display:flex;align-items:center;gap:6px">
+                <i data-lucide="user-cog" style="width:16px;height:16px"></i> الدخول نيابةً
+              </div>
+              <div class="text-xs ${st.cls === 'danger' ? 'text-danger' : 'text-secondary'}" style="margin-block-start:2px">${st.line}</div>
+            </div>
+            <div class="actions">
+              ${st.actions.map((a) => `<button class="btn ${a.cls} btn--sm" data-act="${a.act}"${a.id ? ` data-session="${a.id}"` : ''}>${a.label}</button>`).join('')}
+            </div>
+          </div>
+          ${past.length ? `
+            <div class="text-xs text-tertiary" style="margin-block-start:var(--space-3);display:flex;flex-direction:column;gap:2px">
+              ${past.map((s) => `<div>${fmtDateTime(s.requested_at)} · ${window.utils.escapeHtml(s.actor || 'دعم')} · ${
+                ({ ended: 'انتهت', denied: 'رفضها المالك', expired: 'سقطت بالوقت' })[s.status] || s.status
+              }</div>`).join('')}
+            </div>` : ''}
+        </div>
+      </div>`;
+  }
+
   function render(d) {
     const t = d.tenant;
     const s = statusInfo(t, d.is_active);
@@ -119,6 +194,8 @@
         </div>
       </div>
 
+      ${renderSupport(d.support_sessions)}
+
       <h3 style="font-size:var(--text-md);margin:0 0 var(--space-3)">سجلّ الاشتراكات</h3>
       ${renderSubs(d.subscriptions || [])}
 
@@ -136,7 +213,12 @@
       async function load() {
         container.innerHTML = '<div class="loader-center"><div class="loader loader--lg"></div></div>';
         try {
-          const d = await window.api.adminTenantDetail(tenantId);
+          // متوازيان: تسلسلهما يؤخّر رسم الصفحة بجولة خادمٍ بلا سبب
+          const [d, sessions] = await Promise.all([
+            window.api.adminTenantDetail(tenantId),
+            window.supportApi.adminListSessions(tenantId).catch(() => [])
+          ]);
+          d.support_sessions = sessions;
           if (!alive) return;
           container.innerHTML = render(d);
           window.utils.renderIcons(container);
@@ -314,6 +396,87 @@
           });
         });
 
+        // ── الدخول نيابةً ────────────────────────────────────────────
+        // الوجهة تُبنى كما تبنيها auth.withBase: في الحزمة الأصلية لا خادم
+        // يعيد كتابة المسارات، فـ'/dashboard' وحده يفتح قوقعة التطبيق لا صفحته.
+        function appPath(p) {
+          const resolved = window.native ? window.native.docPath(p) : p;
+          return (window.__BASE__ || '') + resolved;
+        }
+
+        async function runSupport(fn, msg) {
+          try {
+            await fn();
+            window.utils.toast(msg, 'success');
+            await load();
+          } catch (err) {
+            window.utils.toast(window.utils.formatError(err), 'error');
+          }
+        }
+
+        const supRequestBtn = byAct('sup-request');
+        if (supRequestBtn) supRequestBtn.addEventListener('click', () => {
+          // السبب إلزامي — والقاعدة ترفض دونه. يقرؤه المالك قبل أن يوافق،
+          // فليس حقلاً للأرشيف بل هو نصّ الطلب نفسه.
+          const ctrl = window.utils.openModal({
+            title: 'طلب الدخول نيابةً',
+            body: `
+              <p class="text-sm text-secondary">يصل المالك إشعارٌ على جوّاله بهذا السبب. لا يُفتح شيء قبل موافقته، وتنتهي الجلسة وحدها بعد 30 دقيقة.</p>
+              <form id="sup-form" autocomplete="off">
+                <div class="form-group">
+                  <label class="form-label" for="sup-reason">سبب الدخول</label>
+                  <textarea class="form-control" id="sup-reason" rows="2" maxlength="200" required
+                            placeholder="مثال: أضبط لك أوقات الفتح والإغلاق"></textarea>
+                  <span class="form-help">اكتبه بلسان المالك — هو من سيقرؤه.</span>
+                </div>
+              </form>`,
+            footer: `
+              <button type="button" class="btn btn--ghost" data-action="cancel">إلغاء</button>
+              <button type="submit" class="btn btn--primary" form="sup-form" id="sup-submit">أرسل الطلب</button>`
+          });
+          ctrl.modal.querySelector('[data-action="cancel"]').addEventListener('click', ctrl.close);
+          ctrl.modal.querySelector('#sup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = (ctrl.modal.querySelector('#sup-reason').value || '').trim();
+            const btn = ctrl.modal.querySelector('#sup-submit');
+            btn.disabled = true;
+            try {
+              await window.supportApi.adminRequestSession(t.id, reason);
+              ctrl.close();
+              window.utils.toast('وصل الطلب جوّال المالك', 'success');
+              await load();
+            } catch (err) {
+              window.utils.toast(window.utils.formatError(err), 'error');
+              btn.disabled = false;
+            }
+          });
+        });
+
+        const supClaimBtn = byAct('sup-claim');
+        if (supClaimBtn) supClaimBtn.addEventListener('click', async () => {
+          const id = supClaimBtn.getAttribute('data-session');
+          supClaimBtn.disabled = true;
+          try {
+            await window.supportApi.adminClaimSession(id);
+            window.location.href = appPath('/dashboard');
+          } catch (err) {
+            window.utils.toast(window.utils.formatError(err), 'error');
+            supClaimBtn.disabled = false;
+            await load();
+          }
+        });
+
+        const supOpenBtn = byAct('sup-open');
+        if (supOpenBtn) supOpenBtn.addEventListener('click', () => {
+          window.location.href = appPath('/dashboard');
+        });
+
+        const supEndBtn = byAct('sup-end');
+        if (supEndBtn) supEndBtn.addEventListener('click', () => {
+          const id = supEndBtn.getAttribute('data-session');
+          runSupport(() => window.supportApi.endSession(id), 'أُنهيت الجلسة');
+        });
+
         const grantLifeBtn = byAct('grant-lifetime');
         if (grantLifeBtn) grantLifeBtn.addEventListener('click', () => {
           reasonModal({
@@ -351,6 +514,7 @@
         const debounced = window.utils.debounce(load, 500);
         page._cleanup.push(window.realtime.on('tenants:change', debounced));
         page._cleanup.push(window.realtime.on('subscriptions:change', debounced));
+        page._cleanup.push(window.realtime.on('support:change', debounced));
       }
 
       load();

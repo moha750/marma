@@ -39,8 +39,15 @@
         const { data: profile } = await window.sb
           .from('profiles').select('id').eq('id', session.user.id).maybeSingle();
         if (!profile && await window.auth.checkIsSuperAdmin()) {
-          window.location.replace('/admin.html');
-          return;
+          // إلا أن يكون داخل جلسة نيابة: عندها هو هنا قصداً — يعدّل في حساب
+          // ملعبٍ أذن له. تسليمه للوحته حينئذٍ يُخرجه من العمل الذي جاء له.
+          const sup = window.supportApi
+            ? await window.supportApi.currentSession().catch(() => null)
+            : null;
+          if (!sup || sup.viewer !== 'support') {
+            window.location.replace('/admin.html');
+            return;
+          }
         }
       }
     }

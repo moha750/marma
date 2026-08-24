@@ -1,0 +1,168 @@
+/* ─────────────────────────────────────────────
+   شريط جلسة «الدخول نيابةً» + مرشد المساعدة
+   ───────────────────────────────────────────── */
+
+/* الشريط يجلس فوق شريط الاشتراك ويشاركه ارتفاعه وحشوته — القوقعة لها إيقاع
+   واحد، وشريطٌ أطول من أخيه يقرأ خطأً في التخطيط لا تنبيهاً. */
+.support-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--header-height);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-block-end: 1px solid transparent;
+}
+
+.support-banner__icon { display: inline-flex; flex-shrink: 0; }
+.support-banner__icon svg.lucide { width: 14px; height: 14px; }
+
+.support-banner__text { min-width: 0; }
+.support-banner__text strong { font-weight: var(--weight-semibold); }
+
+.support-banner__actions {
+  margin-inline-start: auto;
+  display: inline-flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.support-banner__btn {
+  padding: 3px var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  color: inherit;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.08);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.support-banner__btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.16); }
+.support-banner__btn.is-quiet { background: transparent; text-decoration: underline; }
+.support-banner__btn:disabled { opacity: 0.6; cursor: default; }
+
+[data-theme="dark"] .support-banner__btn { background: rgba(255, 255, 255, 0.10); }
+[data-theme="dark"] .support-banner__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.20); }
+
+/* أربعة ألوان لأربع حقائق مختلفة — لا لأربع درجات من نفس التنبيه:
+   الدعم داخل حسابك الآن (أحمر: يجري فعلٌ لا رجعة فيه)،
+   أنت داخل حساب غيرك (أحمر كذلك — وهذا هو المقصود، الطرفان في خطرٍ واحد)،
+   طلبٌ ينتظرك (كهرماني: قرارٌ مطلوب منك)،
+   دعوتك مفتوحة (أزرق: خبرٌ لا فعل). */
+.support-banner--active,
+.support-banner--support {
+  background: var(--danger-tint);
+  color: var(--danger);
+  border-block-end-color: color-mix(in srgb, var(--danger) 25%, transparent);
+}
+.support-banner--pending {
+  background: var(--warning-tint);
+  color: var(--warning-ink);
+  border-block-end-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+.support-banner--invited {
+  background: var(--info-tint);
+  color: var(--info);
+  border-block-end-color: color-mix(in srgb, var(--info) 25%, transparent);
+}
+
+/* نبضةٌ بطيئة على الجلسة الحيّة وحدها. الحركة هنا وظيفة لا زينة: الشريط الساكن
+   يذوب في القوقعة بعد دقيقتين، وهذا بالضبط ما لا يجوز أن يحدث لجلسةٍ مفتوحة. */
+@media (prefers-reduced-motion: no-preference) {
+  .support-banner--active .support-banner__icon,
+  .support-banner--support .support-banner__icon {
+    animation: support-pulse 2.4s ease-in-out infinite;
+  }
+}
+@keyframes support-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@media (max-width: 640px) {
+  .support-banner {
+    padding-inline: var(--space-4);
+    font-size: var(--text-3xs);
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding-block: var(--space-2);
+  }
+  .support-banner__actions { margin-inline-start: 0; width: 100%; }
+  .support-banner__btn { flex: 1; padding-block: var(--space-2); }
+}
+
+
+/* ─── مرشد المساعدة ─────────────────────────── */
+
+/* الغطاء لا يعترض شيئاً: المستخدم ينقر الزرّ المضاء بيده. والفقاعة وحدها تستعيد
+   pointer-events — بدونها يصبح المرشد فيلماً يُشاهَد لا خطواتٍ تُنفَّذ. */
+.coach {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+.coach__ring {
+  position: fixed;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--accent-500);
+  box-shadow: 0 0 0 9999px rgba(20, 22, 18, 0.45);
+  transition: top 180ms var(--ease-out), left 180ms var(--ease-out),
+              width 180ms var(--ease-out), height 180ms var(--ease-out);
+  pointer-events: none;
+}
+
+.coach__bubble {
+  position: fixed;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+.coach__step {
+  font-size: var(--text-3xs);
+  font-weight: var(--weight-semibold);
+  color: var(--accent-600);
+  margin-block-end: var(--space-1);
+}
+
+.coach__body {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--text-primary);
+}
+
+.coach__actions { display: flex; gap: var(--space-2); }
+
+
+/* ─── ورقة المساعدة ─────────────────────────── */
+.help-sheet-list { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.help-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.help-sheet-item:hover { background: var(--surface-3); }
+.help-sheet-item svg.lucide { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-600); }
+.help-sheet-item .help-sheet-item__go { margin-inline-start: auto; color: var(--text-tertiary); }

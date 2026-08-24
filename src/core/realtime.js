@@ -121,6 +121,15 @@ window.realtime = (function () {
       table: 'loyalty_cards',
       invalidates: [],
       event: 'loyalty:change'
+    },
+    // جلسة «الدخول نيابةً»: الطرفان يحتاجان الخبر في نفس اللحظة — المالك ليرى
+    // الطلب وهو يصل، والدعم ليخرج فور أن يُنهيها المالك. وRLS تكفل ألّا يصل
+    // الصفّ إلا لأهل الملعب وللمشرف صاحبه.
+    {
+      channel: 'rt-support-sessions',
+      table: 'support_sessions',
+      invalidates: [],
+      event: 'support:change'
     }
   ];
 
