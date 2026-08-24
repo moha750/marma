@@ -12,17 +12,17 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.5.0"),
-        .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
-        .package(name: "CapacitorBrowser", path: "../../../node_modules/@capacitor/browser"),
-        .package(name: "CapacitorDevice", path: "../../../node_modules/@capacitor/device"),
-        .package(name: "CapacitorHaptics", path: "../../../node_modules/@capacitor/haptics"),
-        .package(name: "CapacitorKeyboard", path: "../../../node_modules/@capacitor/keyboard"),
-        .package(name: "CapacitorNetwork", path: "../../../node_modules/@capacitor/network"),
-        .package(name: "CapacitorPreferences", path: "../../../node_modules/@capacitor/preferences"),
-        .package(name: "CapacitorPushNotifications", path: "../../../node_modules/@capacitor/push-notifications"),
-        .package(name: "CapacitorShare", path: "../../../node_modules/@capacitor/share"),
-        .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
-        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar")
+        .package(name: "CapacitorApp", path: "../../../node_modules/.deno/@capacitor+app@8.1.1/node_modules/@capacitor/app"),
+        .package(name: "CapacitorBrowser", path: "../../../node_modules/.deno/@capacitor+browser@8.0.4/node_modules/@capacitor/browser"),
+        .package(name: "CapacitorDevice", path: "../../../node_modules/.deno/@capacitor+device@8.0.3/node_modules/@capacitor/device"),
+        .package(name: "CapacitorHaptics", path: "../../../node_modules/.deno/@capacitor+haptics@8.0.2/node_modules/@capacitor/haptics"),
+        .package(name: "CapacitorKeyboard", path: "../../../node_modules/.deno/@capacitor+keyboard@8.0.5/node_modules/@capacitor/keyboard"),
+        .package(name: "CapacitorNetwork", path: "../../../node_modules/.deno/@capacitor+network@8.0.1/node_modules/@capacitor/network"),
+        .package(name: "CapacitorPreferences", path: "../../../node_modules/.deno/@capacitor+preferences@8.0.1/node_modules/@capacitor/preferences"),
+        .package(name: "CapacitorPushNotifications", path: "../../../node_modules/.deno/@capacitor+push-notifications@8.1.2/node_modules/@capacitor/push-notifications"),
+        .package(name: "CapacitorShare", path: "../../../node_modules/.deno/@capacitor+share@8.0.1/node_modules/@capacitor/share"),
+        .package(name: "CapacitorSplashScreen", path: "../../../node_modules/.deno/@capacitor+splash-screen@8.0.2/node_modules/@capacitor/splash-screen"),
+        .package(name: "CapacitorStatusBar", path: "../../../node_modules/.deno/@capacitor+status-bar@8.0.3/node_modules/@capacitor/status-bar")
     ],
     targets: [
         .target(

@@ -251,9 +251,24 @@ window.layout = (function () {
     if (!window.pwa) return false;
     try {
       if (window.pwa.isStandalone()) return false;
+      // على أندرويد بعد نشر التطبيق: المتجر هو الطريق، ولا يشترط
+      // beforeinstallprompt (وهو لا يُطلق أصلاً لمن ثبّت الـ PWA سابقاً)
+      if (storeHref()) return true;
       return !!(window.pwa.isInstallable() ||
         (window.pwa.needsManualInstall && window.pwa.needsManualInstall()));
     } catch (_) { return false; }
+  }
+
+  // رابط متجر Play إن كنّا على أندرويد والتطبيق منشور — وإلا ''
+  function storeHref() {
+    try { return (window.pwa && window.pwa.storeUrl && window.pwa.storeUrl()) || ''; }
+    catch (_) { return ''; }
+  }
+
+  // نصّ الدعوة يتبع الوجهة: متجر، أو تعليمات iOS اليدوية، أو prompt المتصفّح
+  function installLabel() {
+    if (storeHref()) return 'حمّل التطبيق من Google Play';
+    return (window.native && window.native.isIOS) ? 'ثبّت على iPhone' : 'ثبّت التطبيق';
   }
 
   function buildMoreSheetHtml(profile, isLocked) {
@@ -285,7 +300,7 @@ window.layout = (function () {
           ${canOfferInstall() ? `
             <button type="button" class="more-sheet-install" id="more-sheet-install">
               <span class="nav-icon"><i data-lucide="download"></i></span>
-              <span class="nav-label">${window.native && window.native.isIOS ? 'ثبّت على iPhone' : 'ثبّت التطبيق'}</span>
+              <span class="nav-label">${window.utils.escapeHtml(installLabel())}</span>
             </button>
           ` : ''}
           <button type="button" class="more-sheet-help" id="more-sheet-help">
@@ -354,6 +369,12 @@ window.layout = (function () {
     // التثبيت: iOS بلا beforeinstallprompt ⇒ نافذة تعليمات يدوية، وغيره prompt برمجي
     const install = moreSheetCtrl.body.querySelector('#more-sheet-install');
     if (install) install.addEventListener('click', async () => {
+      const store = storeHref();
+      if (store) {
+        if (moreSheetCtrl) moreSheetCtrl.close();
+        window.open(store, '_blank', 'noopener');
+        return;
+      }
       if (window.pwa.needsManualInstall && window.pwa.needsManualInstall()) {
         if (moreSheetCtrl) moreSheetCtrl.close();
         showIOSInstallHelp();
@@ -660,11 +681,15 @@ window.layout = (function () {
 
       const showCta = () => {
         if (window.pwa.isStandalone()) return;
-        if (window.pwa.isInstallable() || iosManual) {
+        const store = storeHref();
+        if (window.pwa.isInstallable() || iosManual || store) {
           installCta.hidden = false;
-          // على iOS غيّر النص ليناسب التعليمات اليدوية
-          if (iosManual) {
-            const label = installBtn.querySelector('span');
+          const label = installBtn.querySelector('span');
+          // النصّ يتبع الوجهة: متجر Play، أو تعليمات iOS اليدوية
+          if (store) {
+            if (label) label.textContent = installLabel();
+            installBtn.title = 'صفحة مَرمى على Google Play';
+          } else if (iosManual) {
             if (label) label.textContent = 'ثبّت على iPhone';
             installBtn.title = 'كيفية تثبيت التطبيق على iPhone';
           }
@@ -674,6 +699,12 @@ window.layout = (function () {
       window.addEventListener('pwa:installable', () => { installCta.hidden = false; });
       window.addEventListener('pwa:installed',   () => { installCta.hidden = true;  });
       installBtn.addEventListener('click', async () => {
+        // أندرويد بعد النشر: المتجر، لا تثبيت PWA — وإلا أيقونتان متطابقتان
+        const store = storeHref();
+        if (store) {
+          window.open(store, '_blank', 'noopener');
+          return;
+        }
         // iOS: اعرض modal بالتعليمات اليدوية
         if (iosManual) {
           showIOSInstallHelp();

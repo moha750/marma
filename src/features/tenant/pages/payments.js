@@ -162,11 +162,11 @@
             </div>
             <div class="form-group">
               <label class="form-label">رقم الأيبان (IBAN) <span class="required">*</span></label>
-              <input type="text" class="form-control" name="iban" dir="ltr" maxlength="34"
+              <input type="text" class="form-control" name="iban" dir="ltr" maxlength="29"
                      autocapitalize="characters" spellcheck="false"
                      placeholder="SA00 0000 0000 0000 0000 0000" value="${esc(formatIban(m.iban))}">
               <span class="form-help">
-                الأيبان السعودي ٢٤ خانة: SA ثم ٢٢ رقمًا — انسخه من تطبيق بنكك.
+                تبدأ بـ SA ثم 22 رقمًا — انسخه من تطبيق بنكك.
                 <span id="pm-iban-count" class="pay-count"></span>
               </span>
             </div>
@@ -177,7 +177,7 @@
               <input type="tel" class="form-control" name="phone" dir="ltr" maxlength="10"
                      inputmode="numeric" placeholder="05XXXXXXXX" value="${esc(m.phone)}">
               <span class="form-help">
-                ١٠ أرقام تبدأ بـ ٠٥ — الرقم الذي تستقبل عليه التحويلات.
+                تبدأ بـ 05 — الرقم الذي تستقبل عليه التحويلات.
                 <span id="pm-phone-count" class="pay-count"></span>
               </span>
             </div>
@@ -196,7 +196,9 @@
             <input type="text" class="form-control" name="note" maxlength="140"
                    placeholder="${kind === 'cash' ? 'ادفع نقدًا عند وصولك للملعب' : 'مثال: أرسل الإيصال على واتساب الملعب'}"
                    value="${esc(m.note)}">
-            <span class="form-help">اختياري — تظهر تحت الطريقة في صفحة الحجز.</span>
+            <span class="form-help">${kind === 'cash'
+              ? 'اختياري — إن تركته فارغًا يظهر لعميلك: «ادفع نقدًا عند وصولك للملعب».'
+              : 'اختياري — إن تركته فارغًا لا يظهر تحت الطريقة شيء.'}</span>
           </div>
         </form>
       `;
@@ -226,20 +228,33 @@
         paint();
       };
 
-      const ibanInput = ctrl.modal.querySelector('input[name="iban"]');
-      counter(ibanInput, ctrl.modal.querySelector('#pm-iban-count'), 24,
-        (v) => String(v).replace(/[\s-]/g, ''));
-      // إعادة التجميع عند الخروج: يكتبه ملتصقًا فيراه مجموعاتٍ رباعية كبنكه
-      if (ibanInput) {
-        ibanInput.addEventListener('blur', () => {
-          const grouped = formatIban(window.api.normalizeIban(ibanInput.value));
-          if (grouped) ibanInput.value = grouped;
-        });
+      // قناع الأيبان: يمنع الخانة الخامسة والعشرين أصلًا بدل ردّها عند الحفظ،
+      // ويجمّع أثناء الكتابة مجموعاتٍ رباعية كما يعرضه تطبيق البنك. المؤشّر
+      // يُحسب بعدد الخانات الخام قبله فلا يقفز إلى آخر السطر مع كل حرف.
+      function maskIban(el) {
+        const rawBefore = el.value.slice(0, el.selectionEnd || 0).replace(/[^A-Za-z0-9]/g, '').length;
+        const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
+        el.value = raw.replace(/(.{4})/g, '$1 ').trim();
+        const keep = Math.min(rawBefore, raw.length);
+        const pos = keep <= 0 ? 0 : keep + Math.floor((keep - 1) / 4);
+        try { el.setSelectionRange(pos, pos); } catch (_) {}
       }
 
-      counter(ctrl.modal.querySelector('input[name="phone"]'),
-        ctrl.modal.querySelector('#pm-phone-count'), 10,
-        (v) => String(v).replace(/[\s-]/g, ''));
+      const ibanInput = ctrl.modal.querySelector('input[name="iban"]');
+      if (ibanInput) ibanInput.addEventListener('input', () => maskIban(ibanInput));
+      counter(ibanInput, ctrl.modal.querySelector('#pm-iban-count'), 24,
+        (v) => String(v).replace(/[^A-Za-z0-9]/g, ''));
+
+      // والجوال أرقامٌ فقط، عشرٌ لا أكثر — نفس المبدأ
+      const phoneInput = ctrl.modal.querySelector('input[name="phone"]');
+      if (phoneInput) {
+        phoneInput.addEventListener('input', () => {
+          const digits = phoneInput.value.replace(/[^0-9]/g, '').slice(0, 10);
+          if (digits !== phoneInput.value) phoneInput.value = digits;
+        });
+      }
+      counter(phoneInput, ctrl.modal.querySelector('#pm-phone-count'), 10,
+        (v) => String(v).replace(/[^0-9]/g, ''));
 
       const chips = ctrl.modal.querySelector('#pm-wallets');
       if (chips) {

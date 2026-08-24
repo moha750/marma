@@ -5,6 +5,7 @@
 //   isInstallable() → bool
 //   isStandalone()  → bool (هل التطبيق يعمل كـ app مُثبَّت)
 //   promptInstall() → Promise<{ outcome: 'accepted'|'dismissed'|'unavailable' }>
+//   storeUrl()      → string ('' = لا متجر، اسلك مسار تثبيت الـ PWA)
 //
 // أحداث مخصّصة على window:
 //   pwa:installable   — أصبح التطبيق قابلاً للتثبيت
@@ -36,6 +37,34 @@
   // على iOS غير المثبّت: يحتاج المستخدم تعليمات يدوية بدل prompt
   function needsManualInstall() {
     return isIOS() && !isStandalone();
+  }
+
+  // ─── متجر Play بدل تثبيت الـ PWA على أندرويد ─────────────────────
+  // لـمَرمى تطبيق في متجر Play. ولو بقي زرّ تثبيت الـ PWA يعمل على أندرويد،
+  // انتهى كل عميل بأيقونتين متطابقتين على جهازه — وقع هذا فعلاً في اختبار
+  // الجهاز الحقيقي. فنوجّه أندرويد إلى المتجر، ويبقى الـ PWA لسطح المكتب
+  // ولـ iOS بتعليماته اليدوية.
+  //
+  // ⚠️ PLAY_STORE_LIVE = false ما دام التطبيق على الاختبار المغلق: صفحة
+  // المتجر تردّ «لم يتم العثور على العنصر» لكل من ليس مختبِراً، وهي أسوأ من
+  // تثبيت PWA. اقلبها إلى true لحظة موافقة قوقل على الإصدار العلني — سطر
+  // واحد، ولا شيء غيره.
+  const PLAY_STORE_URL  = 'https://play.google.com/store/apps/details?id=help.marma.app';
+  const PLAY_STORE_LIVE = false;
+
+  function isAndroid() {
+    return /Android/i.test(navigator.userAgent || '');
+  }
+
+  // '' = لا تعرض المتجر، واسلك مسار تثبيت الـ PWA المعتاد
+  function storeUrl() {
+    if (!PLAY_STORE_LIVE) return '';
+    if (!isAndroid() || isStandalone()) return '';
+    // داخل الحزمة الأصلية لا معنى لدعوة التثبيت أصلاً
+    if (window.__NATIVE__ === true) return '';
+    if (window.Capacitor && window.Capacitor.isNativePlatform &&
+        window.Capacitor.isNativePlatform()) return '';
+    return PLAY_STORE_URL;
   }
 
   async function promptInstall() {
@@ -143,6 +172,8 @@
     isInstallable,
     isStandalone,
     isIOS,
+    isAndroid,
+    storeUrl,
     needsManualInstall
   };
 
