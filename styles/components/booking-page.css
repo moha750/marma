@@ -1173,6 +1173,11 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+/* فاصلٌ بين الطرق: أربعة حساباتٍ متلاصقة جدارٌ لا قائمة */
+.bp-pay-method + .bp-pay-method {
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--c-bdr);
+}
 .bp-pay-method-head {
   display: flex;
   align-items: center;
@@ -1223,6 +1228,23 @@
 .bp-pay-value[data-copied] {
   border-color: var(--c-brand);
   background: var(--c-brand-50);
+}
+.bp-pay-method-note {
+  font-size: var(--text-xs);
+  color: var(--c-faint);
+  margin: 0;
+  line-height: 1.6;
+}
+/* «الدفع عند الاستلام»: سطرٌ ساكن — لا زرّ يُوهم بنسخٍ لا معنى له */
+.bp-pay-static {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-bdr);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--c-fg);
+  line-height: 1.6;
 }
 .bp-pay-note {
   font-size: var(--text-xs);

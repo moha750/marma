@@ -102,7 +102,7 @@ window.auth = (function () {
     if (!user) {
       throw new Error('UNAUTHENTICATED');
     }
-    const TENANT_COLS = 'id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url, show_manage_banner, payment_iban';
+    const TENANT_COLS = 'id, name, trial_ends_at, subscription_ends_at, subscription_status, description, cover_image_url, logo_url, show_manage_banner';
     // maybeSingle لا single: غياب الصفّ صار حالةً محتملة لها معنى (جلسة نيابة)
     // لا خطأً بذاته. والحالة الباطلة الحقيقية نرفعها بأنفسنا في آخر السطور.
     const { data, error } = await window.sb

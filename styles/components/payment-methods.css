@@ -1,0 +1,83 @@
+/* ╔═══════════════════════════════════════════════════════════════════╗
+   ║  بوابات الدفع — صفوف الطرق في لوحة التحكّم                          ║
+   ║  (صورة العميل نفسها تعيش في booking-page.css تحت .bp-pay)          ║
+   ╚═══════════════════════════════════════════════════════════════════╝ */
+
+.pay-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pay-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* المطفأة باهتة لا مخفيّة: المالك يراها ليعيد تشغيلها بلمسة */
+.pay-row.is-off { opacity: .6; }
+
+.pay-row > .stat-icon-chip { flex-shrink: 0; }
+
+.pay-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pay-row-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.pay-row-sub {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+.pay-row-value {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pay-row-note {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.pay-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* على الجوال تنزل الأزرار سطرًا مستقلًا: ثلاثة أفعالٍ وقيمةٌ طويلة (أيبان من
+   ٢٤ خانة) لا تتزاحم في ٣٩٠ بكسل. */
+@media (max-width: 560px) {
+  .pay-row { flex-wrap: wrap; }
+  .pay-row-actions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-block-start: var(--space-2);
+    border-block-start: 1px solid var(--border-subtle);
+  }
+}

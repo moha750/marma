@@ -37,56 +37,112 @@ window.tenantApi = (function () {
   }
 
   // المحافظ المعروفة — نفس مفاتيح القيد في القاعدة. الترتيب ترتيب العرض.
+  // بنكا D360 و stc bank ليسا هنا: بنوكٌ مرخّصة لها أيبان، فمكانها «تحويل بنكي».
   const WALLETS = [
     { key: 'stcpay',    label: 'STC Pay' },
     { key: 'urpay',     label: 'urpay' },
     { key: 'barq',      label: 'برق' },
     { key: 'tiqmo',     label: 'تيقمو' },
-    { key: 'alinmapay', label: 'إنماء باي' },
-    { key: 'd360',      label: 'D360' }
+    { key: 'alinmapay', label: 'إنماء باي' }
   ];
   const WALLET_LABELS = WALLETS.reduce((acc, w) => { acc[w.key] = w.label; return acc; }, {});
 
-  // بوابات الدفع: حفظةٌ واحدة للبوّابتين — المالك يحفظ حالةً متّسقة لا نصفها.
-  // التحقّق هنا لا في الصفحة: القاعدة ترفض بلغتها، وهذه تردّ بلغة المالك.
-  async function updatePaymentGateways({ bank, wallet }) {
-    const patch = {};
+  const TABLE = 'tenant_payment_methods';
 
-    if (bank) {
-      const iban = normalizeIban(bank.iban);
-      if (bank.enabled && !iban) throw new Error('اكتب رقم الأيبان لتشغيل التحويل البنكي');
-      if (iban && !isValidIban(iban)) {
-        throw new Error('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة');
-      }
-      patch.payment_bank_enabled = !!bank.enabled;
-      patch.payment_iban = iban || null;
-      patch.payment_bank_name = (bank.bank_name || '').trim().slice(0, 60) || null;
+  function normalizePhone(value) {
+    return String(value || '').replace(/[\s\u200f\u200e-]/g, '');
+  }
+
+  // من صفٍّ خام إلى صفٍّ صالحٍ للقاعدة — والتحقّق هنا لا في الصفحة: القاعدة
+  // ترفض بلغتها، وهذه تردّ بلغة المالك.
+  function _preparePaymentMethod(m) {
+    const kind = m.kind;
+    if (!['bank', 'wallet', 'cash'].includes(kind)) throw new Error('نوع طريقة الدفع غير معروف');
+
+    const row = {
+      kind,
+      is_active: m.is_active === undefined ? true : !!m.is_active,
+      note: (m.note || '').trim().slice(0, 140) || null,
+      title: null, iban: null, phone: null, wallets: []
+    };
+    if (m.display_order !== undefined) row.display_order = m.display_order;
+
+    if (kind === 'bank') {
+      const iban = normalizeIban(m.iban);
+      if (!iban) throw new Error('اكتب رقم الأيبان');
+      if (!isValidIban(iban)) throw new Error('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة');
+      row.iban = iban;
+      row.title = (m.title || '').trim().slice(0, 60) || null;
     }
 
-    if (wallet) {
-      const phone = String(wallet.phone || '').replace(/[\s\u200f\u200e-]/g, '');
-      const providers = (wallet.providers || []).filter((k) => WALLET_LABELS[k]);
-      if (wallet.enabled && !phone) throw new Error('اكتب رقم الجوال لتشغيل الدفع بالمحفظة');
-      if (phone && !/^05[0-9]{8}$/.test(phone)) {
-        throw new Error('رقم الجوال يجب أن يبدأ بـ 05 ويتكوّن من 10 أرقام');
-      }
-      if (wallet.enabled && providers.length === 0) {
-        throw new Error('اختر محفظةً واحدة على الأقل يستقبل عليها هذا الرقم');
-      }
-      patch.payment_wallet_enabled = !!wallet.enabled;
-      patch.payment_wallet_phone = phone || null;
-      patch.payment_wallets = providers;
+    if (kind === 'wallet') {
+      const phone = normalizePhone(m.phone);
+      if (!phone) throw new Error('اكتب رقم الجوال');
+      if (!/^05[0-9]{8}$/.test(phone)) throw new Error('رقم الجوال يجب أن يبدأ بـ 05 ويتكوّن من 10 أرقام');
+      const wallets = (m.wallets || []).filter((k) => WALLET_LABELS[k]);
+      if (!wallets.length) throw new Error('اختر محفظةً واحدة على الأقل يستقبل عليها هذا الرقم');
+      row.phone = phone;
+      row.wallets = wallets;
     }
 
+    return row;
+  }
+
+  // 23505 = تكرار: أيبانٌ مكرّر، أو رقمٌ مكرّر، أو «عند الاستلام» مرّتين
+  function _paymentError(err, kind) {
+    if (err && err.code === '23505') {
+      if (kind === 'cash') return new Error('«الدفع عند الاستلام» مُضاف مسبقًا');
+      return new Error(kind === 'bank' ? 'هذا الأيبان مُضاف مسبقًا' : 'هذا الرقم مُضاف مسبقًا');
+    }
+    return err;
+  }
+
+  async function listPaymentMethods() {
     const tenantId = await getMyTenantId();
     const { data, error } = await sb()
-      .from('tenants')
-      .update(patch)
-      .eq('id', tenantId)
-      .select()
-      .single();
+      .from(TABLE)
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function createPaymentMethod(method) {
+    const row = _preparePaymentMethod(method);
+    row.tenant_id = await getMyTenantId();
+    const { data, error } = await sb().from(TABLE).insert(row).select().single();
+    if (error) throw _paymentError(error, row.kind);
+    return data;
+  }
+
+  async function updatePaymentMethod(id, method) {
+    const row = _preparePaymentMethod(method);
+    const { data, error } = await sb().from(TABLE).update(row).eq('id', id).select().single();
+    if (error) throw _paymentError(error, row.kind);
+    return data;
+  }
+
+  // التشغيل والإطفاء بلا تحقّقٍ من الشكل: الصفّ محفوظٌ صحيحًا أصلًا، وإطفاء
+  // طريقةٍ لا يجوز أن يكلّف المالك ملء نموذجٍ من جديد.
+  async function setPaymentMethodActive(id, isActive) {
+    const { data, error } = await sb()
+      .from(TABLE).update({ is_active: !!isActive }).eq('id', id).select().single();
     if (error) throw error;
     return data;
+  }
+
+  async function deletePaymentMethod(id) {
+    const { error } = await sb().from(TABLE).delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // ترتيب العرض عند العميل — يُحفظ كما رتّبه المالك
+  async function reorderPaymentMethods(ids) {
+    const tenantId = await getMyTenantId();
+    await Promise.all(ids.map((id, i) => sb()
+      .from(TABLE).update({ display_order: i }).eq('id', id).eq('tenant_id', tenantId)));
   }
 
   async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner }) {
@@ -235,7 +291,10 @@ window.tenantApi = (function () {
     cachedTenantId = null;
   }
 
-  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover, uploadTenantLogo, removeTenantLogo, normalizeIban, isValidIban,
-           updatePaymentGateways, PAYMENT_WALLETS: WALLETS, PAYMENT_WALLET_LABELS: WALLET_LABELS,
+  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover,
+           uploadTenantLogo, removeTenantLogo, normalizeIban, isValidIban,
+           listPaymentMethods, createPaymentMethod, updatePaymentMethod,
+           setPaymentMethodActive, deletePaymentMethod, reorderPaymentMethods,
+           PAYMENT_WALLETS: WALLETS, PAYMENT_WALLET_LABELS: WALLET_LABELS,
            _resetTenantIdCache };
 })();
