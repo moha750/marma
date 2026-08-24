@@ -36,7 +36,60 @@ window.tenantApi = (function () {
     return /^SA[0-9]{22}$/.test(normalizeIban(value));
   }
 
-  async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner, payment_iban }) {
+  // المحافظ المعروفة — نفس مفاتيح القيد في القاعدة. الترتيب ترتيب العرض.
+  const WALLETS = [
+    { key: 'stcpay',    label: 'STC Pay' },
+    { key: 'urpay',     label: 'urpay' },
+    { key: 'barq',      label: 'برق' },
+    { key: 'tiqmo',     label: 'تيقمو' },
+    { key: 'alinmapay', label: 'إنماء باي' },
+    { key: 'd360',      label: 'D360' }
+  ];
+  const WALLET_LABELS = WALLETS.reduce((acc, w) => { acc[w.key] = w.label; return acc; }, {});
+
+  // بوابات الدفع: حفظةٌ واحدة للبوّابتين — المالك يحفظ حالةً متّسقة لا نصفها.
+  // التحقّق هنا لا في الصفحة: القاعدة ترفض بلغتها، وهذه تردّ بلغة المالك.
+  async function updatePaymentGateways({ bank, wallet }) {
+    const patch = {};
+
+    if (bank) {
+      const iban = normalizeIban(bank.iban);
+      if (bank.enabled && !iban) throw new Error('اكتب رقم الأيبان لتشغيل التحويل البنكي');
+      if (iban && !isValidIban(iban)) {
+        throw new Error('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة');
+      }
+      patch.payment_bank_enabled = !!bank.enabled;
+      patch.payment_iban = iban || null;
+      patch.payment_bank_name = (bank.bank_name || '').trim().slice(0, 60) || null;
+    }
+
+    if (wallet) {
+      const phone = String(wallet.phone || '').replace(/[\s\u200f\u200e-]/g, '');
+      const providers = (wallet.providers || []).filter((k) => WALLET_LABELS[k]);
+      if (wallet.enabled && !phone) throw new Error('اكتب رقم الجوال لتشغيل الدفع بالمحفظة');
+      if (phone && !/^05[0-9]{8}$/.test(phone)) {
+        throw new Error('رقم الجوال يجب أن يبدأ بـ 05 ويتكوّن من 10 أرقام');
+      }
+      if (wallet.enabled && providers.length === 0) {
+        throw new Error('اختر محفظةً واحدة على الأقل يستقبل عليها هذا الرقم');
+      }
+      patch.payment_wallet_enabled = !!wallet.enabled;
+      patch.payment_wallet_phone = phone || null;
+      patch.payment_wallets = providers;
+    }
+
+    const tenantId = await getMyTenantId();
+    const { data, error } = await sb()
+      .from('tenants')
+      .update(patch)
+      .eq('id', tenantId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function updateTenant({ name, description, cover_image_url, logo_url, show_manage_banner }) {
     const tenantId = await getMyTenantId();
     const patch = {};
     if (name !== undefined) patch.name = name;
@@ -44,13 +97,6 @@ window.tenantApi = (function () {
     if (cover_image_url !== undefined) patch.cover_image_url = cover_image_url || null;
     if (logo_url !== undefined) patch.logo_url = logo_url || null;
     if (show_manage_banner !== undefined) patch.show_manage_banner = show_manage_banner;
-    if (payment_iban !== undefined) {
-      const iban = normalizeIban(payment_iban);
-      if (iban && !isValidIban(iban)) {
-        throw new Error('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة');
-      }
-      patch.payment_iban = iban || null;
-    }
     const { data, error } = await sb()
       .from('tenants')
       .update(patch)
@@ -189,5 +235,7 @@ window.tenantApi = (function () {
     cachedTenantId = null;
   }
 
-  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover, uploadTenantLogo, removeTenantLogo, normalizeIban, isValidIban, _resetTenantIdCache };
+  return { getMyTenantId, updateTenant, getMyTenant, uploadTenantCover, removeTenantCover, uploadTenantLogo, removeTenantLogo, normalizeIban, isValidIban,
+           updatePaymentGateways, PAYMENT_WALLETS: WALLETS, PAYMENT_WALLET_LABELS: WALLET_LABELS,
+           _resetTenantIdCache };
 })();

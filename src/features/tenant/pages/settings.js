@@ -152,12 +152,6 @@
     else img.addEventListener('load', () => w.print());
   }
 
-  // أيبان مقروء: مجموعات من أربع خانات — كما يعرضه تطبيق البنك. التخزين بلا فراغات.
-  function formatIban(iban) {
-    if (!iban) return '';
-    return String(iban).replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim();
-  }
-
   function TEMPLATE(tenant, isOwner, publicLink) {
     return `
       <div class="page-header">
@@ -255,33 +249,6 @@
           ${isOwner ? `
             <div class="card-footer">
               <button type="submit" class="btn btn--primary" id="branding-save">حفظ الوصف</button>
-            </div>
-          ` : ''}
-        </form>
-      </div>
-
-      <div class="card mb-md" id="payment-card">
-        <div class="card-header">
-          <h3>طريقة الدفع</h3>
-          <span class="card-header-meta">اختياري — تحويل بنكي</span>
-        </div>
-        <form id="payment-form" autocomplete="off">
-          <div class="card-body">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">رقم الأيبان (IBAN)</label>
-              <input type="text" class="form-control" name="payment_iban" dir="ltr"
-                     autocapitalize="characters" spellcheck="false" maxlength="34"
-                     placeholder="SA00 0000 0000 0000 0000 0000"
-                     value="${window.utils.escapeHtml(formatIban(tenant.payment_iban))}" ${isOwner ? '' : 'disabled'}>
-              <span class="form-help">
-                إن وضعته ظهر لعميلك عند تأكيد الحجز ليحوّل المبلغ عليه، مع زرّ نسخ.
-                اتركه فارغاً ليختفي تماماً من صفحة الحجز.
-              </span>
-            </div>
-          </div>
-          ${isOwner ? `
-            <div class="card-footer">
-              <button type="submit" class="btn btn--primary" id="payment-save">حفظ الأيبان</button>
             </div>
           ` : ''}
         </form>
@@ -396,9 +363,6 @@
 
       // ─── كرت هوية الملعب: غلاف + وصف ────────────────
       mountBrandingCard(container, ctx, isOwner);
-
-      // ─── كرت طريقة الدفع: أيبان يظهر للعميل ─────────
-      mountPaymentCard(container, ctx, isOwner);
 
       // ─── قسم الإشعارات ────────────────────────────────
       const notifBody = container.querySelector('#notifications-body');
@@ -639,38 +603,6 @@
         }
       });
     }
-  }
-
-  // كرت الدفع: أيبان واحد. يُطبَّع عند الحفظ ويُعاد عرضه مجموعاتٍ رباعية،
-  // فما يراه المالك بعد الحفظ هو ما سيراه عميله في صفحة الحجز.
-  function mountPaymentCard(container, ctx, isOwner) {
-    const form = container.querySelector('#payment-form');
-    if (!form || !isOwner) return;
-    const input = form.querySelector('input[name="payment_iban"]');
-    const saveBtn = container.querySelector('#payment-save');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const raw = window.api.normalizeIban(input.value);
-      if (raw && !window.api.isValidIban(raw)) {
-        window.utils.toast('رقم الأيبان غير صحيح — يبدأ بـ SA ويتكوّن من 24 خانة', 'error');
-        input.focus();
-        return;
-      }
-      saveBtn.disabled = true;
-      saveBtn.dataset.loading = 'true';
-      try {
-        await window.api.updateTenant({ payment_iban: raw });
-        ctx.tenant.payment_iban = raw || null;
-        input.value = formatIban(raw);
-        window.utils.toast(raw ? 'سيظهر الأيبان لعملائك عند الحجز' : 'تم حذف الأيبان من صفحة الحجز', 'success');
-      } catch (err) {
-        window.utils.toast(window.utils.formatError(err), 'error');
-      } finally {
-        saveBtn.disabled = false;
-        delete saveBtn.dataset.loading;
-      }
-    });
   }
 
   async function renderNotificationsSection(body) {

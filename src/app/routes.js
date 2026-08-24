@@ -44,6 +44,9 @@ window.appRoutes = [
   { name: 'visits',           path: '/visits',           title: 'الزيارات',          ownerOnly: true },
   { name: 'staff',            path: '/staff',            title: 'الموظفون',          ownerOnly: true },
   { name: 'subscription',     path: '/subscription',     title: 'الاشتراك',          ownerOnly: true },
+  // بوابات الدفع: كيف يدفع العميل للملعب — تحويلٌ بنكيّ أو محفظة رقمية.
+  // ownerOnly لأن حسابَ القبض حسابُ المالك لا الموظف.
+  { name: 'payments',         path: '/payments',         title: 'بوابات الدفع',      ownerOnly: true },
   { name: 'account',          path: '/account',          title: 'حسابي' },
   { name: 'settings',         path: '/settings',         title: 'إعدادات الملعب' }
 ];

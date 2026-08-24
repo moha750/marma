@@ -207,7 +207,7 @@
 .bp-loyalty--empty {
   background: var(--c-surface);
   color: var(--c-mute);
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--c-bdr);
 }
 .bp-loyalty--empty p {
   display: flex; align-items: center; gap: 8px;
@@ -1146,14 +1146,14 @@
   margin: 0;
 }
 
-/* ── التحويل البنكي: أيبان المالك (نافذة المراجعة + شاشة النجاح) ── */
+/* ── بوابات الدفع: ما شغّله المالك (نافذة المراجعة + شاشة النجاح + معاينة اللوحة) ── */
 .bp-pay {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-3);
   background: var(--c-soft);
-  border: 1px dashed var(--c-border);
+  border: 1px dashed var(--c-bdr);
   border-radius: var(--radius-md);
   text-align: start;
 }
@@ -1167,7 +1167,36 @@
 }
 .bp-pay-head svg.lucide,
 .bp-pay-head i[data-lucide] { width: 15px; height: 15px; color: var(--c-brand); }
-.bp-pay-iban {
+
+.bp-pay-method {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.bp-pay-method-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  color: var(--c-faint);
+}
+.bp-pay-method-head svg.lucide,
+.bp-pay-method-head i[data-lucide] { width: 14px; height: 14px; color: var(--c-faint); }
+.bp-pay-method-title { font-weight: var(--weight-medium); color: var(--c-fg); }
+.bp-pay-method-meta { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.bp-pay-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-bdr);
+  font-size: var(--text-xs);
+  color: var(--c-faint);
+  white-space: nowrap;
+}
+.bp-pay-value {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1175,13 +1204,13 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--c-surface);
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--c-bdr);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
 }
-.bp-pay-iban:hover { border-color: var(--c-brand); }
-.bp-pay-iban code {
+.bp-pay-value:hover { border-color: var(--c-brand); }
+.bp-pay-value code {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
@@ -1189,9 +1218,9 @@
   background: none;
   padding: 0;
 }
-.bp-pay-iban svg.lucide,
-.bp-pay-iban i[data-lucide] { width: 15px; height: 15px; color: var(--c-faint); flex-shrink: 0; }
-.bp-pay-iban[data-copied] {
+.bp-pay-value svg.lucide,
+.bp-pay-value i[data-lucide] { width: 15px; height: 15px; color: var(--c-faint); flex-shrink: 0; }
+.bp-pay-value[data-copied] {
   border-color: var(--c-brand);
   background: var(--c-brand-50);
 }
@@ -1547,7 +1576,7 @@
   color: var(--accent-300);
   border-color: color-mix(in srgb, var(--c-brand) 30%, transparent);
 }
-[data-theme="dark"] .bp-pay-iban[data-copied] {
+[data-theme="dark"] .bp-pay-value[data-copied] {
   background: color-mix(in srgb, var(--c-brand) 14%, transparent);
 }
 [data-theme="dark"] .bp-success-check-bg {

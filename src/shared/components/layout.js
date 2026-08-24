@@ -53,6 +53,7 @@ window.layout = (function () {
     { key: 'reports',      group: 'إدارة',  label: 'التقارير',             icon: 'trending-up',      path: '/reports',      ownerOnly: true },
     { key: 'visits',       group: 'إدارة',  label: 'الزيارات',             icon: 'eye',              path: '/visits',       ownerOnly: true },
     { key: 'staff',        group: 'إدارة',  label: 'الموظفون',             icon: 'user',             path: '/staff',        ownerOnly: true },
+    { key: 'payments',     group: 'إدارة',  label: 'بوابات الدفع',         icon: 'wallet',           path: '/payments',     ownerOnly: true },
     { key: 'account',      group: 'حساب',   label: 'حسابي',                icon: 'user-circle',      path: '/account' },
     { key: 'subscription', group: 'حساب',   label: 'الاشتراك',             icon: 'credit-card',      path: '/subscription', ownerOnly: true },
     { key: 'settings',     group: 'حساب',   label: 'إعدادات الملعب',       icon: 'settings',         path: '/settings' }

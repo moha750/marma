@@ -37,6 +37,7 @@ const APP_ROUTES = [
   'staff',
   'subscription',
   'account',
+  'payments',
   'settings'
 ];
 
