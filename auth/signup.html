@@ -86,7 +86,12 @@
         <div class="auth-divider"><span>أو بالبريد الإلكتروني</span></div>
       </div>
 
-      <form id="signup-form" autocomplete="on">
+      <!-- شبكة أمان مضمَّنة: ربط النموذج يقع داخل كتلةٍ async بعد انتظارٍ
+           شبكيّ، فبين رسم الصفحة وربطها فجوة. وأيّ استثناء قبلها يُبقيها
+           غير مربوطة أبداً. بلا هذا السطر يرتدّ الإرسال إلى GET فتظهر كلمة
+           المرور في الرابط وسجلّ التصفّح. -->
+      <form id="signup-form" autocomplete="on"
+            onsubmit="if(!window.__signupReady){alert('تعذّر تحميل الصفحة بالكامل. حدّثها ثم أعد المحاولة.');}return false;">
         <div class="form-group" id="fullname-group">
           <label class="form-label" for="full_name">اسمك الكامل <span class="required">*</span></label>
           <input type="text" class="form-control" id="full_name" name="full_name" required>
@@ -121,7 +126,8 @@
           أرسلنا رمزاً من 6 أرقام إلى
           <strong class="auth-confirm__email" id="confirm-email"></strong>
         </p>
-        <form id="otp-form" autocomplete="off">
+        <form id="otp-form" autocomplete="off"
+              onsubmit="if(!window.__signupReady){alert('تعذّر تحميل الصفحة بالكامل. حدّثها ثم أعد المحاولة.');}return false;">
           <div class="form-group">
             <input type="text" class="form-control otp-input" id="otp-input"
                    inputmode="numeric" autocomplete="one-time-code" maxlength="6"
@@ -171,14 +177,24 @@
   <script src="../src/shared/components/tour-stages.js"></script>
   <script src="../src/shared/components/tour.js"></script>
   <script>
-    window.utils.renderIcons();
-    window.utils.initPasswordToggles();
+    // كلٌّ في حِرزه: هذه كلّها زينة تسبق ربط النموذج، وسقوط واحدةٍ منها كان
+    // يُسقط الكتلة async أدناه — فيبقى النموذج غير مربوط ويرتدّ إلى GET.
+    try { window.utils.renderIcons(); } catch (_) {}
+    try { window.utils.initPasswordToggles(); } catch (_) {}
 
     // الجولة: تُركَّب إن أذن الحارس في الـ head، وترفع tour-pending في كل الأحوال.
-    window.tour.init();
-    document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
-    document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
-    document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
+    // ولو تعثّرت، ارفع الحجاب يدوياً — صفحة مخفيّة أسوأ من جولة لا تُعرض.
+    try {
+      window.tour.init();
+      document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
+    } catch (err) {
+      document.documentElement.classList.remove('tour-pending');
+      console.warn('[signup] تعذّر تركيب الجولة:', err);
+    }
+    try {
+      document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
+      document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
+    } catch (_) {}
     (async () => {
       // التقاط جلسة العودة من Google إن وُجدت، ثم إعادة التوجيه إذا مسجل بالفعل
       await window.auth.handleOAuthCallback();
@@ -392,6 +408,9 @@
           submitBtn.querySelector('.btn-text').textContent = 'إنشاء الحساب';
         }
       });
+
+      // النموذجان مربوطان ⇒ حارس onsubmit المضمَّن يفسح لهما الطريق
+      window.__signupReady = true;
     })();
   </script>
 </body>

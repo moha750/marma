@@ -18,7 +18,8 @@
         <p class="subtitle">أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة التعيين</p>
       </div>
 
-      <form id="forgot-form" autocomplete="on">
+      <form id="forgot-form" autocomplete="on"
+            onsubmit="if(!window.__forgotReady){alert('تعذّر تحميل الصفحة بالكامل. حدّثها ثم أعد المحاولة.');}return false;">
         <div class="form-group">
           <label class="form-label" for="email">البريد الإلكتروني <span class="required">*</span></label>
           <input type="email" class="form-control" id="email" name="email" required autofocus autocomplete="email">
@@ -42,7 +43,6 @@
   <script src="../src/core/supabase-client.js"></script>
   <script src="../src/core/utils.js"></script>
   <script>
-    window.utils.renderIcons();
     const form = document.getElementById('forgot-form');
     const submitBtn = document.getElementById('submit-btn');
     const card = document.getElementById('auth-card');
@@ -73,6 +73,12 @@
       `;
       window.utils.renderIcons(card);
     });
+
+    // النموذج مربوط ⇒ حارس onsubmit المضمَّن يفسح له الطريق
+    window.__forgotReady = true;
+
+    // الأيقونات بعد الربط لا قبله: تعثّرها لا يجوز أن يترك النموذج غير مربوط
+    try { window.utils.renderIcons(); } catch (_) {}
   </script>
 </body>
 </html>

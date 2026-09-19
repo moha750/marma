@@ -101,7 +101,13 @@
       </button>
       <div class="auth-divider"><span>أو بالبريد الإلكتروني</span></div>
 
-      <form id="login-form" autocomplete="on">
+      <!-- onsubmit مضمَّن، لا مجرّد addEventListener: هو الحارس الوحيد الذي
+           يعمل حتى لو انهار سكربت الصفحة كلّه. بدونه يرتدّ النموذج إلى إرسال
+           GET افتراضيّ فتصير كلمة المرور جزءاً من الرابط — في شريط العنوان،
+           وفي سجلّ التصفّح، وفي سجلّات الخادم — والصفحة «تتحدّث وتبقى مكانها»
+           بلا تفسير. -->
+      <form id="login-form" autocomplete="on"
+            onsubmit="if(!window.__loginReady){alert('تعذّر تحميل الصفحة بالكامل. حدّثها ثم أعد المحاولة.');}return false;">
         <div class="form-group">
           <label class="form-label" for="email">البريد الإلكتروني <span class="required">*</span></label>
           <input type="email" class="form-control" id="email" name="email" required autofocus autocomplete="email">
@@ -148,23 +154,10 @@
   <script src="../src/shared/components/tour-stages.js"></script>
   <script src="../src/shared/components/tour.js"></script>
   <script>
-    window.utils.renderIcons();
-    window.utils.initPasswordToggles();
-
-    // الجولة: تُركَّب فوراً إن أذن الحارس في الـ head، ورابطها اليدوي يعمل دائماً.
-    // ترفع tour-pending في الحالتين — بما فيها حالة «لن تُعرض» — فلا تبقى صفحة
-    // الدخول مخفيّة.
-    window.tour.init();
-    document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
-    // زر Google
-    document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
-    document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
-    // إذا كان مسجلاً بالفعل (أو عائدًا من Google)، نلتقط الجلسة ثم نوجّه حسب نوع الحساب
-    (async () => {
-      await window.auth.handleOAuthCallback();
-      await window.auth.redirectIfAuthenticated();
-    })();
-
+    // ترتيب هذا السكربت مقصود: النموذج يُربط أوّلاً، ثم الزينة كلٌّ في حِرزه.
+    // كان الربط في الآخر، فأيّ استثناء قبله — جولة، أيقونات، زرّ مفقود — يترك
+    // الصفحة بنموذجٍ غير مربوط: الضغط يرسل GET، فتُحدَّث الصفحة وتبقى مكانها
+    // وكلمة المرور في الرابط. الآن لا شيء يسبق الدخول.
     const form = document.getElementById('login-form');
     const submitBtn = document.getElementById('submit-btn');
 
@@ -194,6 +187,37 @@
         submitBtn.querySelector('.btn-text').textContent = 'تسجيل الدخول';
       }
     });
+
+    // النموذج مربوط ⇒ ارفع العلم الذي يقرؤه حارس onsubmit المضمَّن
+    window.__loginReady = true;
+
+    // ما بعده زينة: كلٌّ في try/catch مستقلّ، فسقوط أحدها لا يُسقط ما بعده.
+    try { window.utils.renderIcons(); } catch (_) {}
+    try { window.utils.initPasswordToggles(); } catch (_) {}
+
+    // الجولة: تُركَّب فوراً إن أذن الحارس في الـ head، ورابطها اليدوي يعمل دائماً.
+    // ترفع tour-pending في الحالتين — بما فيها حالة «لن تُعرض» — فلا تبقى صفحة
+    // الدخول مخفيّة. ولو تعثّرت، ارفع الحجاب يدوياً: صفحة دخول مخفيّة أسوأ من
+    // جولة لا تُعرض.
+    try {
+      window.tour.init();
+      document.getElementById('tour-open-btn').addEventListener('click', () => window.tour.open({ manual: true }));
+    } catch (err) {
+      document.documentElement.classList.remove('tour-pending');
+      console.warn('[login] تعذّر تركيب الجولة:', err);
+    }
+
+    // أزرار المزوّدين
+    try {
+      document.getElementById('google-btn').addEventListener('click', () => window.auth.signInWithGoogle());
+      document.getElementById('apple-btn').addEventListener('click', () => window.auth.signInWithApple());
+    } catch (_) {}
+
+    // إذا كان مسجلاً بالفعل (أو عائدًا من Google)، نلتقط الجلسة ثم نوجّه حسب نوع الحساب
+    (async () => {
+      await window.auth.handleOAuthCallback();
+      await window.auth.redirectIfAuthenticated();
+    })();
   </script>
 </body>
 </html>
