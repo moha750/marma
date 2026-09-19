@@ -219,8 +219,8 @@
             </div>
             <div class="card-body">
               <p class="text-muted text-sm mb-md">
-                الباقة الأساسية ${fmtMoney(window.pricing.BASE_PRICE)} شهرياً تشمل أرضية واحدة وموظفاً واحداً.
-                كل وحدة إضافية (أرضية أو موظف) بـ ${fmtMoney(window.pricing.UNIT_PRICE)}.
+                سعر واحد شامل: ${fmtMoney(window.pricing.BASE_PRICE)} شهرياً، أرضيات وموظفون بلا حدّ.
+                أضف ما تحتاج دون أي رسوم إضافية.
               </p>
 
               <div class="form-row cols-2">

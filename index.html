@@ -940,22 +940,21 @@
         <header class="lp-head lp-head--center reveal">
           <span class="lp-tag lp-tag--quiet"><i data-lucide="tag"></i> سعر صريح</span>
           <h2 class="lp-h2">ادفع مقابل ملعبك، <span class="lp-h2-accent">لا أكثر</span></h2>
-          <p class="lp-lead">لا رسوم خفية، لا عقود سنوية، لا نسبة من حجوزاتك. اختر ما يناسب حجم عملك، وعدّله متى نمى.</p>
+          <p class="lp-lead">لا رسوم خفية، لا عقود سنوية، لا نسبة من حجوزاتك. سعر واحد شامل كل شيء، لا يتغيّر مهما نما ملعبك.</p>
         </header>
 
         <div class="lp-price-cards reveal">
           <article class="lp-pcard">
             <div class="lp-pcard-head">
               <div class="lp-pcard-name">تجريبي</div>
-              <div class="lp-pcard-tag">7 أيام</div>
+              <div class="lp-pcard-tag">30 يومًا</div>
             </div>
             <div class="lp-pcard-amt">مجانًا</div>
-            <p class="lp-pcard-desc">جرّب النظام بأرضية واحدة قبل ما تشترك. بدون بطاقة ائتمانية.</p>
+            <p class="lp-pcard-desc">شهر كامل تجرّب فيه النظام بلا حدود قبل ما تشترك. بدون بطاقة ائتمانية.</p>
             <ul class="lp-pcard-list">
               <li><i data-lucide="check"></i> كل المميزات مفتوحة</li>
               <li><i data-lucide="check"></i> رابط حجز عام يعمل فورًا</li>
-              <li><i data-lucide="check"></i> أرضية واحدة فقط</li>
-              <li><i data-lucide="check"></i> بدون موظفين خلال التجربة</li>
+              <li><i data-lucide="check"></i> أرضيات وموظفون بلا حدّ</li>
             </ul>
             <a href="/auth/signup" class="btn btn--secondary lp-pcard-cta" data-cta="anon">ابدأ التجربة</a>
             <a href="#" class="btn btn--secondary lp-pcard-cta hidden" data-cta="auth" data-action="open-app">افتح اللوحة</a>
@@ -968,58 +967,16 @@
               <div class="lp-pcard-tag lp-pcard-tag--green">شهري</div>
             </div>
             <div class="lp-pcard-amt">
-              <span>200</span><small>ر.س / شهر</small>
+              <span>99</span><small>ر.س / شهر</small>
             </div>
-            <p class="lp-pcard-desc">تشمل أرضية واحدة وموظفًا واحدًا. أضف بسعر ثابت بسيط.</p>
+            <p class="lp-pcard-desc">كل شيء مفتوح. أرضيات وموظفون بلا حدّ، وبلا رسوم إضافية.</p>
             <ul class="lp-pcard-list">
               <li><i data-lucide="check"></i> كل المميزات بلا قيود</li>
-              <li><i data-lucide="check"></i> 1 أرضية + 1 موظف</li>
-              <li><i data-lucide="plus"></i> +50 ر.س لكل أرضية إضافية</li>
-              <li><i data-lucide="plus"></i> +50 ر.س لكل موظف إضافي</li>
+              <li><i data-lucide="check"></i> أرضيات وموظفون بلا حدّ</li>
             </ul>
             <a href="/auth/signup" class="btn btn--primary lp-pcard-cta" data-cta="anon">سجّل وابدأ</a>
             <a href="#" class="btn btn--primary lp-pcard-cta hidden" data-cta="auth" data-action="open-app">إدارة الاشتراك</a>
           </article>
-        </div>
-
-        <!-- حاسبة -->
-        <div class="lp-price-calc reveal l-pricing-calc">
-          <div class="lp-calc-head">
-            <h3>احسب فاتورتك الشهرية</h3>
-            <p>غيّر الأعداد لترى التكلفة الفعلية لحالتك.</p>
-          </div>
-
-          <div class="l-pricing-calc-row">
-            <div class="unit-counter" data-counter="fields">
-              <label>عدد الأرضيات</label>
-              <div class="unit-counter-controls">
-                <button type="button" data-action="dec" aria-label="إنقاص">−</button>
-                <input type="text" name="fields" value="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-min="1" data-max="50">
-                <button type="button" data-action="inc" aria-label="زيادة">+</button>
-              </div>
-            </div>
-            <div class="unit-counter" data-counter="staff">
-              <label>عدد الموظفين</label>
-              <div class="unit-counter-controls">
-                <button type="button" data-action="dec" aria-label="إنقاص">−</button>
-                <input type="text" name="staff" value="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" data-min="1" data-max="50">
-                <button type="button" data-action="inc" aria-label="زيادة">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="lp-calc-amt">
-              <span id="calc-amount" class="amount tabular-nums">200</span>
-              <span class="lp-calc-cur">ر.س <small>/ شهريًا</small></span>
-            </div>
-            <div id="calc-breakdown" class="lp-calc-break">1 أرضية + 1 موظف</div>
-          </div>
-
-          <div class="lp-calc-cta">
-            <a href="/auth/signup" class="btn btn--primary btn--lg" data-cta="anon">ابدأ تجربتك المجانية</a>
-            <a href="#" class="btn btn--primary btn--lg hidden" data-cta="auth" data-action="open-app">لوحة التحكم</a>
-          </div>
         </div>
       </div>
     </section>
@@ -1180,7 +1137,6 @@
   <script src="src/core/utils.js"></script>
   <script src="src/core/analytics.js"></script>
   <script src="src/core/auth.js"></script>
-  <script src="src/features/subscriptions/pricing.js"></script>
   <script src="src/shared/components/theme-toggle.js"></script>
   <script>
     // ─── Lucide icons ───
@@ -1295,45 +1251,6 @@
           panels.forEach((p) => p.classList.toggle('is-active', p.dataset.panel === target));
         });
       });
-    })();
-
-    // ─── Pricing calculator ───
-    (function () {
-      const calc = document.querySelector('.l-pricing-calc');
-      if (!calc || !window.pricing) return;
-      const fieldsInput = calc.querySelector('input[name="fields"]');
-      const staffInput  = calc.querySelector('input[name="staff"]');
-      const amountEl    = calc.querySelector('#calc-amount');
-      const breakdownEl = calc.querySelector('#calc-breakdown');
-      const fmt = new Intl.NumberFormat('ar-EG', { numberingSystem: 'latn' });
-
-      function clamp(input) {
-        const min = parseInt(input.dataset.min, 10) || 1;
-        const max = parseInt(input.dataset.max, 10) || 50;
-        const raw = String(input.value).replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
-        let v = parseInt(raw, 10);
-        if (isNaN(v) || v < min) v = min;
-        if (v > max) v = max;
-        input.value = v;
-      }
-      function recompute() {
-        clamp(fieldsInput); clamp(staffInput);
-        const f = +fieldsInput.value, s = +staffInput.value;
-        amountEl.textContent = fmt.format(window.pricing.calcPrice(f, s));
-        breakdownEl.textContent = `${fmt.format(f)} أرضية + ${fmt.format(s)} موظف`;
-      }
-      calc.querySelectorAll('[data-action="dec"]').forEach((b) => b.addEventListener('click', () => {
-        const inp = b.parentElement.querySelector('input');
-        inp.value = (parseInt(inp.value, 10) || 1) - 1;
-        recompute();
-      }));
-      calc.querySelectorAll('[data-action="inc"]').forEach((b) => b.addEventListener('click', () => {
-        const inp = b.parentElement.querySelector('input');
-        inp.value = (parseInt(inp.value, 10) || 1) + 1;
-        recompute();
-      }));
-      [fieldsInput, staffInput].forEach((i) => i.addEventListener('input', recompute));
-      recompute();
     })();
 
     // ─── Auth-aware CTAs ───

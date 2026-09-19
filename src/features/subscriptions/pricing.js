@@ -1,16 +1,18 @@
 // ثوابت التسعير — المصدر الوحيد للحقيقة.
 // أي تغيير في النموذج التجاري يبدأ من هنا.
 //
-// النموذج:
-//   - تجربة 7 أيام: مجاناً، 1 أرضية، 0 موظف
-//   - الباقة الأساسية: 200 ر.س/شهر تشمل 1 أرضية + 1 موظف
-//   - كل أرضية أو موظف إضافي: +50 ر.س/شهر
+// النموذج (سعر موحّد شامل):
+//   - تجربة 30 يومًا: مجاناً، كل المميزات مفتوحة بلا حدود
+//   - الاشتراك: 99 ر.س/شهر شامل كل شيء — أرضيات وموظفون بلا حدّ
+//   - لا رسوم لكل وحدة إضافية (UNIT_PRICE = 0)، فالترقية لا تكلّف شيئاً
+//   - عملاء التأسيس (أول 10) مجمّدون على 66 ر.س، محفوظة على الخادم في
+//     tenants.monthly_price؛ هذا الملف يحمل السعر المعلن فقط.
 
 window.pricing = (function () {
-  const BASE_PRICE = 200;            // الباقة الأساسية
-  const UNIT_PRICE = 50;             // كل وحدة إضافية (أرضية أو موظف)
+  const BASE_PRICE = 99;             // الاشتراك الشهري الشامل
+  const UNIT_PRICE = 0;              // لا رسوم لأي وحدة إضافية (أرضية أو موظف)
   const DURATION_DAYS = 30;          // مدة دورة الاشتراك
-  const TRIAL_DAYS = 7;              // يطابق create_owner_tenant في قاعدة البيانات
+  const TRIAL_DAYS = 30;             // يطابق create_owner_tenant في قاعدة البيانات
 
   const INCLUDED = { fields: 1, staff: 1 };
   const TRIAL    = { fields: 1, staff: 0 };
@@ -31,19 +33,23 @@ window.pricing = (function () {
     const extraFields = Math.max(0, f - INCLUDED.fields);
     const extraStaff  = Math.max(0, s - INCLUDED.staff);
     const lines = [
-      { label: `الباقة الأساسية (${INCLUDED.fields} أرضية + ${INCLUDED.staff} موظف)`, amount: BASE_PRICE }
+      { label: 'الباقة الأساسية', amount: BASE_PRICE }
     ];
-    if (extraFields > 0) {
-      lines.push({ label: `+${extraFields} أرضية إضافية`, amount: extraFields * UNIT_PRICE });
+    // الأسطر الإضافية تُعرض فقط إن كان لها مبلغ فعلي — بالسعر الشامل لا تظهر
+    const extraFieldsAmount = extraFields * UNIT_PRICE;
+    const extraStaffAmount  = extraStaff  * UNIT_PRICE;
+    if (extraFieldsAmount > 0) {
+      lines.push({ label: `+${extraFields} أرضية إضافية`, amount: extraFieldsAmount });
     }
-    if (extraStaff > 0) {
-      lines.push({ label: `+${extraStaff} موظف إضافي`, amount: extraStaff * UNIT_PRICE });
+    if (extraStaffAmount > 0) {
+      lines.push({ label: `+${extraStaff} موظف إضافي`, amount: extraStaffAmount });
     }
     return { lines, total: calcPrice(f, s) };
   }
 
   // ترقية فورية (proration): سعر الوحدات المضافة للأيام المتبقّية فقط (بلا تمديد).
   //   السعر = الوحدات المضافة × سعر الوحدة × (الأيام المتبقّية ÷ مدة الدورة) — مُقرَّب لأقرب ريال.
+  //   بالسعر الشامل (UNIT_PRICE = 0) النتيجة صفر دائماً: الترقية مجانية.
   function upgradeCost(addedUnits, remainingDays) {
     const u = Math.max(0, Number(addedUnits)    || 0);
     const d = Math.max(0, Number(remainingDays) || 0);
