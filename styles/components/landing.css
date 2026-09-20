@@ -3637,51 +3637,146 @@
 }
 
 /* ═══════════ LOYALTY — بطاقة الولاء ═══════════
-   الميزة التي لا يملكها منافس، وكانت غائبة عن الصفحة كليًا.
-   الشبكة أربعة عناصر على سطح المكتب، عمودان على اللوح، وعمود على الجوّال. */
+   الميزة التي لا يملكها منافس. الموكاب على أسلوب lp-spot: أنميشن دوّار ١٢s
+   مُعطَّل في prefers-reduced-motion. الألوان من جسر --c-* لا قيم صلبة،
+   فيعمل في الوضعين الفاتح والداكن. */
 .lp-loyal-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4, 20px);
-  margin-top: var(--space-6, 32px);
+  grid-template-columns: 1.05fr 1fr;
+  align-items: center;
+  gap: clamp(28px, 5vw, 56px);
+  margin-top: clamp(28px, 4vw, 44px);
 }
-.lp-loyal-item {
-  background: var(--color-surface, rgba(255,255,255,0.03));
-  border: 1px solid var(--color-border, rgba(255,255,255,0.08));
-  border-radius: var(--radius-lg, 16px);
-  padding: 22px 20px;
+
+/* ── الموكاب ── */
+.lp-loyal-visual { position: relative; display: grid; place-items: center; padding: 34px 0 26px; }
+/* طبقتان باهتتان خلف البطاقة — لغة المحفظة، مرسومتان على غلافٍ بعرضها بالضبط */
+.lp-loyal-cardwrap { position: relative; width: min(100%, 420px); }
+.lp-loyal-cardwrap::before,
+.lp-loyal-cardwrap::after {
+  content: ''; position: absolute; inset-inline: 0; block-size: 100%;
+  border-radius: 20px; background: var(--c-surface); border: 1px solid var(--c-bdr);
+  transform-origin: 50% 0;
 }
-.lp-loyal-item > svg,
-.lp-loyal-item > i {
-  width: 26px; height: 26px;
-  color: var(--color-primary, #25D366);
-  margin-bottom: 12px;
+.lp-loyal-cardwrap::before { inset-block-start: -13px; scale: 0.955; opacity: 0.5; }
+.lp-loyal-cardwrap::after  { inset-block-start: -25px; scale: 0.91;  opacity: 0.26; }
+.lp-loyal-card {
+  position: relative; z-index: 1; width: 100%;
+  border-radius: 20px; padding: 22px 22px 18px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-bdr);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--c-fg) 14%, transparent);
+  overflow: hidden;
 }
-.lp-loyal-item h3 {
-  font-size: 1.02rem;
-  margin: 0 0 6px;
-  line-height: 1.5;
+.lp-loyal-shine {
+  position: absolute; inset-block: 0; inline-size: 42%;
+  background: linear-gradient(100deg, transparent,
+              color-mix(in srgb, var(--c-fg) 9%, transparent), transparent);
+  animation: lp-loyal-shine 12s ease-in-out infinite; pointer-events: none;
 }
-.lp-loyal-item p {
-  font-size: 0.9rem;
-  color: var(--color-text-muted, #9fb6cd);
-  margin: 0;
-  line-height: 1.75;
-}
-.lp-loyal-kicker {
-  text-align: center;
-  margin: var(--space-6, 32px) auto 0;
+.lp-loyal-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lp-loyal-card-brand { display: flex; align-items: center; gap: 10px; }
+.lp-loyal-card-logo {
+  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
   font-size: 1.05rem;
-  color: var(--color-text-muted, #9fb6cd);
-  max-width: 44ch;
-  line-height: 1.9;
+  background: color-mix(in srgb, var(--c-brand) 14%, transparent);
+  border: 1px solid var(--c-bdr);
 }
-.lp-loyal-kicker strong { color: var(--color-text, inherit); }
+.lp-loyal-card-brand b { display: block; font-size: 0.97rem; line-height: 1.4; color: var(--c-fg); }
+.lp-loyal-card-brand small { font-size: 0.74rem; color: var(--c-mute); }
+.lp-loyal-card-wallet {
+  font-size: 0.68rem; letter-spacing: 0.04em; padding: 4px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--c-fg) 6%, transparent);
+  border: 1px solid var(--c-bdr); color: var(--c-mute);
+}
+.lp-loyal-stamps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 20px 0 15px; }
+.lp-loyal-stamp {
+  aspect-ratio: 1; border-radius: 50%; position: relative;
+  border: 1.5px dashed color-mix(in srgb, var(--c-fg) 22%, transparent);
+}
+.lp-loyal-stamp::after {
+  content: '⚽'; position: absolute; inset: -1.5px; display: grid; place-items: center;
+  font-size: 0.86rem; border-radius: 50%;
+  background: var(--c-brand); color: #fff;
+  opacity: 0; transform: scale(0.4) rotate(-14deg);
+  animation: lp-loyal-stamp 12s ease-out infinite;
+}
+.lp-loyal-stamp:nth-child(1)::after { animation-delay: 0s; }
+.lp-loyal-stamp:nth-child(2)::after { animation-delay: 0.55s; }
+.lp-loyal-stamp:nth-child(3)::after { animation-delay: 1.1s; }
+.lp-loyal-stamp:nth-child(4)::after { animation-delay: 1.65s; }
+.lp-loyal-stamp:nth-child(5)::after { animation-delay: 2.2s; }
+.lp-loyal-stamp:nth-child(6)::after { animation-delay: 2.75s; }
+.lp-loyal-card-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 0.79rem; color: var(--c-mute); padding-top: 12px;
+  border-top: 1px solid var(--c-bdr);
+}
+.lp-loyal-free {
+  color: var(--c-brand); font-weight: var(--weight-bold); opacity: 0;
+  animation: lp-loyal-free 12s ease-out infinite; animation-delay: 3.3s;
+}
+.lp-loyal-toast {
+  position: absolute; inset-block-start: 0; inset-inline-end: 2%;
+  display: flex; align-items: center; gap: 9px; z-index: 2;
+  padding: 9px 13px; border-radius: 13px;
+  background: var(--c-surface); border: 1px solid var(--c-bdr);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--c-fg) 16%, transparent);
+  opacity: 0; animation: lp-loyal-toast 12s ease-out infinite; animation-delay: 0.3s;
+}
+.lp-loyal-toast b { display: block; font-size: 0.8rem; line-height: 1.4; color: var(--c-fg); }
+.lp-loyal-toast small { font-size: 0.7rem; color: var(--c-mute); }
+.lp-loyal-toast-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-brand); flex: none; }
+
+/* ── القائمة ── */
+.lp-loyal-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.lp-loyal-list li { display: flex; gap: 13px; align-items: flex-start; }
+.lp-loyal-list li > svg, .lp-loyal-list li > i {
+  width: 21px; height: 21px; flex: none; margin-top: 3px; color: var(--c-brand);
+}
+.lp-loyal-list b { display: block; font-size: 0.99rem; margin-bottom: 2px; color: var(--c-fg); }
+.lp-loyal-list span { display: block; font-size: 0.88rem; line-height: 1.75; color: var(--c-mute); }
+.lp-loyal-kicker {
+  text-align: center; margin: clamp(30px, 4vw, 46px) auto 0;
+  font-size: 1.05rem; max-width: 46ch; line-height: 1.9; color: var(--c-mute);
+}
+.lp-loyal-kicker strong { color: var(--c-fg); font-weight: var(--weight-semibold); }
+
+@keyframes lp-loyal-stamp {
+  0%, 6%    { opacity: 0; transform: scale(0.4) rotate(-14deg); }
+  11%       { opacity: 1; transform: scale(1.14) rotate(4deg); }
+  15%, 82%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  92%, 100% { opacity: 0; transform: scale(0.85) rotate(0deg); }
+}
+@keyframes lp-loyal-free {
+  0%, 24%   { opacity: 0; transform: translateY(5px); }
+  30%, 82%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes lp-loyal-toast {
+  0%, 3%    { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  8%, 26%   { opacity: 1; transform: translateY(0) scale(1); }
+  34%, 100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+@keyframes lp-loyal-shine {
+  0%, 60%   { inset-inline-start: -46%; }
+  78%, 100% { inset-inline-start: 116%; }
+}
 
 @media (max-width: 900px) {
-  .lp-loyal-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-loyal-grid { grid-template-columns: 1fr; gap: 30px; }
+  .lp-loyal-visual { order: -1; }
 }
-@media (max-width: 560px) {
-  .lp-loyal-grid { grid-template-columns: 1fr; gap: 12px; }
-  .lp-loyal-item { padding: 18px 16px; }
+@media (max-width: 520px) {
+  .lp-loyal-stamps { gap: 7px; }
+  .lp-loyal-card { padding: 17px 16px 15px; }
+  .lp-loyal-cardwrap::after { display: none; }
+  .lp-loyal-toast { inset-inline-end: 0; padding: 8px 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-loyal-stamp::after, .lp-loyal-free,
+  .lp-loyal-toast, .lp-loyal-shine { animation: none !important; }
+  .lp-loyal-stamp::after, .lp-loyal-free, .lp-loyal-toast { opacity: 1; transform: none; }
+  .lp-loyal-shine { display: none; }
 }
