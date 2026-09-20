@@ -3635,3 +3635,53 @@
 [data-theme="dark"] .lp-stage-card {
   background-image: linear-gradient(180deg, rgba(255,255,255,0.012), transparent);
 }
+
+/* ═══════════ LOYALTY — بطاقة الولاء ═══════════
+   الميزة التي لا يملكها منافس، وكانت غائبة عن الصفحة كليًا.
+   الشبكة أربعة عناصر على سطح المكتب، عمودان على اللوح، وعمود على الجوّال. */
+.lp-loyal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4, 20px);
+  margin-top: var(--space-6, 32px);
+}
+.lp-loyal-item {
+  background: var(--color-surface, rgba(255,255,255,0.03));
+  border: 1px solid var(--color-border, rgba(255,255,255,0.08));
+  border-radius: var(--radius-lg, 16px);
+  padding: 22px 20px;
+}
+.lp-loyal-item > svg,
+.lp-loyal-item > i {
+  width: 26px; height: 26px;
+  color: var(--color-primary, #25D366);
+  margin-bottom: 12px;
+}
+.lp-loyal-item h3 {
+  font-size: 1.02rem;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+.lp-loyal-item p {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #9fb6cd);
+  margin: 0;
+  line-height: 1.75;
+}
+.lp-loyal-kicker {
+  text-align: center;
+  margin: var(--space-6, 32px) auto 0;
+  font-size: 1.05rem;
+  color: var(--color-text-muted, #9fb6cd);
+  max-width: 44ch;
+  line-height: 1.9;
+}
+.lp-loyal-kicker strong { color: var(--color-text, inherit); }
+
+@media (max-width: 900px) {
+  .lp-loyal-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .lp-loyal-grid { grid-template-columns: 1fr; gap: 12px; }
+  .lp-loyal-item { padding: 18px 16px; }
+}
