@@ -14,8 +14,9 @@ window.pricing = (function () {
   const DURATION_DAYS = 30;          // مدة دورة الاشتراك
   const TRIAL_DAYS = 30;             // يطابق create_owner_tenant في قاعدة البيانات
 
-  const INCLUDED = { fields: 1, staff: 1 };
-  const TRIAL    = { fields: 1, staff: 0 };
+  // بلا حدّ فعليًا — الحدّ في الجدول 999 (20260920140000)، والسعر لا يتغيّر بالعدد.
+  const INCLUDED = { fields: 999, staff: 999 };
+  const TRIAL    = { fields: 999, staff: 999 };
 
   // يحسب المبلغ الشهري بناءً على عدد الأرضيات والموظفين
   function calcPrice(fields, staff) {
